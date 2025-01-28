@@ -133,7 +133,7 @@ L?\"(\\.|[^\\"])*\"  { count(); current_token_type="STRING_LITERAL"; return(STRI
 "?"            { count(); current_token_type="?"; return('?'); }
 
 [ \t\v\n\f]		{ count(); }
-.			{ std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column<<"\n";}
+.			{ count(); std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column<<"\n";}
 
 %%
 
@@ -171,7 +171,7 @@ int check_type()
 
 int main(int argc, char *argv[])
 {
-	if(argc > 1)
+	if(argc == 2)
 	{
 		yyin = fopen(argv[1], "r");
 		if(!yyin)
@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		std::cout << "Error : No file specified" << std::endl;
+		std::cout << "Error : Specify one file to be lexed." << std::endl;
 		return 1;
 	}
 	std::unordered_map<std::string, TOKEN> symbol_table;
