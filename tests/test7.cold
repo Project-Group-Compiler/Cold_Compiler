@@ -1,0 +1,13 @@
+//negative testcase
+int main(){
+    int a = 4, b = 10;
+    int 1c = a + b;
+
+    if(a>b){
+        a ++= b;
+    }esle{
+        a -= b;
+    }
+    
+    return 0;
+}   
