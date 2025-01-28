@@ -9,6 +9,10 @@ An end-to-end compiler for a new custom programming language, `Cold`.
 - Intermediate Representaion : `3AC`
 - Target Language : `x86_32` assembly
 
+The C Lex specification is taken from [Here](https://www.lysator.liu.se/c/ANSI-C-grammar-l.html)
+
+For learning ANSI C syntax, the perfect book obviously is K&R C Book.
+
 ## Installation
 
 Run for Ubuntu/Linux
@@ -39,9 +43,5 @@ make
 - Mohammed Haaziq
 - Roopam Taneja
 - Shubham Kumar Verma
-
-The C Lex specification is taken from [Here](https://www.lysator.liu.se/c/ANSI-C-grammar-l.html)
-
-For learning ANSI C syntax, the perfect book obviously is K&R C Book.
 
 ### Made with ❤️
