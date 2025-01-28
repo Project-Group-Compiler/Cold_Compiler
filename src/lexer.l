@@ -9,147 +9,145 @@ IS			(u|U|l|L)*
 #include <stdio.h>
 #include "parser.hpp"
 #include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <unordered_map>
+#include <vector>
+
+typedef struct token_data
+{
+	int line;
+	int column;
+	std::string token_type;
+	std::string lexeme;
+} TOKEN;
+
 void count();
+void comment();
+int check_type();
+
+int column = 1;
+int line = 1;
+std::string current_token_type;
 %}
 
 %option noyywrap
 %%
 
-"/*"			{ comment(); }
+"/*"([^*]|(\*+[^*/]))*\*+\/	{ count();}
 
-"auto"			{ count(); return(AUTO); }
-"break"			{ count(); return(BREAK); }
-"case"			{ count(); return(CASE); }
-"char"			{ count(); return(CHAR); }
-"const"			{ count(); return(CONST); }
-"continue"		{ count(); return(CONTINUE); }
-"default"		{ count(); return(DEFAULT); }
-"do"			{ count(); return(DO); }
-"double"		{ count(); return(DOUBLE); }
-"else"			{ count(); return(ELSE); }
-"enum"			{ count(); return(ENUM); }
-"extern"		{ count(); return(EXTERN); }
-"float"			{ count(); return(FLOAT); }
-"for"			{ count(); return(FOR); }
-"goto"			{ count(); return(GOTO); }
-"if"			{ count(); return(IF); }
-"int"			{ count(); return(INT); }
-"long"			{ count(); return(LONG); }
-"register"		{ count(); return(REGISTER); }
-"return"		{ count(); return(RETURN); }
-"short"			{ count(); return(SHORT); }
-"signed"		{ count(); return(SIGNED); }
-"sizeof"		{ count(); return(SIZEOF); }
-"static"		{ count(); return(STATIC); }
-"struct"		{ count(); return(STRUCT); }
-"switch"		{ count(); return(SWITCH); }
-"typedef"		{ count(); return(TYPEDEF); }
-"union"			{ count(); return(UNION); }
-"unsigned"		{ count(); return(UNSIGNED); }
-"until"         { count(); return(UNTIL); }         /*** Added UNTIL token ***/
-"void"			{ count(); return(VOID); }
-"volatile"		{ count(); return(VOLATILE); }
-"while"			{ count(); return(WHILE); }
+"//"[^\n]*		{ count(); }
 
-{L}({L}|{D})*		{ count(); return(check_type()); }
+"auto"          { count(); current_token_type="AUTO"; return(AUTO); }
+"break"         { count(); current_token_type="BREAK"; return(BREAK); }
+"case"          { count(); current_token_type="CASE"; return(CASE); }
+"char"          { count(); current_token_type="CHAR"; return(CHAR); }
+"const"         { count(); current_token_type="CONST"; return(CONST); }
+"continue"      { count(); current_token_type="CONTINUE"; return(CONTINUE); }
+"default"       { count(); current_token_type="DEFAULT"; return(DEFAULT); }
+"do"            { count(); current_token_type="DO"; return(DO); }
+"double"        { count(); current_token_type="DOUBLE"; return(DOUBLE); }
+"else"          { count(); current_token_type="ELSE"; return(ELSE); }
+"enum"          { count(); current_token_type="ENUM"; return(ENUM); }
+"extern"        { count(); current_token_type="EXTERN"; return(EXTERN); }
+"float"         { count(); current_token_type="FLOAT"; return(FLOAT); }
+"for"           { count(); current_token_type="FOR"; return(FOR); }
+"goto"          { count(); current_token_type="GOTO"; return(GOTO); }
+"if"            { count(); current_token_type="IF"; return(IF); }
+"int"           { count(); current_token_type="INT"; return(INT); }
+"long"          { count(); current_token_type="LONG"; return(LONG); }
+"register"      { count(); current_token_type="REGISTER"; return(REGISTER); }
+"return"        { count(); current_token_type="RETURN"; return(RETURN); }
+"short"         { count(); current_token_type="SHORT"; return(SHORT); }
+"signed"        { count(); current_token_type="SIGNED"; return(SIGNED); }
+"sizeof"        { count(); current_token_type="SIZEOF"; return(SIZEOF); }
+"static"        { count(); current_token_type="STATIC"; return(STATIC); }
+"struct"        { count(); current_token_type="STRUCT"; return(STRUCT); }
+"switch"        { count(); current_token_type="SWITCH"; return(SWITCH); }
+"typedef"       { count(); current_token_type="TYPEDEF"; return(TYPEDEF); }
+"union"         { count(); current_token_type="UNION"; return(UNION); }
+"unsigned"      { count(); current_token_type="UNSIGNED"; return(UNSIGNED); }
+"until"         { count(); current_token_type="UNTIL"; return(UNTIL); }
+"void"          { count(); current_token_type="VOID"; return(VOID); }
+"volatile"      { count(); current_token_type="VOLATILE"; return(VOLATILE); }
+"while"         { count(); current_token_type="WHILE"; return(WHILE); }
 
-0[xX]{H}+{IS}?		{ count(); return(CONSTANT); }
-0{D}+{IS}?		{ count(); return(CONSTANT); }
-{D}+{IS}?		{ count(); return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ count(); return(CONSTANT); }
+{L}({L}|{D})*   { count(); current_token_type="IDENTIFIER"; return(check_type()); }
 
-{D}+{E}{FS}?		{ count(); return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?	{ count(); return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?	{ count(); return(CONSTANT); }
+0[xX]{H}+{IS}?  { count(); current_token_type="CONSTANT"; return(CONSTANT); }
+0{D}+{IS}?      { count(); current_token_type="CONSTANT"; return(CONSTANT); }
+{D}+{IS}?       { count(); current_token_type="CONSTANT"; return(CONSTANT); }
+L?'(\\.|[^\\'])+'  { count(); current_token_type="CONSTANT"; return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"	{ count(); return(STRING_LITERAL); }
+{D}+{E}{FS}?    { count(); current_token_type="CONSTANT"; return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?  { count(); current_token_type="CONSTANT"; return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?  { count(); current_token_type="CONSTANT"; return(CONSTANT); }
 
-"..."			{ count(); return(ELLIPSIS); }
-">>="			{ count(); return(RIGHT_ASSIGN); }
-"<<="			{ count(); return(LEFT_ASSIGN); }
-"+="			{ count(); return(ADD_ASSIGN); }
-"-="			{ count(); return(SUB_ASSIGN); }
-"*="			{ count(); return(MUL_ASSIGN); }
-"/="			{ count(); return(DIV_ASSIGN); }
-"%="			{ count(); return(MOD_ASSIGN); }
-"&="			{ count(); return(AND_ASSIGN); }
-"^="			{ count(); return(XOR_ASSIGN); }
-"|="			{ count(); return(OR_ASSIGN); }
-">>"			{ count(); return(RIGHT_OP); }
-"<<"			{ count(); return(LEFT_OP); }
-"++"			{ count(); return(INC_OP); }
-"--"			{ count(); return(DEC_OP); }
-"->"			{ count(); return(PTR_OP); }
-"&&"			{ count(); return(AND_OP); }
-"||"			{ count(); return(OR_OP); }
-"<="			{ count(); return(LE_OP); }
-">="			{ count(); return(GE_OP); }
-"=="			{ count(); return(EQ_OP); }
-"!="			{ count(); return(NE_OP); }
-";"			{ count(); return(';'); }
-("{"|"<%")		{ count(); return('{'); }
-("}"|"%>")		{ count(); return('}'); }
-","			{ count(); return(','); }
-":"			{ count(); return(':'); }
-"="			{ count(); return('='); }
-"("			{ count(); return('('); }
-")"			{ count(); return(')'); }
-("["|"<:")		{ count(); return('['); }
-("]"|":>")		{ count(); return(']'); }
-"."			{ count(); return('.'); }
-"&"			{ count(); return('&'); }
-"!"			{ count(); return('!'); }
-"~"			{ count(); return('~'); }
-"-"			{ count(); return('-'); }
-"+"			{ count(); return('+'); }
-"*"			{ count(); return('*'); }
-"/"			{ count(); return('/'); }
-"%"			{ count(); return('%'); }
-"<"			{ count(); return('<'); }
-">"			{ count(); return('>'); }
-"^"			{ count(); return('^'); }
-"|"			{ count(); return('|'); }
-"?"			{ count(); return('?'); }
+L?\"(\\.|[^\\"])*\"  { count(); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
+
+"..."           { count(); current_token_type="ELLIPSIS"; return(ELLIPSIS); }
+">>="          { count(); current_token_type="RIGHT_ASSIGN"; return(RIGHT_ASSIGN); }
+"<<="          { count(); current_token_type="LEFT_ASSIGN"; return(LEFT_ASSIGN); }
+"+="           { count(); current_token_type="ADD_ASSIGN"; return(ADD_ASSIGN); }
+"-="           { count(); current_token_type="SUB_ASSIGN"; return(SUB_ASSIGN); }
+"*="           { count(); current_token_type="MUL_ASSIGN"; return(MUL_ASSIGN); }
+"/="           { count(); current_token_type="DIV_ASSIGN"; return(DIV_ASSIGN); }
+"%="           { count(); current_token_type="MOD_ASSIGN"; return(MOD_ASSIGN); }
+"&="           { count(); current_token_type="AND_ASSIGN"; return(AND_ASSIGN); }
+"^="           { count(); current_token_type="XOR_ASSIGN"; return(XOR_ASSIGN); }
+"|="           { count(); current_token_type="OR_ASSIGN"; return(OR_ASSIGN); }
+">>"           { count(); current_token_type="RIGHT_OP"; return(RIGHT_OP); }
+"<<"           { count(); current_token_type="LEFT_OP"; return(LEFT_OP); }
+"++"           { count(); current_token_type="INC_OP"; return(INC_OP); }
+"--"           { count(); current_token_type="DEC_OP"; return(DEC_OP); }
+"->"           { count(); current_token_type="PTR_OP"; return(PTR_OP); }
+"&&"           { count(); current_token_type="AND_OP"; return(AND_OP); }
+"||"           { count(); current_token_type="OR_OP"; return(OR_OP); }
+"<="           { count(); current_token_type="LE_OP"; return(LE_OP); }
+">="           { count(); current_token_type="GE_OP"; return(GE_OP); }
+"=="           { count(); current_token_type="EQ_OP"; return(EQ_OP); }
+"!="           { count(); current_token_type="NE_OP"; return(NE_OP); }
+";"            { count(); current_token_type=";"; return(';'); }
+("{"|"<%")     { count(); current_token_type="{"; return('{'); }
+("}"|"%>")     { count(); current_token_type="}"; return('}'); }
+","            { count(); current_token_type=","; return(','); }
+":"            { count(); current_token_type=":"; return(':'); }
+"="            { count(); current_token_type="="; return('='); }
+"("            { count(); current_token_type="("; return('('); }
+")"            { count(); current_token_type=")"; return(')'); }
+("["|"<:")     { count(); current_token_type="["; return('['); }
+("]"|":>")     { count(); current_token_type="]"; return(']'); }
+"."            { count(); current_token_type="."; return('.'); }
+"&"            { count(); current_token_type="&"; return('&'); }
+"!"            { count(); current_token_type="!"; return('!'); }
+"~"            { count(); current_token_type="~"; return('~'); }
+"-"            { count(); current_token_type="-"; return('-'); }
+"+"            { count(); current_token_type="+"; return('+'); }
+"*"            { count(); current_token_type="*"; return('*'); }
+"/"            { count(); current_token_type="/"; return('/'); }
+"%"            { count(); current_token_type="%"; return('%'); }
+"<"            { count(); current_token_type="<"; return('<'); }
+">"            { count(); current_token_type=">"; return('>'); }
+"^"            { count(); current_token_type="^"; return('^'); }
+"|"            { count(); current_token_type="|"; return('|'); }
+"?"            { count(); current_token_type="?"; return('?'); }
 
 [ \t\v\n\f]		{ count(); }
-.			{ /* ignore bad characters */ }
+.			{ count(); std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column<<"\n";}
 
 %%
 
-comment()
-{
-	char c, c1;
-
-loop:
-	while ((c = input()) != '*' && c != 0)
-		putchar(c);
-
-	if ((c1 = input()) != '/' && c != 0)
-	{
-		unput(c1);
-		goto loop;
-	}
-
-	if (c != 0)
-		putchar(c1);
-}
-
-
-int column = 0;
-
 void count()
 {
-	int i;
-
-	for (i = 0; yytext[i] != '\0'; i++)
+	for (int i = 0; yytext[i] != '\0'; i++)
+	{
 		if (yytext[i] == '\n')
-			column = 0;
+			column = 1, line++;
 		else if (yytext[i] == '\t')
-			column += 8 - (column % 8);
+			column += 4 - (column % 4);
 		else
 			column++;
-
-	ECHO;
+	}
 }
 
 
@@ -173,23 +171,48 @@ int check_type()
 
 int main(int argc, char *argv[])
 {
-	if(argc > 1)
+	if(argc == 2)
 	{
 		yyin = fopen(argv[1], "r");
 		if(!yyin)
 		{
-			std::cout << "Error : Can't open file <<argv[1]<<"\n";
+			std::cout << "Error : Can't open file "<<argv[1]<<"\n";
 			return 1;
 		}
 	}
 	else
 	{
-		std::cout << "Error : No file specified" << std::endl;
+		std::cout << "Error : Specify one file to be lexed." << std::endl;
 		return 1;
 	}
+	std::unordered_map<std::string, TOKEN> symbol_table;
+	std::vector<TOKEN> tokens;
+	int token_id;
+	while((token_id = yylex()) != 0)
+	{
+		TOKEN token;
+		token.token_type = current_token_type;
+		token.lexeme = std::string(yytext);
+		token.line = line;
+		token.column = column - token.lexeme.length();
+		symbol_table[token.lexeme] = token;	
+		tokens.push_back(token);
+	}
 	std::ofstream out("output.txt");
-	out<<"Lexical Analysis for "<<argv[1]<<"\n\n";
-	out<<"Token\t\t\tLexeme\n";
-	yylex();
+	out << "Lexical Analysis for " << argv[1] << "\n\n";
+	out << std::left 
+    	<< std::setw(20) << "Token" 
+    	<< std::setw(30) << "Lexeme" 
+    	<< std::setw(10) << "Line" 
+    	<< std::setw(10) << "Column" << "\n"
+    	<< std::string(70, '-') << "\n";
+	for(auto token : tokens)
+	{
+		out << std::left 
+			<< std::setw(20) << token.token_type
+			<< std::setw(30) << token.lexeme
+			<< std::setw(10) << token.line
+			<< std::setw(10) << token.column << "\n";
+	}
 	return 0;
 }
