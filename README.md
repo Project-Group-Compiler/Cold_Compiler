@@ -35,7 +35,12 @@ Run the following command in the root directory:
 make
 ```
 
-3. Run script for testcases (TODO)
+3. Run script for testcases
+
+```
+chmod +x run.sh
+./run.sh bin/compiler
+```
    
 ## Team Members
 
