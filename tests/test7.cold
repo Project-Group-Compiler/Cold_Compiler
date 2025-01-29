@@ -1,4 +1,8 @@
 //negative testcase
+
+#define MAX_NODES 1000
+#define INF 1000000000 //pre-proccessing directives are not supported thus will raise errors
+
 int main(){
     int a = 4, b = 10;
     int 1c = a + b;
