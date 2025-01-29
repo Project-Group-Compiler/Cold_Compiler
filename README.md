@@ -15,6 +15,8 @@ The C Lex specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C
 
 The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C-grammar-y.html).
 
+Apart from ANSI C constructs, `until` loop is also supported.
+
 ## Installation
 
 Run for Ubuntu/Linux
@@ -23,7 +25,7 @@ Run for Ubuntu/Linux
 sudo apt install flex bison build-essential
 ```
 
-## Running the Compiler
+## Running the lexer
 
 1. Clone the Repository
 
@@ -32,7 +34,7 @@ git clone https://github.com/Project-Group-Compiler/Cold_Compiler.git
 cd Cold_Compiler
 ```
 
-2. Build the Compiler
+2. Build the lexer
    
 Run the following command in the root directory:
 
@@ -45,6 +47,12 @@ make
 ```bash
 chmod +x run.sh
 ./run.sh
+```
+
+Alternatively, execute for a single input file
+
+```bash
+bin/lexer <input_file> <output_file>
 ```
    
 ## Team Members

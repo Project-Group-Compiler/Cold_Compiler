@@ -23,12 +23,13 @@ typedef struct token_data
 } TOKEN;
 
 void count();
-void comment();
+void reportError();
 int check_type();
 
 int column = 1;
 int line = 1;
 std::string current_token_type;
+bool has_error = false;
 %}
 
 %option noyywrap
@@ -133,9 +134,17 @@ L?\"(\\.|[^\\"])*\"  { count(); current_token_type="STRING_LITERAL"; return(STRI
 "?"            { count(); current_token_type="?"; return('?'); }
 
 [ \t\v\n\f]		{ count(); }
-.			{ count(); std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column<<"\n";}
+
+{D}+{L}+	{ count(); reportError();}
+.			{ count(); reportError();}
 
 %%
+
+void reportError()
+{
+	has_error = true; 
+	std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
+}
 
 void count()
 {
@@ -143,7 +152,7 @@ void count()
 	{
 		if (yytext[i] == '\n')
 			column = 1, line++;
-		else if (yytext[i] == '\t')
+		else if (yytext[i] == '\t') // tab size : 4
 			column += 4 - (column % 4);
 		else
 			column++;
@@ -153,19 +162,6 @@ void count()
 
 int check_type()
 {
-/*
-* pseudo code --- this is what it should check
-*
-*	if (yytext == type_name)
-*		return(TYPE_NAME);
-*
-*	return(IDENTIFIER);
-*/
-
-/*
-*	it actually will only return IDENTIFIER
-*/
-
 	return(IDENTIFIER);
 }
 
@@ -197,10 +193,15 @@ int main(int argc, char *argv[])
 		token.token_type = current_token_type;
 		token.lexeme = std::string(yytext);
 		token.line = line;
-		token.column = column - token.lexeme.length();
+		token.column = column - yyleng;
 		if(symbol_table.find(token.lexeme) == symbol_table.end())
 			symbol_table[token.lexeme] = token;	
 		tokens.push_back(token);
+	}
+	if (has_error)
+	{
+		out << "Lexical errors printed on stdout.\n";
+		return 1;
 	}
 	out << "Lexical Analysis for " << argv[1] << "\n\n";
 	out << std::left 
