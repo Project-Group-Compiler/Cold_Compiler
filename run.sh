@@ -1,15 +1,6 @@
 #!/bin/bash
 
-# Check if the executable is passed as an argument
-if [ $# -lt 1 ]; then
-  echo "Usage: ./run.sh <compiler_executable>"
-  exit 1
-fi
-
-# Compiler executable
-EXECUTABLE=$1
-
-# Directory containing test cases
+EXECUTABLE="bin/lexer"
 TEST_DIR="tests"
 OUTPUT_DIR="outputs"
 
@@ -30,11 +21,10 @@ for test_case in "$TEST_DIR"/*.cold; do
 
     echo "Running test case: $test_name"
 
-    # Redirect output to the output directory
-    "$EXECUTABLE" "$test_case" > "$OUTPUT_DIR/$test_name.output"
+    "$EXECUTABLE" "$test_case" "$OUTPUT_DIR/$test_name.txt"
 
     if [ $? -eq 0 ]; then
-      echo "Test $test_name passed. Output saved to $OUTPUT_DIR/$test_name.output"
+      echo "Test $test_name passed. Output saved to $OUTPUT_DIR/$test_name.txt"
     else
       echo "Test $test_name failed."
     fi

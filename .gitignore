@@ -1,4 +1,5 @@
 .vscode/
+.cph/
 *.exe
 *.out
 build/

@@ -171,18 +171,21 @@ int check_type()
 
 int main(int argc, char *argv[])
 {
-	if(argc == 2)
+	if(argc != 3)
 	{
-		yyin = fopen(argv[1], "r");
-		if(!yyin)
-		{
-			std::cout << "Error : Can't open file "<<argv[1]<<"\n";
-			return 1;
-		}
+		std::cerr << "Usage : ./lexer <input_file> <output_file>\n";
+		return 1;
 	}
-	else
+	yyin = fopen(argv[1], "r");
+	if(!yyin)
 	{
-		std::cout << "Error : Specify one file to be lexed." << std::endl;
+		std::cerr << "Error : Can't open input file "<<argv[1]<<"\n";
+		return 1;
+	}
+	std::ofstream out(argv[2]);
+	if(!out)
+	{
+		std::cerr << "Error : Can't open output file "<<argv[2]<<"\n";
 		return 1;
 	}
 	std::unordered_map<std::string, TOKEN> symbol_table;
@@ -195,22 +198,22 @@ int main(int argc, char *argv[])
 		token.lexeme = std::string(yytext);
 		token.line = line;
 		token.column = column - token.lexeme.length();
-		symbol_table[token.lexeme] = token;	
+		if(symbol_table.find(token.lexeme) == symbol_table.end())
+			symbol_table[token.lexeme] = token;	
 		tokens.push_back(token);
 	}
-	std::ofstream out("output.txt");
 	out << "Lexical Analysis for " << argv[1] << "\n\n";
 	out << std::left 
     	<< std::setw(20) << "Token" 
-    	<< std::setw(30) << "Lexeme" 
+    	<< std::setw(40) << "Lexeme" 
     	<< std::setw(10) << "Line" 
     	<< std::setw(10) << "Column" << "\n"
-    	<< std::string(70, '-') << "\n";
-	for(auto token : tokens)
+    	<< std::string(80, '-') << "\n";
+	for(auto &token : tokens)
 	{
 		out << std::left 
 			<< std::setw(20) << token.token_type
-			<< std::setw(30) << token.lexeme
+			<< std::setw(40) << token.lexeme
 			<< std::setw(10) << token.line
 			<< std::setw(10) << token.column << "\n";
 	}

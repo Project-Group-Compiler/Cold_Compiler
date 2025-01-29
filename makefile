@@ -9,7 +9,7 @@ LEXER_CPP = $(BUILD_DIR)/lexer.cpp
 PARSER_CPP = $(BUILD_DIR)/parser.cpp
 PARSER_HPP = $(BUILD_DIR)/parser.hpp
 
-OUTPUT = $(BIN_DIR)/compiler
+OUTPUT = $(BIN_DIR)/lexer
 OBJS = $(BUILD_DIR)/lexer.o
 
 # Compiler and tools
@@ -32,7 +32,7 @@ $(LEXER_CPP): $(LEXER) $(PARSER_HPP) | $(BUILD_DIR)
 $(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP)
 	$(CXX) -c -o $@ $(LEXER_CPP)
 
-# Link the final compiler binary
+# Link the final lexer binary
 $(OUTPUT): $(OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) -o $@ $^
@@ -45,9 +45,5 @@ $(BUILD_DIR):
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-# Run the lexer/parser on input files
-run: $(OUTPUT)
-	$(OUTPUT) $(ARGS)
-
 # Phony targets
-.PHONY: all clean run
+.PHONY: all clean
