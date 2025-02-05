@@ -1,3 +1,4 @@
+
 D			[0-9]
 L			[a-zA-Z_]
 H			[a-fA-F0-9]
@@ -24,6 +25,7 @@ typedef struct token_data
 
 void count();
 void reportError();
+void reportInvalidIdentifier();
 int check_type();
 
 int column = 1;
@@ -135,14 +137,16 @@ L?\"(\\.|[^\\"])*\"  { count(); current_token_type="STRING_LITERAL"; return(STRI
 
 [ \t\v\n\f]		{ count(); }
 
-{D}+{L}+	{ count(); reportError();}
+{D}+{L}+	{ count(); reportInvalidIdentifier();}
 .			{ count(); reportError();}
 
 %%
 
-void reportError()
-{
-	has_error = true; 
+void reportInvalidIdentifier() {
+	std::cerr << "Error: Invalid identifier '" << yytext << "' at line " << line << " column " << column - yyleng << "\n";
+}
+void reportError() {
+    has_error = true;
 	std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
 }
 

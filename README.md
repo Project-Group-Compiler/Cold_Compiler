@@ -15,7 +15,9 @@ The C Lex specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C
 
 The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C-grammar-y.html).
 
-Apart from ANSI C constructs, `until` loop is also supported.
+**Apart from ANSI C constructs, `until` loop is also supported.**
+
+**Note:** Errors are printed in terminal.
 
 ## Installation
 
