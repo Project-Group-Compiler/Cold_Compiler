@@ -222,5 +222,5 @@ int main(int argc, char *argv[])
 			<< std::setw(10) << token.line
 			<< std::setw(10) << token.column << "\n";
 	}
-	return 0;
+	return 0;
 }
