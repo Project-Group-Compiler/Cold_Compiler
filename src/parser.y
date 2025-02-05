@@ -12,6 +12,7 @@
 %token UNTIL /*** Added UNTIL token ***/
 
 %start translation_unit
+%expect 1
 %%
 
 primary_expression
