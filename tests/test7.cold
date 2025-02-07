@@ -5,7 +5,7 @@
 
 int main(){
     int a = 4, b = 10;
-    int 1c = a + b;
+    int $c = a + b; // shows invalid symbol error
 
     if(a>b){
         a += b;

@@ -137,14 +137,10 @@ L?\"(\\.|[^\\"])*\"  { count(); current_token_type="STRING_LITERAL"; return(STRI
 
 [ \t\v\n\f]		{ count(); }
 
-{D}+{L}+	{ count(); reportInvalidIdentifier();}
 .			{ count(); reportError();}
 
 %%
 
-void reportInvalidIdentifier() {
-	std::cerr << "Error: Invalid identifier '" << yytext << "' at line " << line << " column " << column - yyleng << "\n";
-}
 void reportError() {
     has_error = true;
 	std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
