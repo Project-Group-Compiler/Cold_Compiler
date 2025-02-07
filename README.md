@@ -17,7 +17,7 @@ The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-
 
 **Apart from ANSI C constructs, `until` loop is also supported.**
 
-**Note:** Errors are printed in terminal.
+**Note:** Errors are printed in terminal. Only invalid symbols not part of ANSI C are handled at this point. Rest of the errors will be handled in subsequent stages.
 
 ## Installation
 
