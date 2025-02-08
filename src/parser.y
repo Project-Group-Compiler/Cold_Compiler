@@ -81,11 +81,11 @@ shift_expression
 	;
 
 relational_expression
-	: shift_expression
-	| relational_expression '<' shift_expression
-	| relational_expression '>' shift_expression
-	| relational_expression LE_OP shift_expression
-	| relational_expression GE_OP shift_expression
+	: inclusive_or_expression
+	| relational_expression '<' inclusive_or_expression
+	| relational_expression '>' inclusive_or_expression
+	| relational_expression LE_OP inclusive_or_expression
+	| relational_expression GE_OP inclusive_or_expression
 	;
 
 equality_expression
@@ -95,8 +95,8 @@ equality_expression
 	;
 
 and_expression
-	: equality_expression
-	| and_expression '&' equality_expression
+	: shift_expression
+	| and_expression '&' shift_expression
 	;
 
 exclusive_or_expression
@@ -110,8 +110,8 @@ inclusive_or_expression
 	;
 
 logical_and_expression
-	: inclusive_or_expression
-	| logical_and_expression AND_OP inclusive_or_expression
+	: equality_expression
+	| logical_and_expression AND_OP equality_expression
 	;
 
 logical_or_expression
