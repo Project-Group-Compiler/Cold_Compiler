@@ -5,7 +5,7 @@ int main(){
         .//Special Character: @#$%&   
     */
 
-    int a, b, c;
+    inta a, b, c;
     char op;
     printf("Enter first number\n");
     scanf("%d",&a);

@@ -5,6 +5,7 @@ int main() {
     int number;
     char binary[32];
     int bit = 0;
+    int i;
 
     scanf("%d", &decimal);
     number = decimal;
@@ -14,7 +15,7 @@ int main() {
     }
 
     printf("Binary representation of %d is:\n",number);
-    for (int i = bit - 1; i >= 0; i--) {
+    for (i = bit - 1; i >= 0; i--) {
         printf("%c", binary[i]);
     }
     printf("\n");

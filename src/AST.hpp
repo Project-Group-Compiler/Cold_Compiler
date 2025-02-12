@@ -1,0 +1,25 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cstdio>
+
+struct Node{
+    long long node_id; //unique id
+    std::string node_name;
+    long long intVal;
+    long long realVal;
+    char charVal;
+    std::string strVal;
+};
+
+struct Data{
+    Node* node;
+    std::string str;
+    bool is_node;
+};
+
+void beginAST();
+void endAST();
+void insertAttr(std::vector<Data>& v, Node* node, const std::string& str, bool isNode);
+Node* createLeaf(const std::string& str);
+Node* createNode(const std::string& str, std::vector<Data>& v);

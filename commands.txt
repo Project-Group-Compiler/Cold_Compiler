@@ -1,0 +1,14 @@
+cd src/
+flex -o lexer.cpp lexer.l
+bison -d -o parser.cpp parser.y
+g++ -g -o ../bin/parser lexer.cpp parser.cpp AST.cpp -ll
+cd ..
+bin/parser tests/test6.cold
+dot -Tpng src/AST.dot -o outputs/graph.png
+
+bin/parser -l outputs/lexer_output.txt tests/test1.cold
+
+
+gdb --args bin/parser tests/test1.cold
+run
+bt 
