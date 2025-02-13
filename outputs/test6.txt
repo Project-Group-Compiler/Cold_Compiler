@@ -1,0 +1,33 @@
+Lexical Analysis for tests/test6.cold
+
+Token               Lexeme                                  Line      Column    
+--------------------------------------------------------------------------------
+INT                 int                                     2         1         
+IDENTIFIER          main                                    2         5         
+(                   (                                       2         9         
+)                   )                                       2         10        
+{                   {                                       3         1         
+INT                 int                                     4         5         
+IDENTIFIER          x                                       4         9         
+=                   =                                       4         11        
+CONSTANT            0                                       4         13        
+;                   ;                                       4         14        
+UNTIL               until                                   5         5         
+(                   (                                       5         10        
+IDENTIFIER          x                                       5         11        
+GE_OP               >=                                      5         13        
+CONSTANT            5                                       5         16        
+)                   )                                       5         17        
+{                   {                                       6         5         
+IDENTIFIER          printf                                  7         9         
+(                   (                                       7         15        
+STRING_LITERAL      "x is %d\n"                             7         16        
+,                   ,                                       7         27        
+IDENTIFIER          x                                       7         29        
+)                   )                                       7         30        
+;                   ;                                       7         31        
+IDENTIFIER          x                                       8         9         
+INC_OP              ++                                      8         10        
+;                   ;                                       8         12        
+}                   }                                       9         5         
+}                   }                                       10        1         

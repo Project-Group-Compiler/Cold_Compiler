@@ -1,6 +1,6 @@
-#line 2 "lexer.cpp"
+#line 2 "build/lexer.cpp"
 
-#line 4 "lexer.cpp"
+#line 4 "build/lexer.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -624,10 +624,9 @@ int yy_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
-#line 1 "lexer.l"
-#line 10 "lexer.l"
+#line 1 "src/lexer.l"
+#line 10 "src/lexer.l"
 #include <stdio.h>
-#include "AST.hpp"
 #include "parser.hpp"
 #include <iostream>
 #include <iomanip>
@@ -645,14 +644,15 @@ typedef struct token_data
 
 void count();
 void reportError();
+void reportInvalidIdentifier();
 int check_type();
 
 int column = 1;
 int line = 1;
 std::string current_token_type;
 bool has_error = false;
-#line 655 "lexer.cpp"
-#line 656 "lexer.cpp"
+#line 655 "build/lexer.cpp"
+#line 656 "build/lexer.cpp"
 
 #define INITIAL 0
 
@@ -869,10 +869,10 @@ YY_DECL
 		}
 
 	{
-#line 38 "lexer.l"
+#line 38 "src/lexer.l"
 
 
-#line 876 "lexer.cpp"
+#line 876 "build/lexer.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -932,473 +932,473 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 40 "lexer.l"
+#line 40 "src/lexer.l"
 { count();}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 42 "lexer.l"
+#line 42 "src/lexer.l"
 { count(); }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 44 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="AUTO"; return(AUTO); }
+#line 44 "src/lexer.l"
+{ count(); current_token_type="AUTO"; return(AUTO); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 45 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="BREAK"; return(BREAK); }
+#line 45 "src/lexer.l"
+{ count(); current_token_type="BREAK"; return(BREAK); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 46 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CASE"; return(CASE); }
+#line 46 "src/lexer.l"
+{ count(); current_token_type="CASE"; return(CASE); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 47 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CHAR"; return(CHAR); }
+#line 47 "src/lexer.l"
+{ count(); current_token_type="CHAR"; return(CHAR); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 48 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONST"; return(CONST); }
+#line 48 "src/lexer.l"
+{ count(); current_token_type="CONST"; return(CONST); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 49 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONTINUE"; return(CONTINUE); }
+#line 49 "src/lexer.l"
+{ count(); current_token_type="CONTINUE"; return(CONTINUE); }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 50 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="DEFAULT"; return(DEFAULT); }
+#line 50 "src/lexer.l"
+{ count(); current_token_type="DEFAULT"; return(DEFAULT); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 51 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="DO"; return(DO); }
+#line 51 "src/lexer.l"
+{ count(); current_token_type="DO"; return(DO); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 52 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="DOUBLE"; return(DOUBLE); }
+#line 52 "src/lexer.l"
+{ count(); current_token_type="DOUBLE"; return(DOUBLE); }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 53 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="ELSE"; return(ELSE); }
+#line 53 "src/lexer.l"
+{ count(); current_token_type="ELSE"; return(ELSE); }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 54 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="ENUM"; return(ENUM); }
+#line 54 "src/lexer.l"
+{ count(); current_token_type="ENUM"; return(ENUM); }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 55 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="EXTERN"; return(EXTERN); }
+#line 55 "src/lexer.l"
+{ count(); current_token_type="EXTERN"; return(EXTERN); }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 56 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="FLOAT"; return(FLOAT); }
+#line 56 "src/lexer.l"
+{ count(); current_token_type="FLOAT"; return(FLOAT); }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 57 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="FOR"; return(FOR); }
+#line 57 "src/lexer.l"
+{ count(); current_token_type="FOR"; return(FOR); }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 58 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="GOTO"; return(GOTO); }
+#line 58 "src/lexer.l"
+{ count(); current_token_type="GOTO"; return(GOTO); }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 59 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="IF"; return(IF); }
+#line 59 "src/lexer.l"
+{ count(); current_token_type="IF"; return(IF); }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 60 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="INT"; return(INT); }
+#line 60 "src/lexer.l"
+{ count(); current_token_type="INT"; return(INT); }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 61 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="LONG"; return(LONG); }
+#line 61 "src/lexer.l"
+{ count(); current_token_type="LONG"; return(LONG); }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 62 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="REGISTER"; return(REGISTER); }
+#line 62 "src/lexer.l"
+{ count(); current_token_type="REGISTER"; return(REGISTER); }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 63 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="RETURN"; return(RETURN); }
+#line 63 "src/lexer.l"
+{ count(); current_token_type="RETURN"; return(RETURN); }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 64 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="SHORT"; return(SHORT); }
+#line 64 "src/lexer.l"
+{ count(); current_token_type="SHORT"; return(SHORT); }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 65 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="SIGNED"; return(SIGNED); }
+#line 65 "src/lexer.l"
+{ count(); current_token_type="SIGNED"; return(SIGNED); }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 66 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="SIZEOF"; return(SIZEOF); }
+#line 66 "src/lexer.l"
+{ count(); current_token_type="SIZEOF"; return(SIZEOF); }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 67 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="STATIC"; return(STATIC); }
+#line 67 "src/lexer.l"
+{ count(); current_token_type="STATIC"; return(STATIC); }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 68 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="STRUCT"; return(STRUCT); }
+#line 68 "src/lexer.l"
+{ count(); current_token_type="STRUCT"; return(STRUCT); }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 69 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="SWITCH"; return(SWITCH); }
+#line 69 "src/lexer.l"
+{ count(); current_token_type="SWITCH"; return(SWITCH); }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 70 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="TYPEDEF"; return(TYPEDEF); }
+#line 70 "src/lexer.l"
+{ count(); current_token_type="TYPEDEF"; return(TYPEDEF); }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 71 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="UNION"; return(UNION); }
+#line 71 "src/lexer.l"
+{ count(); current_token_type="UNION"; return(UNION); }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 72 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="UNSIGNED"; return(UNSIGNED); }
+#line 72 "src/lexer.l"
+{ count(); current_token_type="UNSIGNED"; return(UNSIGNED); }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 73 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="UNTIL"; return(UNTIL); }
+#line 73 "src/lexer.l"
+{ count(); current_token_type="UNTIL"; return(UNTIL); }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 74 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="VOID"; return(VOID); }
+#line 74 "src/lexer.l"
+{ count(); current_token_type="VOID"; return(VOID); }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 75 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="VOLATILE"; return(VOLATILE); }
+#line 75 "src/lexer.l"
+{ count(); current_token_type="VOLATILE"; return(VOLATILE); }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 76 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="WHILE"; return(WHILE); }
+#line 76 "src/lexer.l"
+{ count(); current_token_type="WHILE"; return(WHILE); }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 78 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
+#line 78 "src/lexer.l"
+{ count(); current_token_type="IDENTIFIER"; return(check_type()); }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 80 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+#line 80 "src/lexer.l"
+{ count(); current_token_type="CONSTANT"; return(CONSTANT); }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 81 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+#line 81 "src/lexer.l"
+{ count(); current_token_type="CONSTANT"; return(CONSTANT); }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 82 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+#line 82 "src/lexer.l"
+{ count(); current_token_type="CONSTANT"; return(CONSTANT); }
 	YY_BREAK
 case 40:
 /* rule 40 can match eol */
 YY_RULE_SETUP
-#line 83 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+#line 83 "src/lexer.l"
+{ count(); current_token_type="CONSTANT"; return(CONSTANT); }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 85 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+#line 85 "src/lexer.l"
+{ count(); current_token_type="CONSTANT"; return(CONSTANT); }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 86 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+#line 86 "src/lexer.l"
+{ count(); current_token_type="CONSTANT"; return(CONSTANT); }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 87 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+#line 87 "src/lexer.l"
+{ count(); current_token_type="CONSTANT"; return(CONSTANT); }
 	YY_BREAK
 case 44:
 /* rule 44 can match eol */
 YY_RULE_SETUP
-#line 89 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
+#line 89 "src/lexer.l"
+{ count(); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 91 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="ELLIPSIS"; return(ELLIPSIS); }
+#line 91 "src/lexer.l"
+{ count(); current_token_type="ELLIPSIS"; return(ELLIPSIS); }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 92 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="RIGHT_ASSIGN"; return(RIGHT_ASSIGN); }
+#line 92 "src/lexer.l"
+{ count(); current_token_type="RIGHT_ASSIGN"; return(RIGHT_ASSIGN); }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 93 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="LEFT_ASSIGN"; return(LEFT_ASSIGN); }
+#line 93 "src/lexer.l"
+{ count(); current_token_type="LEFT_ASSIGN"; return(LEFT_ASSIGN); }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 94 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="ADD_ASSIGN"; return(ADD_ASSIGN); }
+#line 94 "src/lexer.l"
+{ count(); current_token_type="ADD_ASSIGN"; return(ADD_ASSIGN); }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 95 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="SUB_ASSIGN"; return(SUB_ASSIGN); }
+#line 95 "src/lexer.l"
+{ count(); current_token_type="SUB_ASSIGN"; return(SUB_ASSIGN); }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 96 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="MUL_ASSIGN"; return(MUL_ASSIGN); }
+#line 96 "src/lexer.l"
+{ count(); current_token_type="MUL_ASSIGN"; return(MUL_ASSIGN); }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 97 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="DIV_ASSIGN"; return(DIV_ASSIGN); }
+#line 97 "src/lexer.l"
+{ count(); current_token_type="DIV_ASSIGN"; return(DIV_ASSIGN); }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 98 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="MOD_ASSIGN"; return(MOD_ASSIGN); }
+#line 98 "src/lexer.l"
+{ count(); current_token_type="MOD_ASSIGN"; return(MOD_ASSIGN); }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 99 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="AND_ASSIGN"; return(AND_ASSIGN); }
+#line 99 "src/lexer.l"
+{ count(); current_token_type="AND_ASSIGN"; return(AND_ASSIGN); }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 100 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="XOR_ASSIGN"; return(XOR_ASSIGN); }
+#line 100 "src/lexer.l"
+{ count(); current_token_type="XOR_ASSIGN"; return(XOR_ASSIGN); }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 101 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="OR_ASSIGN"; return(OR_ASSIGN); }
+#line 101 "src/lexer.l"
+{ count(); current_token_type="OR_ASSIGN"; return(OR_ASSIGN); }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 102 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="RIGHT_OP"; return(RIGHT_OP); }
+#line 102 "src/lexer.l"
+{ count(); current_token_type="RIGHT_OP"; return(RIGHT_OP); }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 103 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="LEFT_OP"; return(LEFT_OP); }
+#line 103 "src/lexer.l"
+{ count(); current_token_type="LEFT_OP"; return(LEFT_OP); }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 104 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="INC_OP"; return(INC_OP); }
+#line 104 "src/lexer.l"
+{ count(); current_token_type="INC_OP"; return(INC_OP); }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 105 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="DEC_OP"; return(DEC_OP); }
+#line 105 "src/lexer.l"
+{ count(); current_token_type="DEC_OP"; return(DEC_OP); }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 106 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="PTR_OP"; return(PTR_OP); }
+#line 106 "src/lexer.l"
+{ count(); current_token_type="PTR_OP"; return(PTR_OP); }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 107 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="AND_OP"; return(AND_OP); }
+#line 107 "src/lexer.l"
+{ count(); current_token_type="AND_OP"; return(AND_OP); }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 108 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="OR_OP"; return(OR_OP); }
+#line 108 "src/lexer.l"
+{ count(); current_token_type="OR_OP"; return(OR_OP); }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 109 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="LE_OP"; return(LE_OP); }
+#line 109 "src/lexer.l"
+{ count(); current_token_type="LE_OP"; return(LE_OP); }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 110 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="GE_OP"; return(GE_OP); }
+#line 110 "src/lexer.l"
+{ count(); current_token_type="GE_OP"; return(GE_OP); }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 111 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="EQ_OP"; return(EQ_OP); }
+#line 111 "src/lexer.l"
+{ count(); current_token_type="EQ_OP"; return(EQ_OP); }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 112 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="NE_OP"; return(NE_OP); }
+#line 112 "src/lexer.l"
+{ count(); current_token_type="NE_OP"; return(NE_OP); }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 113 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type=";"; return(';'); }
+#line 113 "src/lexer.l"
+{ count(); current_token_type=";"; return(';'); }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 114 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="{"; return('{'); }
+#line 114 "src/lexer.l"
+{ count(); current_token_type="{"; return('{'); }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 115 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="}"; return('}'); }
+#line 115 "src/lexer.l"
+{ count(); current_token_type="}"; return('}'); }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 116 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type=","; return(','); }
+#line 116 "src/lexer.l"
+{ count(); current_token_type=","; return(','); }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 117 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type=":"; return(':'); }
+#line 117 "src/lexer.l"
+{ count(); current_token_type=":"; return(':'); }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 118 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="="; return('='); }
+#line 118 "src/lexer.l"
+{ count(); current_token_type="="; return('='); }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 119 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="("; return('('); }
+#line 119 "src/lexer.l"
+{ count(); current_token_type="("; return('('); }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 120 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type=")"; return(')'); }
+#line 120 "src/lexer.l"
+{ count(); current_token_type=")"; return(')'); }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 121 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="["; return('['); }
+#line 121 "src/lexer.l"
+{ count(); current_token_type="["; return('['); }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 122 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="]"; return(']'); }
+#line 122 "src/lexer.l"
+{ count(); current_token_type="]"; return(']'); }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 123 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="."; return('.'); }
+#line 123 "src/lexer.l"
+{ count(); current_token_type="."; return('.'); }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 124 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="&"; return('&'); }
+#line 124 "src/lexer.l"
+{ count(); current_token_type="&"; return('&'); }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 125 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="!"; return('!'); }
+#line 125 "src/lexer.l"
+{ count(); current_token_type="!"; return('!'); }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 126 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="~"; return('~'); }
+#line 126 "src/lexer.l"
+{ count(); current_token_type="~"; return('~'); }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 127 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="-"; return('-'); }
+#line 127 "src/lexer.l"
+{ count(); current_token_type="-"; return('-'); }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 128 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="+"; return('+'); }
+#line 128 "src/lexer.l"
+{ count(); current_token_type="+"; return('+'); }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 129 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="*"; return('*'); }
+#line 129 "src/lexer.l"
+{ count(); current_token_type="*"; return('*'); }
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 130 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="/"; return('/'); }
+#line 130 "src/lexer.l"
+{ count(); current_token_type="/"; return('/'); }
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 131 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="%"; return('%'); }
+#line 131 "src/lexer.l"
+{ count(); current_token_type="%"; return('%'); }
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 132 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="<"; return('<'); }
+#line 132 "src/lexer.l"
+{ count(); current_token_type="<"; return('<'); }
 	YY_BREAK
 case 87:
 YY_RULE_SETUP
-#line 133 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type=">"; return('>'); }
+#line 133 "src/lexer.l"
+{ count(); current_token_type=">"; return('>'); }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 134 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="^"; return('^'); }
+#line 134 "src/lexer.l"
+{ count(); current_token_type="^"; return('^'); }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 135 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="|"; return('|'); }
+#line 135 "src/lexer.l"
+{ count(); current_token_type="|"; return('|'); }
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 136 "lexer.l"
-{ count(); yylval.str = strdup(yytext); current_token_type="?"; return('?'); }
+#line 136 "src/lexer.l"
+{ count(); current_token_type="?"; return('?'); }
 	YY_BREAK
 case 91:
 /* rule 91 can match eol */
 YY_RULE_SETUP
-#line 138 "lexer.l"
+#line 138 "src/lexer.l"
 { count(); }
 	YY_BREAK
 case 92:
 YY_RULE_SETUP
-#line 140 "lexer.l"
+#line 140 "src/lexer.l"
 { count(); reportError();}
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 142 "lexer.l"
+#line 142 "src/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1402 "lexer.cpp"
+#line 1402 "build/lexer.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2403,7 +2403,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 142 "lexer.l"
+#line 142 "src/lexer.l"
 
 
 void reportError() {
@@ -2430,58 +2430,58 @@ int check_type()
 	return(IDENTIFIER);
 }
 
-// int main(int argc, char *argv[])
-// {
-// 	if(argc != 3)
-// 	{
-// 		std::cerr << "Usage : ./lexer <input_file> <output_file>\n";
-// 		return 1;
-// 	}
-// 	yyin = fopen(argv[1], "r");
-// 	if(!yyin)
-// 	{
-// 		std::cerr << "Error : Can't open input file "<<argv[1]<<"\n";
-// 		return 1;
-// 	}
-// 	std::ofstream out(argv[2]);
-// 	if(!out)
-// 	{
-// 		std::cerr << "Error : Can't open output file "<<argv[2]<<"\n";
-// 		return 1;
-// 	}
-// 	std::unordered_map<std::string, TOKEN> symbol_table;
-// 	std::vector<TOKEN> tokens;
-// 	int token_id;
-// 	while((token_id = yylex()) != 0)
-// 	{
-// 		TOKEN token;
-// 		token.token_type = current_token_type;
-// 		token.lexeme = std::string(yytext);
-// 		token.line = line;
-// 		token.column = column - yyleng;
-// 		if(symbol_table.find(token.lexeme) == symbol_table.end())
-// 			symbol_table[token.lexeme] = token;	
-// 		tokens.push_back(token);
-// 	}
-// 	if (has_error)
-// 	{
-// 		out << "Lexical errors printed on stdout.\n";
-// 		return 1;
-// 	}
-// 	out << "Lexical Analysis for " << argv[1] << "\n\n";
-// 	out << std::left 
-//     	<< std::setw(20) << "Token" 
-//     	<< std::setw(40) << "Lexeme" 
-//     	<< std::setw(10) << "Line" 
-//     	<< std::setw(10) << "Column" << "\n"
-//     	<< std::string(80, '-') << "\n";
-// 	for(auto &token : tokens)
-// 	{
-// 		out << std::left 
-// 			<< std::setw(20) << token.token_type
-// 			<< std::setw(40) << token.lexeme
-// 			<< std::setw(10) << token.line
-// 			<< std::setw(10) << token.column << "\n";
-// 	}
-// 	return 0;
-// }
+int main(int argc, char *argv[])
+{
+	if(argc != 3)
+	{
+		std::cerr << "Usage : ./lexer <input_file> <output_file>\n";
+		return 1;
+	}
+	yyin = fopen(argv[1], "r");
+	if(!yyin)
+	{
+		std::cerr << "Error : Can't open input file "<<argv[1]<<"\n";
+		return 1;
+	}
+	std::ofstream out(argv[2]);
+	if(!out)
+	{
+		std::cerr << "Error : Can't open output file "<<argv[2]<<"\n";
+		return 1;
+	}
+	std::unordered_map<std::string, TOKEN> symbol_table;
+	std::vector<TOKEN> tokens;
+	int token_id;
+	while((token_id = yylex()) != 0)
+	{
+		TOKEN token;
+		token.token_type = current_token_type;
+		token.lexeme = std::string(yytext);
+		token.line = line;
+		token.column = column - yyleng;
+		if(symbol_table.find(token.lexeme) == symbol_table.end())
+			symbol_table[token.lexeme] = token;	
+		tokens.push_back(token);
+	}
+	if (has_error)
+	{
+		out << "Lexical errors printed on stdout.\n";
+		return 1;
+	}
+	out << "Lexical Analysis for " << argv[1] << "\n\n";
+	out << std::left 
+    	<< std::setw(20) << "Token" 
+    	<< std::setw(40) << "Lexeme" 
+    	<< std::setw(10) << "Line" 
+    	<< std::setw(10) << "Column" << "\n"
+    	<< std::string(80, '-') << "\n";
+	for(auto &token : tokens)
+	{
+		out << std::left 
+			<< std::setw(20) << token.token_type
+			<< std::setw(40) << token.lexeme
+			<< std::setw(10) << token.line
+			<< std::setw(10) << token.column << "\n";
+	}
+	return 0;
+}
