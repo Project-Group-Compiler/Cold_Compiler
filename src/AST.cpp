@@ -28,7 +28,7 @@ Node* createASTNode(const std::string& str, std::vector<Data>* v) {
             format += c;
             if (c == '\\') format += c;
         }
-        
+        node->node_name = format;
         if (str[0] == '"') { // String literal
             std::string s = format.substr(1, format.size() - 2);
             std::fprintf(dotfile, "\t%lld [label=\"\\\"%s\\\"\" shape=box style=filled color=\"dodgerblue\" fillcolor=\"lightyellow\"]\n", 

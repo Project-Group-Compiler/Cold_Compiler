@@ -1,5 +1,7 @@
 
 int main(){
+    const int a=5;
+    int* b;
     printf("ehllo world");
     //pointer and const not working
     //unterminated string
@@ -7,6 +9,6 @@ int main(){
     // kll";
     // char* b = "defgh";
     // int* a;
-    const int a=5;
+    
     return 0;
 }
