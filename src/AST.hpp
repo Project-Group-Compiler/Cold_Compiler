@@ -21,5 +21,4 @@ struct Data{
 void beginAST();
 void endAST();
 void insertAttr(std::vector<Data>& v, Node* node, const std::string& str, bool isNode);
-Node* createLeaf(const std::string& str);
-Node* createNode(const std::string& str, std::vector<Data>& v);
+Node* createASTNode(const std::string& str, std::vector<Data>* v = nullptr);

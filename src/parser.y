@@ -72,13 +72,13 @@ extern FILE* yyin;
 
 primary_expression
     : IDENTIFIER {
-    	$$ = createLeaf($1);
+    	$$ = createASTNode($1);
     }
 	| CONSTANT 	{
-		$$ = createLeaf($1);
+		$$ = createASTNode($1);
 	}
 	| STRING_LITERAL {
-		$$ = createLeaf($1);
+		$$ = createASTNode($1);
 	}
 	| '(' expression ')' {
 		$$ = $2;
@@ -93,7 +93,7 @@ postfix_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("postfix_expression", attr);
+		$$ = createASTNode("postfix_expression", &attr);
 	}
 	| postfix_expression '(' ')' {
 		$$ = $1;
@@ -102,29 +102,29 @@ postfix_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("postfix_expression", attr);
+		$$ = createASTNode("postfix_expression", &attr);
 	}
 	| postfix_expression '.' IDENTIFIER {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, createLeaf($3), "", 1);
-		$$ = createNode("expression.id", attr);
+		insertAttr(attr, createASTNode($3), "", 1);
+		$$ = createASTNode("expression.id", &attr);
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, createLeaf($3), "", 1);
-		$$ = createNode($2, attr);
+		insertAttr(attr, createASTNode($3), "", 1);
+		$$ = createASTNode($2, &attr);
 	}
 	| postfix_expression INC_OP {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
-		$$ = createNode($2, attr);
+		$$ = createASTNode($2, &attr);
 	}
 	| postfix_expression DEC_OP {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
-		$$ = createNode($2, attr);
+		$$ = createASTNode($2, &attr);
 	}
 	;
 
@@ -136,7 +136,7 @@ argument_expression_list
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("argument_list", attr);
+		$$ = createASTNode("argument_list", &attr);
 	}
 	;
 
@@ -147,49 +147,49 @@ unary_expression
 	| INC_OP unary_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $2, "", 1);
-		$$ = createNode($1,attr);
+		$$ = createASTNode($1, &attr);
 	}
 	| DEC_OP unary_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $2, "", 1);
-		$$ = createNode($1,attr);
+		$$ = createASTNode($1, &attr);
 	}
 	| unary_operator cast_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
-		$$ = createNode("unary_exp",attr);
+		$$ = createASTNode("unary_exp", &attr);
 	}
 	| SIZEOF unary_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $2, "", 1);
-		$$ = createNode($1,attr);
+		$$ = createASTNode($1, &attr);
 	}
 	| SIZEOF '(' type_name ')' {
 		std::vector<Data> attr;
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode($1,attr);
+		$$ = createASTNode($1, &attr);
 	}
 	;
 
 unary_operator
 	: '&' {
-		$$ = createLeaf("&");
+		$$ = createASTNode("&");
 	}
 	| '*' {
-		$$ = createLeaf("*");
+		$$ = createASTNode("*");
 	}
 	| '+' {
-		$$ = createLeaf("+");
+		$$ = createASTNode("+");
 	}
 	| '-' {
-		$$ = createLeaf("-");
+		$$ = createASTNode("-");
 	}
 	| '~' {
-		$$ = createLeaf("~");
+		$$ = createASTNode("~");
 	}
 	| '!' {
-		$$ = createLeaf("!");
+		$$ = createASTNode("!");
 	}
 	;
 
@@ -201,7 +201,7 @@ cast_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $2, "", 1);
 		insertAttr(attr, $4, "", 1);
-		$$ = createNode("cast_expression" ,attr);
+		$$ = createASTNode("cast_expression", &attr);
 	}
 	;
 
@@ -213,19 +213,19 @@ multiplicative_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("*" ,attr);
+		$$ = createASTNode("*", &attr);
 	}
 	| multiplicative_expression '/' cast_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("/" ,attr);
+		$$ = createASTNode("/", &attr);
 	}
 	| multiplicative_expression '%' cast_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("%" ,attr);
+		$$ = createASTNode("%", &attr);
 	}
 	;
 
@@ -237,13 +237,13 @@ additive_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("+" ,attr);
+		$$ = createASTNode("+", &attr);
 	}
 	| additive_expression '-' multiplicative_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("-" ,attr);
+		$$ = createASTNode("-", &attr);
 	}
 	;
 
@@ -255,13 +255,13 @@ shift_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode($2 ,attr);
+		$$ = createASTNode($2, &attr);
 	}
 	| shift_expression RIGHT_OP additive_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode($2 ,attr);
+		$$ = createASTNode($2, &attr);
 	}
 	; 
 
@@ -273,25 +273,25 @@ relational_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("<" ,attr);
+		$$ = createASTNode("<", &attr);
 	}
 	| relational_expression '>' shift_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode(">" ,attr);
+		$$ = createASTNode(">", &attr);
 	}
 	| relational_expression LE_OP shift_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode($2 ,attr);
+		$$ = createASTNode($2, &attr);
 	}
 	| relational_expression GE_OP shift_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode($2 ,attr);
+		$$ = createASTNode($2, &attr);
 	}
 	;
 
@@ -303,13 +303,13 @@ equality_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode($2 ,attr);
+		$$ = createASTNode($2, &attr);
 	}
 	| equality_expression NE_OP relational_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode($2 ,attr);
+		$$ = createASTNode($2, &attr);
 	}
 	;
 
@@ -321,7 +321,7 @@ and_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("&",attr);
+		$$ = createASTNode("&", &attr);
 	}
 	;
 
@@ -333,7 +333,7 @@ exclusive_or_expression
 																			std::vector<Data> attr;
 																			insertAttr(attr, $1, "", 1);
 																			insertAttr(attr, $3, "", 1);
-																			$$ = createNode("^",attr);
+																			$$ = createASTNode("^", &attr);
 																		}
 	;
 
@@ -343,7 +343,7 @@ inclusive_or_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("|",attr);
+		$$ = createASTNode("|", &attr);
 	}
 	;
 
@@ -353,7 +353,7 @@ logical_and_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("&&",attr);
+		$$ = createASTNode("&&", &attr);
 	}
 	;
 
@@ -363,7 +363,7 @@ logical_or_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("||",attr);
+		$$ = createASTNode("||", &attr);
 	}
 	;
 
@@ -374,7 +374,7 @@ conditional_expression
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		insertAttr(attr, $5, "", 1);
-		$$ = createNode("ternary operator",attr);
+		$$ = createASTNode("ternary operator", &attr);
 	}
 	;
 
@@ -384,7 +384,7 @@ assignment_expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode($2,attr);
+		$$ = createASTNode($2, &attr);
 	}
 	;
 
@@ -410,7 +410,7 @@ expression
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("expression",attr);
+		$$ = createASTNode("expression", &attr);
 	}
 	;
 
@@ -424,7 +424,7 @@ declaration
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
-		$$ = createNode("declaration",attr);
+		$$ = createASTNode("declaration", &attr);
 	}
 	;
 
@@ -434,21 +434,21 @@ declaration_specifiers
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
-		$$ = createNode("declaration_specifiers",attr);
+		$$ = createASTNode("declaration_specifiers", &attr);
 	}
 	| type_specifier{ $$ = $1; }
 	| type_specifier declaration_specifiers{
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
-		$$ = createNode("declaration_specifiers",attr);
+		$$ = createASTNode("declaration_specifiers", &attr);
 	}
 	| type_qualifier{ $$ = $1; }
 	| type_qualifier declaration_specifiers{
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
-		$$ = createNode("declaration_specifiers",attr);
+		$$ = createASTNode("declaration_specifiers", &attr);
 	}
 	;
 
@@ -458,7 +458,7 @@ init_declarator_list
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = createNode("init_declarator_list",attr);
+		$$ = createASTNode("init_declarator_list", &attr);
 	}
 	;
 
@@ -468,55 +468,55 @@ init_declarator
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("=", v);
+		$$ = createASTNode("=", &v);
 	}
 	;
 
 storage_class_specifier
-	: TYPEDEF	{ $$ = createLeaf($1);}
-	| EXTERN	{ $$ = createLeaf($1);}
-	| STATIC	{ $$ = createLeaf($1);}
-	| AUTO		{ $$ = createLeaf($1);}
-	| REGISTER	{ $$ = createLeaf($1);}
+	: TYPEDEF	{ $$ = createASTNode($1);}
+	| EXTERN	{ $$ = createASTNode($1);}
+	| STATIC	{ $$ = createASTNode($1);}
+	| AUTO		{ $$ = createASTNode($1);}
+	| REGISTER	{ $$ = createASTNode($1);}
 	;
 
 type_specifier
-	: VOID			{$$ = createLeaf($1);}	
-	| CHAR			{$$ = createLeaf($1);}	
-	| SHORT			{$$ = createLeaf($1);}	
+	: VOID			{$$ = createASTNode($1);}	
+	| CHAR			{$$ = createASTNode($1);}	
+	| SHORT			{$$ = createASTNode($1);}	
 	| INT			{
 		if (!$1) {
 			yyerror("Parser error: NULL INT token received");
 			YYABORT;
 		}
-		$$ = createLeaf($1);
+		$$ = createASTNode($1);
 	}
-	| LONG			{$$ = createLeaf($1);}
-	| FLOAT			{$$ = createLeaf($1);}
-	| DOUBLE		{$$ = createLeaf($1);}
-	| SIGNED		{$$ = createLeaf($1);}
-	| UNSIGNED		{$$ = createLeaf($1);}
+	| LONG			{$$ = createASTNode($1);}
+	| FLOAT			{$$ = createASTNode($1);}
+	| DOUBLE		{$$ = createASTNode($1);}
+	| SIGNED		{$$ = createASTNode($1);}
+	| UNSIGNED		{$$ = createASTNode($1);}
 	| struct_or_union_specifier	{$$ = $1;}	
 	| enum_specifier			{$$ = $1;}
-	| TYPE_NAME		{$$ = createLeaf($1);}	
+	| TYPE_NAME		{$$ = createASTNode($1);}	
 	;
 
 struct_or_union_specifier
 	: struct_or_union IDENTIFIER '{' struct_declaration_list '}'	{
 		std::vector<Data> v;
-		insertAttr(v, createLeaf($2), "", 1);
+		insertAttr(v, createASTNode($2), "", 1);
 		insertAttr(v, $4, "", 1);
-		$$ = createNode($1, v);
+		$$ = createASTNode($1, &v);
 	}
 	| struct_or_union '{' struct_declaration_list '}'		{
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
-		$$ = createNode($1, v);
+		$$ = createASTNode($1, &v);
 	}
 	| struct_or_union IDENTIFIER 	{
 		std::vector<Data> v;
-		insertAttr(v, createLeaf($2), "", 1);
-		$$ = createNode($1, v);
+		insertAttr(v, createASTNode($2), "", 1);
+		$$ = createASTNode($1, &v);
 	}
 	;
 
@@ -531,7 +531,7 @@ struct_declaration_list
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("struct_declaration_list", v);
+		$$ = createASTNode("struct_declaration_list", &v);
 	}
 	;
 
@@ -540,7 +540,7 @@ struct_declaration
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("struct_declaration", v);
+		$$ = createASTNode("struct_declaration", &v);
 	}
 	;
 
@@ -549,14 +549,14 @@ specifier_qualifier_list
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("specifier_qualifier_list", v);
+		$$ = createASTNode("specifier_qualifier_list", &v);
 	}
 	| type_specifier	{ $$ = $1; }
 	| type_qualifier specifier_qualifier_list 	{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("specifier_qualifier_list", v);
+		$$ = createASTNode("specifier_qualifier_list", &v);
 	}
 	| type_qualifier	{ $$ = $1; }
 	;
@@ -567,7 +567,7 @@ struct_declarator_list
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("struct_declarator_list", v);
+		$$ = createASTNode("struct_declarator_list", &v);
 	}
 	;
 
@@ -578,7 +578,7 @@ struct_declarator
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode(":", v);
+		$$ = createASTNode(":", &v);
 	}
 	;
 
@@ -586,18 +586,18 @@ enum_specifier
 	: ENUM '{' enumerator_list '}'		{
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
-		$$ = createNode($1, v);
+		$$ = createASTNode($1, &v);
 	}
 	| ENUM IDENTIFIER '{' enumerator_list '}'	{
 		std::vector<Data> v;
-		insertAttr(v, createLeaf($2), "", 1);
+		insertAttr(v, createASTNode($2), "", 1);
 		insertAttr(v, $4, "", 1);
-		$$ = createNode($1, v);
+		$$ = createASTNode($1, &v);
 	}
 	| ENUM IDENTIFIER {
 		std::vector<Data> v;
-		insertAttr(v, createLeaf($2), "", 1);
-		$$ = createNode($1, v);
+		insertAttr(v, createASTNode($2), "", 1);
+		$$ = createASTNode($1, &v);
 	}
 	;
 
@@ -607,23 +607,23 @@ enumerator_list
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("enumerator_list", v);
+		$$ = createASTNode("enumerator_list", &v);
 	}
 	;
 
 enumerator
-	: IDENTIFIER	{ $$ = createLeaf($1); }
+	: IDENTIFIER	{ $$ = createASTNode($1); }
 	| IDENTIFIER '=' constant_expression 	{
 		std::vector<Data> v;
-		insertAttr(v, createLeaf($1), "", 1);
+		insertAttr(v, createASTNode($1), "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("=", v);
+		$$ = createASTNode("=", &v);
 	}
 	;
 
 type_qualifier
-	: CONST		{ $$ = createLeaf($1); }
-	| VOLATILE	{ $$ = createLeaf($1); }
+	: CONST		{ $$ = createASTNode($1); }
+	| VOLATILE	{ $$ = createASTNode($1); }
 	;
 
 
@@ -632,7 +632,7 @@ declarator
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("declarator", v);
+		$$ = createASTNode("declarator", &v);
 	}
 	| direct_declarator {
 		$$ = $1 ;
@@ -642,7 +642,7 @@ declarator
 
 direct_declarator
 	: IDENTIFIER {
-		$$ = createLeaf($1);
+		$$ = createASTNode($1);
 	}
 	| '(' declarator ')'  {
 		$$ = $2 ;
@@ -650,60 +650,60 @@ direct_declarator
 	| direct_declarator '[' constant_expression ']'{
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, "", 1);
-		Node* node = createNode("[ ]", v2);
+		Node* node = createASTNode("[ ]", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
-		$$ = createNode("direct_declarator", v);
+		$$ = createASTNode("direct_declarator", &v);
 	}
 	| direct_declarator '[' ']'{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "[ ]", 0);
-		$$ = createNode("direct_declarator", v);
+		$$ = createASTNode("direct_declarator", &v);
 	}
 	| direct_declarator '(' parameter_type_list ')'{
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, "", 1);
-		Node* node = createNode("( )", v2);
+		Node* node = createASTNode("( )", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
-		$$ = createNode("direct_declarator", v);
+		$$ = createASTNode("direct_declarator", &v);
 	}
 	| direct_declarator '(' identifier_list ')'{
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, "", 1);
-		Node* node = createNode("( )", v2);
+		Node* node = createASTNode("( )", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
-		$$ = createNode("direct_declarator", v);
+		$$ = createASTNode("direct_declarator", &v);
 	}
 	| direct_declarator '(' ')'{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "( )", 0);
-		$$ = createNode("direct_declarator", v);
+		$$ = createASTNode("direct_declarator", &v);
 	}
 	;
 
 pointer
 	: '*' {
-		$$ = createLeaf("*(Pointer)");
+		$$ = createASTNode("*(Pointer)");
 	}
 	| '*' type_qualifier_list{
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
-		$$ = createNode("*(Pointer)",v);
+		$$ = createASTNode("*(Pointer)",&v);
 	}
 	| '*' pointer{
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
-		$$ = createNode("*(Pointer)",v);
+		$$ = createASTNode("*(Pointer)",&v);
 	}
 	| '*' type_qualifier_list pointer{
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
 		insertAttr(v,$3,"",1);
-		$$ = createNode("*(Pointer)",v);
+		$$ = createASTNode("*(Pointer)",&v);
 	}
 	;
 
@@ -715,7 +715,7 @@ type_qualifier_list
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
-		$$ = createNode("type_qualifier_list",v);
+		$$ = createASTNode("type_qualifier_list",&v);
 	}
 	;
 
@@ -727,8 +727,8 @@ parameter_type_list
 	| parameter_list ',' ELLIPSIS{
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
-		insertAttr(v, createLeaf($3), "", 1);
-		$$ = createNode("parameter_type_list",v);
+		insertAttr(v, createASTNode($3), "", 1);
+		$$ = createASTNode("parameter_type_list",&v);
 	}
 	;
 
@@ -740,7 +740,7 @@ parameter_list
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("parameter_list",v);
+		$$ = createASTNode("parameter_list",&v);
 	}
 	;
 
@@ -749,13 +749,13 @@ parameter_declaration
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("parameter_declaration",v);
+		$$ = createASTNode("parameter_declaration",&v);
 	}
 	| declaration_specifiers abstract_declarator{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("parameter_declaration",v);
+		$$ = createASTNode("parameter_declaration",&v);
 	}
 	| declaration_specifiers {
 		$$ = $1;
@@ -764,13 +764,13 @@ parameter_declaration
 
 identifier_list
 	: IDENTIFIER {
-		$$ =createLeaf($1);
+		$$ =createASTNode($1);
 	}
 	| identifier_list ',' IDENTIFIER{
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
-		insertAttr(v,createLeaf($3),"",1);
-		$$ = createNode("identifier_list",v);
+		insertAttr(v,createASTNode($3),"",1);
+		$$ = createASTNode("identifier_list",&v);
 	}
 	;
 
@@ -782,7 +782,7 @@ type_name
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
-		$$ = createNode("type_name",v);
+		$$ = createASTNode("type_name",&v);
 	}
 	;
 
@@ -797,7 +797,7 @@ abstract_declarator
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
-		$$ = createNode("abstract_declarator",v);
+		$$ = createASTNode("abstract_declarator",&v);
 	}
 	;
 
@@ -806,7 +806,7 @@ direct_abstract_declarator
 		$$ = $2;
 	}
 	| '[' ']'{
-		$$ = createLeaf("[ ]") ;
+		$$ = createASTNode("[ ]") ;
 	}
 	| '[' constant_expression ']' {
 		$$ = $2;
@@ -815,18 +815,18 @@ direct_abstract_declarator
 		std::vector<Data> v;
 		insertAttr(v,NULL,"[ ]",0);
 		insertAttr(v,$1,"",1);
-		$$ = createNode("direct_abstract_declarator",v);
+		$$ = createASTNode("direct_abstract_declarator",&v);
 	}
 	| direct_abstract_declarator '[' constant_expression ']'{
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, NULL, 1);
-		Node* node = createNode("[ ]", v2);
+		Node* node = createASTNode("[ ]", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
-		$$ = createNode("direct_abstract_declarator", v);
+		$$ = createASTNode("direct_abstract_declarator", &v);
 	}
 	| '(' ')'{
-		$$ = createLeaf("( )") ;
+		$$ = createASTNode("( )") ;
 	}
 	| '(' parameter_type_list ')'{
 		$$ = $2 ;
@@ -835,15 +835,15 @@ direct_abstract_declarator
 		std::vector<Data> v;
 		insertAttr(v, NULL, "( )", 0);
 		insertAttr(v, $1, "", 1);
-		$$ = createNode("direct_abstract_declarator",v);
+		$$ = createASTNode("direct_abstract_declarator",&v);
 	}
 	| direct_abstract_declarator '(' parameter_type_list ')'{
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, "", 1);
-		Node* node = createNode("( )", v2);
+		Node* node = createASTNode("( )", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
-		$$ = createNode("direct_abstract_declarator", v);
+		$$ = createASTNode("direct_abstract_declarator", &v);
 	}
 	;
 
@@ -868,7 +868,7 @@ initializer_list
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("initializer_list", v);
+		$$ = createASTNode("initializer_list", &v);
 	}
 	;
 
@@ -884,33 +884,33 @@ statement
 labeled_statement
 	: IDENTIFIER ':' statement	{
 		std::vector<Data> v;
-		insertAttr(v, createLeaf($1), "", 1);
+		insertAttr(v, createASTNode($1), "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("labeled_statement", v);
+		$$ = createASTNode("labeled_statement", &v);
 	}
 	| CASE constant_expression ':' statement	{
 		std::vector<Data> v;
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $4, "", 1);
-		$$ = createNode("case", v);
+		$$ = createASTNode("case", &v);
 	}
 	| DEFAULT ':' statement	{
 		std::vector<Data> v;
 		insertAttr(v, NULL, "default", 0);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("case", v);
+		$$ = createASTNode("case", &v);
 	}
 	;
 
 compound_statement
-	: '{' '}'	{$$ = createLeaf("{ }");}
+	: '{' '}'	{$$ = createASTNode("{ }");}
 	| '{' statement_list '}'	{$$ = $2;}
 	| '{' declaration_list '}'	{$$ = $2;}
 	| '{' declaration_list statement_list '}'	{
 		std::vector<Data> v;
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("compound_statement", v);
+		$$ = createASTNode("compound_statement", &v);
 	}
 	;
 
@@ -920,7 +920,7 @@ declaration_list
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("declaration_list", v);
+		$$ = createASTNode("declaration_list", &v);
 	}
 	;
 
@@ -930,12 +930,12 @@ statement_list
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("statement_list", v);
+		$$ = createASTNode("statement_list", &v);
 	}
 	;
 
 expression_statement
-	: ';'	{$$ = createLeaf(";");}
+	: ';'	{$$ = createASTNode(";");}
 	| expression ';'	{$$ = $1;}
 	;
 
@@ -944,20 +944,20 @@ selection_statement
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
-		$$ = createNode("if", v);
+		$$ = createASTNode("if", &v);
 	}
 	| IF '(' expression ')' statement ELSE statement	{
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		insertAttr(v, $7, "", 1);
-		$$ = createNode("if-else", v);
+		$$ = createASTNode("if-else", &v);
 	}
 	| SWITCH '(' expression ')' statement	{
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
-		$$ = createNode("switch", v);
+		$$ = createASTNode("switch", &v);
 	}
 	;
 
@@ -966,20 +966,20 @@ iteration_statement
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
-		$$ = createNode("while-loop", v);
+		$$ = createASTNode("while-loop", &v);
 	}
 	| DO statement WHILE '(' expression ')' ';'	{
 		std::vector<Data> v;
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $5, "", 1);
-		$$ = createNode("do-while-loop", v);
+		$$ = createASTNode("do-while-loop", &v);
 	}
 	| FOR '(' expression_statement expression_statement ')' statement	{
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
 		insertAttr(v, $6, "", 1);
-		$$ = createNode("for-loop(w/o update stmt)", v);
+		$$ = createASTNode("for-loop(w/o update stmt)", &v);
 	}
 	| FOR '(' expression_statement expression_statement expression ')' statement	{
 		std::vector<Data> v;
@@ -987,13 +987,13 @@ iteration_statement
 		insertAttr(v, $4, "", 1);
 		insertAttr(v, $5, "", 1);
 		insertAttr(v, $7, "", 1);
-		$$ = createNode("for-loop", v);
+		$$ = createASTNode("for-loop", &v);
 	}
     | UNTIL '(' expression ')' statement { /*** Added UNTIL grammar ***/
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
-		$$ = createNode("until-loop", v);
+		$$ = createASTNode("until-loop", &v);
 	}
 	;
 
@@ -1001,16 +1001,16 @@ jump_statement
 	: GOTO IDENTIFIER ';'	{
 		std::string s;
 		s = (std::string)$1 + " : " + (std::string)$2;
-        $$ = createLeaf(s);
+        $$ = createASTNode(s);
 	}
-	| CONTINUE ';'	{$$ = createLeaf($1);}
-	| BREAK ';'		{$$ = createLeaf($1);}
-	| RETURN ';'	{$$ = createLeaf($1);}
+	| CONTINUE ';'	{$$ = createASTNode($1);}
+	| BREAK ';'		{$$ = createASTNode($1);}
+	| RETURN ';'	{$$ = createASTNode($1);}
 	| RETURN expression ';'	{
 		std::vector<Data> v;
-		insertAttr(v, createLeaf($1), "", 1);
+		insertAttr(v, createASTNode($1), "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("jump_stmt", v);
+		$$ = createASTNode("jump_stmt", &v);
 	}
 	;
 
@@ -1022,7 +1022,7 @@ translation_unit
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("program", v);
+		$$ = createASTNode("program", &v);
 	}
 	;
 
@@ -1038,27 +1038,27 @@ function_definition
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
-		$$ = createNode("function", v);
+		$$ = createASTNode("function", &v);
 	}
 	| declaration_specifiers declarator compound_statement	{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $3, "", 1);
-		$$ = createNode("function (w/o decl_list)", v);
+		$$ = createASTNode("function (w/o decl_list)", &v);
 	}
 	| declarator declaration_list compound_statement	{
 		std::vector<Data> v;
                 insertAttr(v, $1, "", 1);
                 insertAttr(v, $2, "", 1);
                 insertAttr(v, $3, "", 1);
-                $$ = createNode("function (w/o decl_specifiers)", v);
+                $$ = createASTNode("function (w/o decl_specifiers)", &v);
 	}
 	| declarator compound_statement	{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
-		$$ = createNode("function (w/o specifiers and decl_list)", v);
+		$$ = createASTNode("function (w/o specifiers and decl_list)", &v);
 	}
 	;
 
