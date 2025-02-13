@@ -266,28 +266,28 @@ shift_expression
 	; 
 
 relational_expression
-	: shift_expression {
+	: inclusive_or_expression {
 		 $$ = $1;
 	}
-	| relational_expression '<' shift_expression {
+	| relational_expression '<' inclusive_or_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode("<", &attr);
 	}
-	| relational_expression '>' shift_expression {
+	| relational_expression '>' inclusive_or_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode(">", &attr);
 	}
-	| relational_expression LE_OP shift_expression {
+	| relational_expression LE_OP inclusive_or_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode($2, &attr);
 	}
-	| relational_expression GE_OP shift_expression {
+	| relational_expression GE_OP inclusive_or_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -314,10 +314,10 @@ equality_expression
 	;
 
 and_expression
-	: equality_expression {	
+	: shift_expression {	
 		$$ = $1; 
 	}
-	| and_expression '&' equality_expression{
+	| and_expression '&' shift_expression{
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -329,12 +329,12 @@ exclusive_or_expression
 	: and_expression {
 		$$ = $1;
 	}
-	| exclusive_or_expression '^' and_expression 						{
-																			std::vector<Data> attr;
-																			insertAttr(attr, $1, "", 1);
-																			insertAttr(attr, $3, "", 1);
-																			$$ = createASTNode("^", &attr);
-																		}
+	| exclusive_or_expression '^' and_expression{
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("^", &attr);
+    }
 	;
 
 inclusive_or_expression
@@ -348,8 +348,8 @@ inclusive_or_expression
 	;
 
 logical_and_expression
-	: inclusive_or_expression {$$ = $1;}
-	| logical_and_expression AND_OP inclusive_or_expression{
+	: equality_expression {$$ = $1;}
+	| logical_and_expression AND_OP equality_expression{
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);

@@ -1,0 +1,12 @@
+
+int main(){
+    printf("ehllo world");
+    //pointer and const not working
+    //unterminated string
+    // char* a="asdf
+    // kll";
+    // char* b = "defgh";
+    // int* a;
+    const int a=5;
+    return 0;
+}

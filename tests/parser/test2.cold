@@ -1,0 +1,17 @@
+
+int main(){
+    /*
+        This is a testcase for checking lexer
+        .//Special Character: @#$%&   
+    */
+    printf("ehllo world"); //checking unterminated string
+    char* a="asdf      
+    kll";
+    return 0;
+}//multiline comment error
+
+/*
+
+ghghgh
+
+*

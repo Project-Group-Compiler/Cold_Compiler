@@ -4,7 +4,7 @@
 #define INF 1000000000 // pre-proccessing directives are not supported thus will raise errors
 
 int main(){
-    int a = 4, b = 10;
+    const int a = 4, b = 10;
     int $c = a + b; // shows invalid symbol error
 
     if(a>b){

@@ -1,0 +1,5 @@
+int main() {
+    int a = 0 == 1 & 2;  // Expected new output: 1 (0 == (1 & 2))
+    printf("Result: %d\n", a);
+    return 0;
+}
