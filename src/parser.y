@@ -16,16 +16,6 @@ typedef struct token_data
 	std::string lexeme;
 } TOKEN;
 
-typedef struct Error {
-    std::string message;
-    int line;
-    int column;
-    std::string type;
-} Error;
-
-std::vector<Error> errors;
-const int MAX_IDENTIFIER_LENGTH = 31;
-const int MAX_NUMBER_LENGTH = 20;
 
 extern char* yytext;
 extern int column;
@@ -42,33 +32,6 @@ extern int yylex();
 extern int yyrestart(FILE*);
 extern FILE* yyin;
 #define YYERROR_VERBOSE
-void add_error(const std::string& message, const std::string& type) {
-    Error err;
-    err.message = message;
-    err.line = line;
-    err.column = column;
-    err.type = type;
-    errors.push_back(err);
-}
-bool check_identifier(const char* text) {
-    if (strlen(text) > MAX_IDENTIFIER_LENGTH) {
-        add_error("Identifier length exceeds maximum allowed length of 31", "Lexical");
-        return false;
-    }
-    if (!isalpha(text[0]) && text[0] != '_') {
-        add_error("Invalid identifier - must begin with letter or underscore", "Lexical");
-        return false;
-    }
-    return true;
-}
-
-bool check_numeric_constant(const char* text) {
-    if (strlen(text) > MAX_NUMBER_LENGTH) {
-        add_error("Numeric constant exceeds maximum allowed length", "Lexical");
-        return false;
-    }
-    return true;
-}
 %}
 
 %union{
@@ -86,6 +49,7 @@ bool check_numeric_constant(const char* text) {
 %token<str> TYPEDEF EXTERN STATIC AUTO REGISTER
 %token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
 %token<str> STRUCT UNION ENUM ELLIPSIS
+%token<str> CLASS PUBLIC PRIVATE PROTECTED EXTENDS
 
 %token<str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 %token<str> UNTIL /*** Added UNTIL token ***/
@@ -101,6 +65,7 @@ bool check_numeric_constant(const char* text) {
 %type<ptr> statement labeled_statement compound_statement declaration_list statement_list expression_statement selection_statement iteration_statement jump_statement translation_unit external_declaration function_definition initializer_list
 %type<ptr> storage_class_specifier
 %type<str> struct_or_union
+%type<ptr> class_specifier class_declaration_list class_declaration member_declaration class_declarator_list class_declarator 
 
 %left ';'
 %expect 1 
@@ -109,25 +74,13 @@ bool check_numeric_constant(const char* text) {
 
 primary_expression
     : IDENTIFIER {
-        if (check_identifier($1)) {
-            $$ = createASTNode($1);
-        } else {
-            yyerror("Invalid identifier");
-        }
+    	$$ = createASTNode($1);
     }
 	| CONSTANT 	{
-		if (check_numeric_constant($1)) {
-            $$ = createASTNode($1);
-        } else {
-            yyerror("Invalid numeric constant");
-        }
+		$$ = createASTNode($1);
 	}
 	| STRING_LITERAL {
-		if (strchr($1, '\n') != nullptr) {
-            yyerror("Unterminated string literal");
-        } else {
-            $$ = createASTNode($1);
-        }
+		$$ = createASTNode($1);
 	}
 	| '(' expression ')' {
 		$$ = $2;
@@ -548,6 +501,7 @@ type_specifier
 	| struct_or_union_specifier	{$$ = $1;}	
 	| enum_specifier			{$$ = $1;}
 	| TYPE_NAME		{$$ = createASTNode($1);}	
+	| class_specifier  {$$ = $1;}	
 	;
 
 struct_or_union_specifier
@@ -631,6 +585,70 @@ struct_declarator
 	}
 	;
 
+class_specifier
+    : CLASS IDENTIFIER '{' class_declaration_list '}' {
+        std::vector<Data> v;
+        insertAttr(v, createASTNode($2), "", 1);
+        insertAttr(v, $4, "", 1);
+        $$ = createASTNode("class", &v);
+    }
+    | CLASS '{' class_declaration_list '}' {
+        std::vector<Data> v;
+        insertAttr(v, $3, "", 1);
+        $$ = createASTNode("class", &v);
+    }
+    | CLASS IDENTIFIER {
+        std::vector<Data> v;
+        insertAttr(v, createASTNode($2), "", 1);
+        $$ = createASTNode("class", &v);
+    }
+    ;
+
+class_declaration_list
+    : class_declaration { $$ = $1; }
+    | class_declaration_list class_declaration {
+        std::vector<Data> v;
+        insertAttr(v, $1, "", 1);
+        insertAttr(v, $2, "", 1);
+        $$ = createASTNode("class_body", &v);
+    }
+    ;
+
+class_declaration
+    : member_declaration ';' {
+        std::vector<Data> v;
+        insertAttr(v, $1, "", 1);
+        $$ = createASTNode("class_declaration", &v);
+    }
+    | function_definition {
+        std::vector<Data> v;
+        insertAttr(v, $1, "", 1);
+        $$ = createASTNode("class_declaration", &v);
+    }
+    ;
+
+member_declaration
+    : specifier_qualifier_list class_declarator_list {
+        std::vector<Data> v;
+        insertAttr(v, $1, "", 1);
+        insertAttr(v, $2, "", 1);
+        $$ = createASTNode("member_declaration", &v);
+    }
+    ;
+class_declarator_list
+    : class_declarator { $$ = $1; }
+    | class_declarator_list ',' class_declarator {
+        std::vector<Data> v;
+        insertAttr(v, $1, "", 1);
+        insertAttr(v, $3, "", 1);
+        $$ = createASTNode("class_declarator_list", &v);
+    }
+    ;
+
+class_declarator
+    : declarator  { $$ = $1; }
+    ;
+
 enum_specifier
 	: ENUM '{' enumerator_list '}'		{
 		std::vector<Data> v;
@@ -691,11 +709,7 @@ declarator
 
 direct_declarator
 	: IDENTIFIER {
-		if (check_identifier($1)) {
-            $$ = createASTNode($1);
-        } else {
-            yyerror("Invalid identifier in declaration");
-        }
+		$$ = createASTNode($1);
 	}
 	| '(' declarator ')'  {
 		$$ = $2 ;
@@ -1170,43 +1184,20 @@ void performLexicalAnalysis(const std::string& filename) {
 
     out.close();
 }
+
 void performParsing() {
-    errors.clear(); // Clear previous errors
-    
     dotfile = fopen("src/AST.dot", "w");
     if (!dotfile) {
-        add_error("Cannot open AST.dot for writing.", "System");
+        print_error("Cannot open AST.dot for writing.");
         return;
     }
 
     beginAST();
-    int parse_result = yyparse();
+    yyparse();
     endAST();
-    fclose(dotfile);
 
-    // Print all collected errors
-    if (!errors.empty()) {
-        std::cerr << "\nFound " << errors.size() << " error(s):\n";
-        for (const auto& err : errors) {
-            std::cerr << "\033[1;31m" << err.type << " Error:\033[0m " 
-                     << err.message << " at line " << err.line 
-                     << ", column " << err.column << "\n";
-        }
-    }
+    fclose(dotfile);
 }
-//void performParsing() {
-//    dotfile = fopen("src/AST.dot", "w");
-//    if (!dotfile) {
-//        print_error("Cannot open AST.dot for writing.");
-//        return;
-//    }
-//
-//    beginAST();
-//    yyparse();
-//    endAST();
-//
-//    fclose(dotfile);
-//}
 
 int main(int argc, char* argv[]) {
     if (argc <= 1) {
@@ -1249,74 +1240,36 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-int yyerror(const char* s) {
-    std::string error_msg(s);
-    std::string error_type;
-    
-    // Categorize the error
-    if (error_msg.find("syntax error") != std::string::npos) {
-        error_type = "Syntax";
-    } else if (error_msg.find("undefined") != std::string::npos) {
-        error_type = "Semantic";
-    } else {
-        error_type = "Lexical";
-    }
-
-    // Print error with location and context
-    std::cerr << "\033[1;31m" << error_type << " Error:\033[0m " << s 
-              << " at line " << line << ", column " << column - yyleng << "\n";
-
-    // Print the line with error
-    if (!currentFilename.empty()) {
-        std::ifstream file(currentFilename);
-        if (file) {
-            std::string line_content;
-            int current_line = 0;
-            while (std::getline(file, line_content) && current_line < line) {
-                current_line++;
-            }
-            if (current_line == line) {
-                std::cerr << line << " | " << line_content << "\n";
-                std::cerr << "    " << std::string(column - yyleng, ' ') << "^\n";
-            }
-            file.close();
-        }
-    }
-
-    // Add error to collection
-    add_error(s, error_type);
-    return 0;
-}
 // Error handling function
-//int yyerror(const char* s) {
-//    std::cerr << "\033[1;31mError:\033[0m " << s << " at line " << line 
-//              << ", column " << column + 1 - (yytext ? strlen(yytext) : 0) 
-//              << std::endl;
-//
-//    if (currentFilename.empty()) {
-//        print_error("Filename not set.");
-//        return -1;
-//    }
-//
-//    std::ifstream file(currentFilename);  
-//    if (!file) {
-//        print_error("Cannot open source file: " + currentFilename);
-//        return -1;
-//    }
-//
-//    std::string curr_line;
-//    int count = 1;
-//    
-//    while (std::getline(file, curr_line)) {
-//        if (count == line) {
-//            std::cerr << "\n" << line << " | " << curr_line << "\n";
-//            std::cerr << "    " << std::string(column - yyleng + 1, ' ') << "^\n";
-//            std::cerr << "\033[1;31mError: \033[0m" << s << "\n\n";
-//            break;
-//        }
-//        count++;
-//    }
-//
-//    file.close();
-//    return -1;
-//}
+int yyerror(const char* s) {
+    std::cerr << "\033[1;31mError:\033[0m " << s << " at line " << line 
+              << ", column " << column + 1 - (yytext ? strlen(yytext) : 0) 
+              << std::endl;
+
+    if (currentFilename.empty()) {
+        print_error("Filename not set.");
+        return -1;
+    }
+
+    std::ifstream file(currentFilename);  
+    if (!file) {
+        print_error("Cannot open source file: " + currentFilename);
+        return -1;
+    }
+
+    std::string curr_line;
+    int count = 1;
+    
+    while (std::getline(file, curr_line)) {
+        if (count == line) {
+            std::cerr << "\n" << line << " | " << curr_line << "\n";
+            std::cerr << "    " << std::string(column - yyleng + 1, ' ') << "^\n";
+            std::cerr << "\033[1;31mError: \033[0m" << s << "\n\n";
+            break;
+        }
+        count++;
+    }
+
+    file.close();
+    return -1;
+}

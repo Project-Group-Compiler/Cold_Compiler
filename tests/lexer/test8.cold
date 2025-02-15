@@ -1,0 +1,20 @@
+class Person {
+
+    // Data members
+     char* name;
+    int age;
+    void introduce();
+
+};
+int main(){
+    class Person person1;
+
+    // accessing data members
+    person1->name = "Alice";
+    person1->age = 30; //person1.age = 30; both work
+
+    // Call the introduce member method
+    person1.introduce();
+
+    return 0;
+}

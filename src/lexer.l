@@ -74,6 +74,11 @@ bool has_error = false;
 "void"          { count(); yylval.str = strdup(yytext); current_token_type="VOID"; return(VOID); }
 "volatile"      { count(); yylval.str = strdup(yytext); current_token_type="VOLATILE"; return(VOLATILE); }
 "while"         { count(); yylval.str = strdup(yytext); current_token_type="WHILE"; return(WHILE); }
+"class"          { count(); yylval.str = strdup(yytext); current_token_type="CLASS"; return(CLASS); }
+"public"         { count(); yylval.str = strdup(yytext); current_token_type="PUBLIC"; return(PUBLIC); }
+"private"        { count(); yylval.str = strdup(yytext); current_token_type="PRIVATE"; return(PRIVATE); }
+"protected"      { count(); yylval.str = strdup(yytext); current_token_type="PROTECTED"; return(PROTECTED); }
+"extends"        { count(); yylval.str = strdup(yytext); current_token_type="EXTENDS"; return(EXTENDS); }
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
 
