@@ -31,8 +31,9 @@ extern int yyleng;
 extern int yylex();
 extern int yyrestart(FILE*);
 extern FILE* yyin;
-#define YYERROR_VERBOSE
 %}
+
+%define parse.error detailed
 
 %union{
 	char* str;
@@ -484,13 +485,7 @@ type_specifier
 	: VOID			{$$ = createASTNode($1);}	
 	| CHAR			{$$ = createASTNode($1);}	
 	| SHORT			{$$ = createASTNode($1);}	
-	| INT			{
-		if (!$1) {
-			yyerror("Parser error: NULL INT token received");
-			YYABORT;
-		}
-		$$ = createASTNode($1);
-	}
+	| INT			{$$ = createASTNode($1);}
 	| LONG			{$$ = createASTNode($1);}
 	| FLOAT			{$$ = createASTNode($1);}
 	| DOUBLE		{$$ = createASTNode($1);}
@@ -879,6 +874,7 @@ statement
 	| selection_statement	{$$ = $1;}
 	| iteration_statement	{$$ = $1;}
 	| jump_statement	{$$ = $1;}
+	| error ';' {$$ = new Node; yyclearin; yyerrok;}
 	;
 
 labeled_statement
@@ -1068,7 +1064,7 @@ std::string lexerOutputFile;
 std::string currentFilename; 
 
 void print_error(const std::string& message) {	
-    std::cerr << "\033[1;31mError: \033[0m" << message << "\n";
+    std::cerr << "\033[1;31merror: \033[0m" << message << "\n";
 }
 
 void print_options() {
@@ -1121,7 +1117,7 @@ void performLexicalAnalysis(const std::string& filename) {
 void performParsing() {
     dotfile = fopen("src/AST.dot", "w");
     if (!dotfile) {
-        print_error("Cannot open AST.dot for writing.");
+        print_error("cannot open AST.dot for writing.");
         return;
     }
 
@@ -1134,7 +1130,7 @@ void performParsing() {
 
 int main(int argc, char* argv[]) {
     if (argc <= 1) {
-        print_error("No input files provided.");
+        print_error("no input files provided.");
         return -1;
     }
 
@@ -1142,7 +1138,7 @@ int main(int argc, char* argv[]) {
         std::string arg = argv[i];
         if (arg == "-l") { // Lexer-only mode
             if (i + 1 >= argc) {
-                print_error("Missing filename for -l option.");
+                print_error("missing filename for -l option.");
                 return -1;
             }
             onlyLexer = true;
@@ -1153,7 +1149,7 @@ int main(int argc, char* argv[]) {
 		currentFilename = argv[i];
         yyin = fopen(argv[i], "r");
         if (!yyin) {
-            print_error("Cannot open file " + arg);
+            print_error("cannot open file " + arg);
             continue;
         }
 
@@ -1175,29 +1171,31 @@ int main(int argc, char* argv[]) {
 
 // Error handling function
 int yyerror(const char* s) {
-    std::cerr << "\033[1;31mError:\033[0m " << s << " at line " << line 
-              << ", column " << column + 1 - (yytext ? strlen(yytext) : 0) 
-              << std::endl;
 
     if (currentFilename.empty()) {
-        print_error("Filename not set.");
+        print_error("filename not set.");
         return -1;
     }
 
     std::ifstream file(currentFilename);  
     if (!file) {
-        print_error("Cannot open source file: " + currentFilename);
+        print_error("cannot open file: " + currentFilename);
         return -1;
     }
 
     std::string curr_line;
     int count = 1;
-    
+	std::string heading("syntax error");
+	std::string error_line(s);
+	int pos = error_line.find_first_of(heading);
+	if (pos != std::string::npos)
+		error_line.erase(pos, heading.length() + 2);
+
     while (std::getline(file, curr_line)) {
         if (count == line) {
-            std::cerr << "\n" << line << " | " << curr_line << "\n";
-            std::cerr << "    " << std::string(column - yyleng + 1, ' ') << "^\n";
-            std::cerr << "\033[1;31mError: \033[0m" << s << "\n\n";
+            std::cerr << "\033[1;31merror: \033[0m" << heading << "::" << line << ":" << column - yyleng << ": " << error_line << "\n\n";
+            std::cerr << line << " | " << curr_line << "\n";
+            std::cerr << std::string(column - yyleng + 4, ' ') << "^\n";
             break;
         }
         count++;

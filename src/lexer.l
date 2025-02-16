@@ -143,7 +143,7 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 
 void reportError() {
     has_error = true;
-	std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
+	std::cerr<<"\033[1;31merror: \033[0m Unknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
 }
 
 void count()
