@@ -78,7 +78,7 @@ bool has_error = false;
 "public"         { count(); yylval.str = strdup(yytext); current_token_type="PUBLIC"; return(PUBLIC); }
 "private"        { count(); yylval.str = strdup(yytext); current_token_type="PRIVATE"; return(PRIVATE); }
 "protected"      { count(); yylval.str = strdup(yytext); current_token_type="PROTECTED"; return(PROTECTED); }
-"extends"        { count(); yylval.str = strdup(yytext); current_token_type="EXTENDS"; return(EXTENDS); }
+
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
 
@@ -139,6 +139,7 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 "^"            { count(); yylval.str = strdup(yytext); current_token_type="^"; return('^'); }
 "|"            { count(); yylval.str = strdup(yytext); current_token_type="|"; return('|'); }
 "?"            { count(); yylval.str = strdup(yytext); current_token_type="?"; return('?'); }
+"<-"   { count(); yylval.str = strdup(yytext); current_token_type = "INHERITANCE_OP"; return(INHERITANCE_OP); }
 
 [ \t\v\n\f]	   { count(); }
 
