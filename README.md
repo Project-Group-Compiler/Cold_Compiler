@@ -21,22 +21,17 @@ The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-
 
 ## Installation
 
-Run for Ubuntu/Linux
+Run for Ubuntu/Linux. Make sure you have `g++` installed.
 
 ```bash
-sudo apt install flex bison build-essential
-```
-
-## Running the lexer
-
-1. Clone the Repository
-
-```bash
+sudo apt install flex bison build-essential graphviz
 git clone https://github.com/Project-Group-Compiler/Cold_Compiler.git
 cd Cold_Compiler
 ```
 
-2. Build the lexer
+## Running the parser
+
+1. Build the parser
    
 Run the following command in the root directory:
 
@@ -44,17 +39,31 @@ Run the following command in the root directory:
 make
 ```
 
-3. Run script for executing testcases
+2. Run script for executing testcases. Outputs get saved in `outputs` directory.
 
 ```bash
 chmod +x run.sh
 ./run.sh
 ```
 
-Alternatively, execute for a single input file
+Alternatively, execute for a single input file using:
 
 ```bash
-bin/lexer <input_file> <output_file>
+bin/parser <input_file> [options]
+```
+
+```markdown
+Options:
+    -h, --help       Show this help message and exit
+    -l, --lex        Print lexical analysis table also
+    -a, --ast        Print abstract syntax tree as dot file
+    -f, --force      Force parsing even if lexical errors are present
+```
+
+Optionally, convert AST DOT file into image using:
+
+```bash
+dot -Tpng <dot_file> -o <png_file> 
 ```
    
 ## Team Members

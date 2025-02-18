@@ -12,17 +12,7 @@ void print_error(const std::string &message)
     std::cerr << "\033[1;31merror: \033[0m" << message << "\n";
 }
 
-void print_options()
-{
-    std::cout << "Usage: driver <input_file> [options]\n"
-              << "Options:\n"
-              << "  -h, --help       Show this help message and exit\n"
-              << "  -l, --lex        Print lexical analysis table\n"
-              << "  -a, --ast        Print abstract syntax tree\n"
-              << "  -f, --force      Force parsing even if lexical errors are present\n";
-}
-
-void printLexTable(const std::string &inputFile);
+void performLexing(const std::string &inputFile, bool lexPrint);
 void performParsing(const std::string &inputFile);
 
 int main(int argc, char *argv[])
@@ -38,7 +28,12 @@ int main(int argc, char *argv[])
         std::string arg = argv[i];
         if (arg == "-h" || arg == "--help")
         {
-            print_options();
+            std::cout << "Usage: driver <input_file> [options]\n"
+                      << "Options:\n"
+                      << "  -h, --help       Show this help message and exit\n"
+                      << "  -l, --lex        Print lexical analysis table\n"
+                      << "  -a, --ast        Print abstract syntax tree\n"
+                      << "  -f, --force      Force parsing even if lexical errors are present\n";
             return 0;
         }
     }
@@ -58,11 +53,11 @@ int main(int argc, char *argv[])
         std::string arg = argv[i];
         if (arg == "-l" || arg == "--lex")
             lexPrint = true;
-        if (arg == "-a" || arg == "--ast")
+        else if (arg == "-a" || arg == "--ast")
             print_ast = true;
-        if (arg == "-f" || arg == "--force")
+        else if (arg == "-f" || arg == "--force")
             force = true;
-        if (arg == "-o" || arg == "--output")
+        else if (arg == "-o" || arg == "--output")
         {
             if (i + 1 < argc)
                 outputDir = argv[++i];
@@ -72,13 +67,19 @@ int main(int argc, char *argv[])
                 return -1;
             }
         }
+        else
+        {
+            print_error("unknown option " + arg);
+            return -1;
+        }
     }
 
-    if (lexPrint)
-        printLexTable(inputFileString);
+    performLexing(inputFileString, lexPrint);
 
     if (!has_error || force)
         performParsing(inputFileString);
+    else if (has_error)
+        print_error("lexical errors present, use -f to force parsing");
 
     fclose(yyin);
     return 0;

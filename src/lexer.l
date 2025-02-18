@@ -32,6 +32,7 @@ void reportError();
 int check_type();
 int column = 0;
 int line = 1;
+bool err_dur_parsing = false;
 std::string current_token_type;
 %}
 
@@ -145,7 +146,8 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 void reportError() 
 {
     has_error = true;
-	std::cerr<<"\033[1;31merror: \033[0munknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
+    if(!err_dur_parsing)
+	    std::cerr<<"\033[1;31merror: \033[0munknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
 }
 
 void count()
@@ -167,15 +169,8 @@ int check_type()
 	return(IDENTIFIER);
 }
 
-void printLexTable(const std::string &inputFile)
+void performLexing(const std::string &inputFile, bool lexPrint)
 {
-    std::ofstream out(outputDir + inputFile + "_lexfile.txt");
-    if (!out)
-    {
-        print_error("cannot open " + outputDir + inputFile + "_lexfile.txt");
-        return;
-    }
-
     std::vector<TOKEN> tokens;
     int token_id;
     while ((token_id = yylex()) != 0)
@@ -188,21 +183,35 @@ void printLexTable(const std::string &inputFile)
         tokens.push_back(token);
     }
 
-    out << "Lexical Analysis for " << inputFile << "\n\n";
-    out << std::left
-        << std::setw(20) << "Token"
-        << std::setw(40) << "Lexeme"
-        << std::setw(10) << "Line"
-        << std::setw(10) << "Column" << "\n"
-        << std::string(80, '-') << "\n";
-
-    for (auto &token : tokens)
+    if(lexPrint)
     {
+        std::ofstream out(outputDir + inputFile + "_lexfile.txt");
+        if (!out)
+        {
+            print_error("cannot open " + outputDir + inputFile + "_lexfile.txt");
+            return;
+        }
+        out << "Lexical Analysis for " << inputFile << "\n\n";
         out << std::left
-            << std::setw(20) << token.token_type
-            << std::setw(40) << token.lexeme
-            << std::setw(10) << token.line
-            << std::setw(10) << token.column << "\n";
+            << std::setw(20) << "Token"
+            << std::setw(40) << "Lexeme"
+            << std::setw(10) << "Line"
+            << std::setw(10) << "Column" << "\n"
+            << std::string(80, '-') << "\n";
+
+        for (auto &token : tokens)
+        {
+            out << std::left
+                << std::setw(20) << token.token_type
+                << std::setw(40) << token.lexeme
+                << std::setw(10) << token.line
+                << std::setw(10) << token.column << "\n";
+        }
+        out.close();
     }
-    out.close();
+    line = 1;
+    column = 0;
+    err_dur_parsing = true;
+    rewind(yyin);
+    yyrestart(yyin);
 }
