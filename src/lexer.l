@@ -8,30 +8,31 @@ IS			(u|U|l|L)*
 
 %{
 #include <stdio.h>
-#include "AST.hpp"
-#include "parser.hpp"
 #include <iostream>
 #include <iomanip>
-#include <fstream>
-#include <unordered_map>
 #include <vector>
+#include <fstream>
+#include "AST.hpp"
+#include "parser.hpp"
 
-typedef struct token_data
+struct TOKEN
 {
-	int line;
-	int column;
-	std::string token_type;
-	std::string lexeme;
-} TOKEN;
+    int line;
+    int column;
+    std::string token_type;
+    std::string lexeme;
+};
+
+extern std::string outputDir;
+extern bool has_error;
+void print_error(const std::string &message);
 
 void count();
 void reportError();
 int check_type();
-
-int column = 1;
+int column = 0;
 int line = 1;
 std::string current_token_type;
-bool has_error = false;
 %}
 
 %option noyywrap
@@ -141,9 +142,10 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 
 %%
 
-void reportError() {
+void reportError() 
+{
     has_error = true;
-	std::cerr<<"\033[1;31merror: \033[0m Unknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
+	std::cerr<<"\033[1;31merror: \033[0munknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
 }
 
 void count()
@@ -165,58 +167,42 @@ int check_type()
 	return(IDENTIFIER);
 }
 
-// int main(int argc, char *argv[])
-// {
-// 	if(argc != 3)
-// 	{
-// 		std::cerr << "Usage : ./lexer <input_file> <output_file>\n";
-// 		return 1;
-// 	}
-// 	yyin = fopen(argv[1], "r");
-// 	if(!yyin)
-// 	{
-// 		std::cerr << "Error : Can't open input file "<<argv[1]<<"\n";
-// 		return 1;
-// 	}
-// 	std::ofstream out(argv[2]);
-// 	if(!out)
-// 	{
-// 		std::cerr << "Error : Can't open output file "<<argv[2]<<"\n";
-// 		return 1;
-// 	}
-// 	std::unordered_map<std::string, TOKEN> symbol_table;
-// 	std::vector<TOKEN> tokens;
-// 	int token_id;
-// 	while((token_id = yylex()) != 0)
-// 	{
-// 		TOKEN token;
-// 		token.token_type = current_token_type;
-// 		token.lexeme = std::string(yytext);
-// 		token.line = line;
-// 		token.column = column - yyleng;
-// 		if(symbol_table.find(token.lexeme) == symbol_table.end())
-// 			symbol_table[token.lexeme] = token;	
-// 		tokens.push_back(token);
-// 	}
-// 	if (has_error)
-// 	{
-// 		out << "Lexical errors printed on stdout.\n";
-// 		return 1;
-// 	}
-// 	out << "Lexical Analysis for " << argv[1] << "\n\n";
-// 	out << std::left 
-//     	<< std::setw(20) << "Token" 
-//     	<< std::setw(40) << "Lexeme" 
-//     	<< std::setw(10) << "Line" 
-//     	<< std::setw(10) << "Column" << "\n"
-//     	<< std::string(80, '-') << "\n";
-// 	for(auto &token : tokens)
-// 	{
-// 		out << std::left 
-// 			<< std::setw(20) << token.token_type
-// 			<< std::setw(40) << token.lexeme
-// 			<< std::setw(10) << token.line
-// 			<< std::setw(10) << token.column << "\n";
-// 	}
-// 	return 0;
-// }
+void printLexTable(const std::string &inputFile)
+{
+    std::ofstream out(outputDir + inputFile + "_lexfile.txt");
+    if (!out)
+    {
+        print_error("cannot open " + outputDir + inputFile + "_lexfile.txt");
+        return;
+    }
+
+    std::vector<TOKEN> tokens;
+    int token_id;
+    while ((token_id = yylex()) != 0)
+    {
+        TOKEN token;
+        token.token_type = current_token_type;
+        token.lexeme = std::string(yytext);
+        token.line = line;
+        token.column = column - yyleng;
+        tokens.push_back(token);
+    }
+
+    out << "Lexical Analysis for " << inputFile << "\n\n";
+    out << std::left
+        << std::setw(20) << "Token"
+        << std::setw(40) << "Lexeme"
+        << std::setw(10) << "Line"
+        << std::setw(10) << "Column" << "\n"
+        << std::string(80, '-') << "\n";
+
+    for (auto &token : tokens)
+    {
+        out << std::left
+            << std::setw(20) << token.token_type
+            << std::setw(40) << token.lexeme
+            << std::setw(10) << token.line
+            << std::setw(10) << token.column << "\n";
+    }
+    out.close();
+}

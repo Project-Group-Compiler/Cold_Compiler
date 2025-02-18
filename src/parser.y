@@ -1,39 +1,23 @@
 %{
-#include "AST.hpp"
 #include <stdio.h>
 #include <iostream>
-#include <iomanip>
 #include <fstream>
-#include <unordered_map>
 #include <vector>
 #include <cstring>
+#include "AST.hpp"
 
-typedef struct token_data
-{
-	int line;
-	int column;
-	std::string token_type;
-	std::string lexeme;
-} TOKEN;
-
-
-extern char* yytext;
+extern int yyleng;
 extern int column;
 extern int line;
-extern std::string current_token_type;
+extern std::string inputFilename;
+extern bool has_error;
 
 int yyerror(const char*);
 int yylex();
-int onlyLexer = 0;
-FILE* dotfile;
-
-extern int yyleng;
-extern int yylex();
-extern int yyrestart(FILE*);
-extern FILE* yyin;
 %}
 
 %define parse.error detailed
+%define parse.lac full
 
 %union{
 	char* str;
@@ -1060,129 +1044,18 @@ function_definition
 
 %%
 
-std::string lexerOutputFile;
-std::string currentFilename; 
-
-void print_error(const std::string& message) {	
-    std::cerr << "\033[1;31merror: \033[0m" << message << "\n";
-}
-
-void print_options() {
-	//Later
-}
-
-void performLexicalAnalysis(const std::string& filename) {
-    std::ofstream out(lexerOutputFile);
-    if (!out) {
-        print_error("Cannot open output file " + lexerOutputFile);
-        return;
-    }
-
-    std::unordered_map<std::string, TOKEN> symbol_table;
-    std::vector<TOKEN> tokens;
-    
-    int token_id;
-    while ((token_id = yylex()) != 0) {
-        TOKEN token;
-        token.token_type = current_token_type;
-        token.lexeme = std::string(yytext);
-        token.line = line;
-        token.column = column - yyleng;
-
-        if (symbol_table.find(token.lexeme) == symbol_table.end()) {
-            symbol_table[token.lexeme] = token;
-        }
-        tokens.push_back(token);
-    }
-
-    out << "Lexical Analysis for " << filename << "\n\n";
-    out << std::left 
-        << std::setw(20) << "Token" 
-        << std::setw(40) << "Lexeme" 
-        << std::setw(10) << "Line" 
-        << std::setw(10) << "Column" << "\n"
-        << std::string(80, '-') << "\n";
-
-    for (auto& token : tokens) {
-        out << std::left 
-            << std::setw(20) << token.token_type
-            << std::setw(40) << token.lexeme
-            << std::setw(10) << token.line
-            << std::setw(10) << token.column << "\n";
-    }
-
-    out.close();
-}
-
-void performParsing() {
-    dotfile = fopen("src/AST.dot", "w");
-    if (!dotfile) {
-        print_error("cannot open AST.dot for writing.");
-        return;
-    }
-
-    beginAST();
+void performParsing(const std::string &inputFile)
+{
+    beginAST(inputFile);
     yyparse();
     endAST();
-
-    fclose(dotfile);
-}
-
-int main(int argc, char* argv[]) {
-    if (argc <= 1) {
-        print_error("no input files provided.");
-        return -1;
-    }
-
-    for (int i = 1; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "-l") { // Lexer-only mode
-            if (i + 1 >= argc) {
-                print_error("missing filename for -l option.");
-                return -1;
-            }
-            onlyLexer = true;
-            lexerOutputFile = argv[++i];
-            continue;
-        }
-
-		currentFilename = argv[i];
-        yyin = fopen(argv[i], "r");
-        if (!yyin) {
-            print_error("cannot open file " + arg);
-            continue;
-        }
-
-        line = 1;
-        column = 0;
-        yyrestart(yyin);
-
-        if (onlyLexer) {
-            performLexicalAnalysis(arg);
-        } else {
-            performParsing();
-        }
-
-        fclose(yyin);
-    }
-
-    return 0;
 }
 
 // Error handling function
-int yyerror(const char* s) {
-
-    if (currentFilename.empty()) {
-        print_error("filename not set.");
-        return -1;
-    }
-
-    std::ifstream file(currentFilename);  
-    if (!file) {
-        print_error("cannot open file: " + currentFilename);
-        return -1;
-    }
-
+int yyerror(const char* s) 
+{
+	has_error = true;
+    std::ifstream file(inputFilename);  
     std::string curr_line;
     int count = 1;
 	std::string heading("syntax error");
@@ -1191,7 +1064,8 @@ int yyerror(const char* s) {
 	if (pos != std::string::npos)
 		error_line.erase(pos, heading.length() + 2);
 
-    while (std::getline(file, curr_line)) {
+    while (std::getline(file, curr_line)) 
+	{
         if (count == line) {
             std::cerr << "\033[1;31merror: \033[0m" << heading << "::" << line << ":" << column - yyleng << ": " << error_line << "\n\n";
             std::cerr << line << " | " << curr_line << "\n";
@@ -1200,7 +1074,6 @@ int yyerror(const char* s) {
         }
         count++;
     }
-
     file.close();
     return -1;
 }
