@@ -1,7 +1,13 @@
 #!/bin/bash
 
+if [ $# -eq 0 ]; then
+  echo "Error: No test directory provided."
+  echo "Usage: $0 <test_directory>"
+  exit 1
+fi
+
 EXECUTABLE="bin/parser"
-TEST_DIR="tests/parser"
+TEST_DIR=$1
 OUTPUT_DIR="outputs"
 
 # Ensure test directory exists

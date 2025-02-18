@@ -77,7 +77,7 @@ Node *createASTNode(const std::string &str, std::vector<Data> *v)
                 if (!data.str.empty())
                 {
                     if (print_ast)
-                        dotfile << "\t" << opid << " [label=\"" << data.str << "\" shape=box style=filled fillcolor=\"#9ACBD0\" pad=" << padding << "]\n";
+                        dotfile << "\t" << opid << " [label=\"" << data.str << "\" shape=box style=filled fillcolor=\"#98D8EF\" pad=" << padding << "]\n";
                 }
             }
         }

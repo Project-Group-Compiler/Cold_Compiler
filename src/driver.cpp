@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
     if (!has_error || force)
         performParsing(inputFileString);
-    else if (has_error)
+    else
         print_error("lexical errors present, use -f to force parsing");
 
     fclose(yyin);
