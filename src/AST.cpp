@@ -57,12 +57,12 @@ Node *createASTNode(const std::string &str, std::vector<Data> *v)
         { // String literal
             std::string s = format.substr(1, format.size() - 2);
             if (print_ast)
-                dotfile << "\t" << node->node_id << " [label=\"\\\"" << s << "\\\"\" shape=box fillcolor=\"#98D8EF\" pad=" << padding << "]\n";
+                dotfile << "\t" << node->node_id << " [label=\"\\\"" << s << "\\\"\" shape=box style=filled fillcolor=\"#98D8EF\" pad=" << padding << "]\n";
         }
         else
         {
             if (print_ast)
-                dotfile << "\t" << node->node_id << " [label=\"" << node->node_name << "\" shape=box fillcolor=\"#98D8EF\" pad=" << padding << "]\n";
+                dotfile << "\t" << node->node_id << " [label=\"" << node->node_name << "\" shape=box style=filled fillcolor=\"#98D8EF\" pad=" << padding << "]\n";
         }
     }
     else
@@ -77,13 +77,13 @@ Node *createASTNode(const std::string &str, std::vector<Data> *v)
                 if (!data.str.empty())
                 {
                     if (print_ast)
-                        dotfile << "\t" << opid << " [label=\"" << data.str << "\" shape=box style=filled color=\"dodgerblue\" fillcolor=\"#9ACBD0\" pad=" << padding << "]\n";
+                        dotfile << "\t" << opid << " [label=\"" << data.str << "\" shape=box style=filled fillcolor=\"#9ACBD0\" pad=" << padding << "]\n";
                 }
             }
         }
 
         if (print_ast)
-            dotfile << "\t" << node->node_id << " [label=\"" << node->node_name << "\" shape=box style=filled color=\"#9ACBD0\" fillcolor=\"#F2EFE7\" pad=" << padding << "]\n";
+            dotfile << "\t" << node->node_id << " [label=\"" << node->node_name << "\" shape=box style=filled fillcolor=\"#F2EFE7\" pad=" << padding << "]\n";
 
         int j = 0;
         for (auto &data : *v)
