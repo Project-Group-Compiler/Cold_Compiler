@@ -68,8 +68,7 @@ extern FILE* yyin;
 %type<ptr> class_definition inheritance_specifier inheritance_specifier_list access_specifier class class_definition_head class_internal_definition_list class_internal_definition	class_member_list class_member
 
 %left ';'
-%expect 4 
-
+%expect 3
 %%
 
 primary_expression
@@ -535,8 +534,7 @@ class
 	;
 
 class_definition_head 
-	: class { $$ = $1;}
-	| class INHERITANCE_OP inheritance_specifier_list{
+	: class INHERITANCE_OP inheritance_specifier_list{
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
