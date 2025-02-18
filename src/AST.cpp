@@ -11,23 +11,25 @@ std::string padding = "0.1";
 
 void beginAST(const std::string &inputFile)
 {
-    if(print_ast)
-	{
-		dotfile = std::ofstream(outputDir + inputFile + "_AST.dot");
-		if (!dotfile)
-		{
-			print_error("cannot open " + outputDir + inputFile + "_AST.dot");
-			return;
-		}
+    if (print_ast)
+    {
+        dotfile = std::ofstream(outputDir + inputFile + "_AST.dot");
+        if (!dotfile)
+        {
+            print_error("cannot open " + outputDir + inputFile + "_AST.dot");
+            return;
+        }
         dotfile << "digraph AST {\n\trankdir=TB;\n\tordering=out;\n";
-	}
+    }
 }
 
 void endAST()
 {
     if (print_ast)
+    {
         dotfile << "}\n";
-    	dotfile.close();
+        dotfile.close();
+    }
 }
 
 void insertAttr(std::vector<Data> &v, Node *node, const std::string &str, bool isNode)

@@ -4,10 +4,10 @@ int main(){
         This is a testcase for checking lexer
         .//Special Character: @#$%&   
     */
-    int 123abc,$sc;//invalid identifier
-    inta a, b, c; //checking syntax errors
-    int a = 0x45;
-    int b = 0x3j; //invalid hex value
+    //int 123abc,$sc;//invalid identifier
+    //inta a, b, c; //checking syntax errors
+    //int a = 0x45;
+    //int b = 0x3j; //invalid hex value
     char op;
     printf("Enter first number\n");
     scanf("%d",&a);
