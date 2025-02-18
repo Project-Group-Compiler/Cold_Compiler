@@ -1,0 +1,10 @@
+void test_dynamic_memory() {
+    int *ptr = (int *)malloc(sizeof(int));
+    if (ptr) {
+        *ptr = 42;
+        if (*ptr == 42) {
+            // Test Passed
+        }
+        free(ptr);
+    }
+}

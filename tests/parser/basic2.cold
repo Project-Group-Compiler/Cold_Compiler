@@ -1,14 +1,20 @@
 
+struct Node {
+    int val;
+    struct Node* L;
+    struct Node* R;
+};
 int main(){
     /*
         This is a testcase for checking lexer
         .//Special Character: @#$%&   
     */
-    int 123abc,$sc;//invalid identifier
-    inta a, b, c; //checking syntax errors
-    int a = 0x45;
-    int b = 0x3j; //invalid hex value
+    struct Node a;
+    int a, b, c;
     char op;
+        a.val=5;
+    printf("%d", a.x);
+    
     printf("Enter first number\n");
     scanf("%d",&a);
     printf("Enter second number\n");
@@ -31,4 +37,3 @@ int main(){
     }
     return 0;
 }
-
