@@ -41,7 +41,7 @@ extern FILE* yyin;
 }
 
 %token<str> IDENTIFIER CONSTANT STRING_LITERAL SIZEOF
-%token<str> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP
+%token<str> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP INHERITANCE_OP
 %token<str> AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token<str> SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
 %token<str> XOR_ASSIGN OR_ASSIGN TYPE_NAME
@@ -49,6 +49,7 @@ extern FILE* yyin;
 %token<str> TYPEDEF EXTERN STATIC AUTO REGISTER
 %token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
 %token<str> STRUCT UNION ENUM ELLIPSIS
+%token<str> CLASS PUBLIC PRIVATE PROTECTED
 
 %token<str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 %token<str> UNTIL /*** Added UNTIL token ***/
@@ -64,10 +65,10 @@ extern FILE* yyin;
 %type<ptr> statement labeled_statement compound_statement declaration_list statement_list expression_statement selection_statement iteration_statement jump_statement translation_unit external_declaration function_definition initializer_list
 %type<ptr> storage_class_specifier
 %type<str> struct_or_union
+%type<ptr> class_definition inheritance_specifier inheritance_specifier_list access_specifier class class_definition_head class_internal_definition_list class_internal_definition	class_member_list class_member
 
 %left ';'
-%expect 1 
-
+%expect 3
 %%
 
 primary_expression
@@ -497,8 +498,105 @@ type_specifier
 	| SIGNED		{$$ = createASTNode($1);}
 	| UNSIGNED		{$$ = createASTNode($1);}
 	| struct_or_union_specifier	{$$ = $1;}	
+	| class_definition 			{$$ = $1;}
 	| enum_specifier			{$$ = $1;}
 	| TYPE_NAME		{$$ = createASTNode($1);}	
+	;
+
+inheritance_specifier
+	: access_specifier IDENTIFIER {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        /* Wrap IDENTIFIER into an AST node */
+        insertAttr(attr, createASTNode($2), "", 1);
+        $$ = createASTNode("inheritance_specifier", &attr);
+    }
+	;
+
+inheritance_specifier_list
+	: inheritance_specifier { $$ = $1; }
+	| inheritance_specifier_list ',' inheritance_specifier{
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("inheritance_specifier_list", &attr);
+    }
+	;
+
+access_specifier 
+	: PRIVATE { $$ = createASTNode($1); }
+	| PUBLIC { $$ = createASTNode($1); }
+	| PROTECTED { $$ = createASTNode($1); }
+	;
+
+class
+	: CLASS { $$ = createASTNode($1); }
+	;
+
+class_definition_head 
+	: class INHERITANCE_OP inheritance_specifier_list{
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("class_definition_head", &attr);
+    }
+	| class IDENTIFIER {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, createASTNode($2), "", 1);
+        $$ = createASTNode("class_definition_head", &attr);
+    }
+	| class IDENTIFIER  INHERITANCE_OP inheritance_specifier_list{
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, createASTNode($2), "", 1);
+        insertAttr(attr, $4, "", 1);
+        $$ = createASTNode("class_definition_head", &attr);
+    }
+	;
+
+class_definition 
+	: class_definition_head '{' class_internal_definition_list '}'{
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("class_definition", &attr);
+    }
+	| class_definition_head { $$ = $1; }
+	;
+
+class_internal_definition_list
+	: class_internal_definition { $$ = $1; }
+	| class_internal_definition_list class_internal_definition {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $2, "", 1);
+        $$ = createASTNode("class_internal_definition_list", &attr);
+    }
+	; 
+
+class_internal_definition	
+	: access_specifier '{' class_member_list '}' ';'{
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("class_internal_definition", &attr);
+    }
+	;
+
+class_member_list
+	: class_member{ $$ = $1; }
+	| class_member_list class_member{
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $2, "", 1);
+        $$ = createASTNode("class_member_list", &attr);
+    }
+	;
+
+class_member
+	: function_definition { $$ = $1; }
+	| declaration { $$ = $1; }
 	;
 
 struct_or_union_specifier
