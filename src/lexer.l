@@ -24,9 +24,30 @@ typedef struct token_data
 	std::string lexeme;
 } TOKEN;
 
+extern std::vector<std::pair<std::string,std::string>> typedefTable;
+
+std::string searchTypedefTable(std::string Token);
+
 void count();
 void reportError();
 int check_type();
+
+typedef struct {
+    std::string token;
+    std::string data_type;
+} SymbolTableEntry;
+
+std::vector<SymbolTableEntry> ConstantTable;
+extern std::vector<SymbolTableEntry> SymbolTable;
+extern void addToSymbolTable(std::string Token, std::string Data_type);
+extern bool searchSymbolTable(std::string Token);
+
+void addToConstantTable(std::string constnt, std::string const_type){
+	SymbolTableEntry entry;
+	entry.token=constnt;
+	entry.data_type=const_type;
+	ConstantTable.push_back(entry);
+}
 
 int column = 1;
 int line = 1;
@@ -82,14 +103,14 @@ bool has_error = false;
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
 
-0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
+0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
+{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
+L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Character"); return(CONSTANT); }
 
-{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
 
 L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
 
@@ -168,6 +189,10 @@ void count()
 
 int check_type()
 {
+	std::string str = searchTypedefTable(strdup(yytext));
+	if(str=="int"){
+		return(INT);
+	}
 	return(IDENTIFIER);
 }
 

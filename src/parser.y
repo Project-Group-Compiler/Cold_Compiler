@@ -8,6 +8,87 @@
 #include <vector>
 #include <cstring>
 
+std::string currentDataType="";
+
+std::vector<std::pair<std::string,std::string>> typedefTable;
+
+typedef struct {
+    std::string token;
+    std::string data_type;
+} SymbolTableEntry;
+
+char type_of_declarator='n';
+int noArgs=0;
+bool flag=0;
+
+std::vector<SymbolTableEntry> SymbolTable;
+extern std::vector<SymbolTableEntry> ConstantTable;
+extern void addToConstantTable(std::string Token, std::string Data_type);
+
+void addToSymbolTable(std::string Token, std::string Data_type) {
+    SymbolTableEntry entry;
+	entry.token=Token;
+	entry.data_type=Data_type;
+	SymbolTable.push_back(entry);
+}
+
+void updateLastSymbolEntry(){
+	if (!SymbolTable.empty()) {
+        SymbolTable.back().data_type+="[]";
+    } else {
+        std::cerr << "SymbolTable is already empty." << std::endl;
+    }
+}
+
+void updateFuncSymbolEntry(int args){
+	if (SymbolTable.size()>args) {
+        SymbolTable[SymbolTable.size()-1-args].data_type="Procedure";
+    } else {
+        std::cerr << "SymbolTable is too small" << std::endl;
+    }
+}
+
+std::string searchTypedefTable(std::string Token){
+	for (int i=0; i<typedefTable.size(); i++){
+		if(typedefTable[i].first==Token) return typedefTable[i].second;
+	}
+	return "";
+}
+
+void printSymbolTable() {
+    printf("\nSymbol Table:\n");
+    std::cout << std::left <<
+    	std::setw(20) << "Token" 
+     	<< std::setw(40) << "Data Type" << "\n"
+     	<< std::string(80, '-') << "\n";
+    for (int i = 0; i < SymbolTable.size(); i++) {
+        std::cout << std::left <<
+    	std::setw(20) << SymbolTable[i].token
+     	<< std::setw(40) << SymbolTable[i].data_type << "\n";
+    }
+    printf("---------------------------\n");
+}
+
+void printConstantTable() {
+    printf("\nConstant Table:\n");
+    std::cout << std::left <<
+    	std::setw(20) << "Constant" 
+     	<< std::setw(40) << "Constant Type" << "\n"
+     	<< std::string(80, '-') << "\n";
+    for (int i = 0; i < ConstantTable.size(); i++) {
+        std::cout << std::left <<
+    	std::setw(20) << ConstantTable[i].token
+     	<< std::setw(40) << ConstantTable[i].data_type << "\n";
+    }
+    printf("---------------------------\n");
+}
+
+void printType(){
+	for(int i=0; i<typedefTable.size(); i++){
+		std::cout << typedefTable[i].first << "    " << typedefTable[i].second << '\n';
+	}
+}
+
 typedef struct token_data
 {
 	int line;
@@ -74,11 +155,17 @@ extern FILE* yyin;
 primary_expression
     : IDENTIFIER {
     	$$ = createASTNode($1);
+		//std::string check=std::string($1);
+		//addToSymbolTable(check,currentDataType);
+		//std::cout << check << "  " << currentDataType << " added " << "primary_expression" << '\n';
     }
 	| CONSTANT 	{
 		$$ = createASTNode($1);
 	}
 	| STRING_LITERAL {
+		std::string check=std::string($1);
+		addToConstantTable(check,"String Literal");
+		//std::cout << check << "  " << currentDataType << " added " << "STRING_LITERAL" << '\n';
 		$$ = createASTNode($1);
 	}
 	| '(' expression ')' {
@@ -474,7 +561,7 @@ init_declarator
 	;
 
 storage_class_specifier
-	: TYPEDEF	{ $$ = createASTNode($1);}
+	: TYPEDEF	{ $$ = createASTNode($1); flag=1;}
 	| EXTERN	{ $$ = createASTNode($1);}
 	| STATIC	{ $$ = createASTNode($1);}
 	| AUTO		{ $$ = createASTNode($1);}
@@ -482,21 +569,23 @@ storage_class_specifier
 	;
 
 type_specifier
-	: VOID			{$$ = createASTNode($1);}	
-	| CHAR			{$$ = createASTNode($1);}	
-	| SHORT			{$$ = createASTNode($1);}	
+	: VOID			{$$ = createASTNode($1); currentDataType="void"; type_of_declarator='d';}	
+	| CHAR			{$$ = createASTNode($1); currentDataType="char"; type_of_declarator='d';}	
+	| SHORT			{$$ = createASTNode($1); currentDataType="short"; type_of_declarator='d';}	
 	| INT			{
 		if (!$1) {
 			yyerror("Parser error: NULL INT token received");
 			YYABORT;
 		}
 		$$ = createASTNode($1);
+		currentDataType="int";
+		type_of_declarator='d';
 	}
-	| LONG			{$$ = createASTNode($1);}
-	| FLOAT			{$$ = createASTNode($1);}
-	| DOUBLE		{$$ = createASTNode($1);}
-	| SIGNED		{$$ = createASTNode($1);}
-	| UNSIGNED		{$$ = createASTNode($1);}
+	| LONG			{$$ = createASTNode($1); currentDataType="long"; type_of_declarator='d';}
+	| FLOAT			{$$ = createASTNode($1); currentDataType="float"; type_of_declarator='d';}
+	| DOUBLE		{$$ = createASTNode($1); currentDataType="double"; type_of_declarator='d';}
+	| SIGNED		{$$ = createASTNode($1); currentDataType="signed"; type_of_declarator='d';}
+	| UNSIGNED		{$$ = createASTNode($1); currentDataType="unsigned"; type_of_declarator='d';}
 	| struct_or_union_specifier	{$$ = $1;}	
 	| class_definition 			{$$ = $1;}
 	| enum_specifier			{$$ = $1;}
@@ -604,6 +693,8 @@ struct_or_union_specifier
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($2), "", 1);
 		insertAttr(v, $4, "", 1);
+		std::string check=std::string($2);
+		//addToSymbolTable(check,currentDataType);
 		$$ = createASTNode($1, &v);
 	}
 	| struct_or_union '{' struct_declaration_list '}'		{
@@ -614,12 +705,15 @@ struct_or_union_specifier
 	| struct_or_union IDENTIFIER 	{
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($2), "", 1);
+		std::string check=std::string($2);
+		currentDataType+=" ";
+		currentDataType+=check;
 		$$ = createASTNode($1, &v);
 	}
 	;
 
 struct_or_union
-	: STRUCT	{$$ = $1;}
+	: STRUCT	{$$ = $1; currentDataType="struct";}
 	| UNION		{$$ = $1;}
 	;
 
@@ -741,6 +835,16 @@ declarator
 direct_declarator
 	: IDENTIFIER {
 		$$ = createASTNode($1);
+		std::string check=std::string($1);
+		if(flag){
+			typedefTable.push_back(make_pair(check,currentDataType));
+			flag=0;
+		}
+		else{
+		std::string check=std::string($1);
+		addToSymbolTable(check,currentDataType);
+		//std::cout << check << "  " << currentDataType << " added " << "direct_declarator for primitives" << '\n';
+		type_of_declarator='n';}
 	}
 	| '(' declarator ')'  {
 		$$ = $2 ;
@@ -752,6 +856,7 @@ direct_declarator
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
 		$$ = createASTNode("direct_declarator", &v);
+		updateLastSymbolEntry();
 	}
 	| direct_declarator '[' ']'{
 		std::vector<Data> v;
@@ -766,6 +871,9 @@ direct_declarator
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
 		$$ = createASTNode("direct_declarator", &v);
+		//std::cout << SymbolTable.back().token << "      " << SymbolTable.back().data_type << '\n'; 
+		updateFuncSymbolEntry(noArgs);
+		noArgs=0;
 	}
 	| direct_declarator '(' identifier_list ')'{
 		std::vector<Data> v, v2;
@@ -774,30 +882,37 @@ direct_declarator
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
 		$$ = createASTNode("direct_declarator", &v);
+		//updateFuncSymbolEntry();
 	}
 	| direct_declarator '(' ')'{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "( )", 0);
 		$$ = createASTNode("direct_declarator", &v);
+		updateFuncSymbolEntry(0);
 	}
 	;
 
 pointer
 	: '*' {
+		currentDataType+="*";
+		std:: cout << currentDataType << '\n';
 		$$ = createASTNode("*(Pointer)");
 	}
 	| '*' type_qualifier_list{
+		currentDataType+="*";
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
 		$$ = createASTNode("*(Pointer)",&v);
 	}
 	| '*' pointer{
+		currentDataType+="*";
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
 		$$ = createASTNode("*(Pointer)",&v);
 	}
 	| '*' type_qualifier_list pointer{
+		currentDataType+="*";
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
 		insertAttr(v,$3,"",1);
@@ -832,12 +947,17 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration{
+		//std::cout << SymbolTable.back().token << "   "  << " single   " << SymbolTable.back().data_type << "  " << noArgs << '\n';
+		//updateFuncSymbolEntry(noArgs);
+		noArgs++;
 		$$ = $1;
 	}
 	| parameter_list ',' parameter_declaration{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
+		//std::cout << SymbolTable.back().token << " " << "list  " << SymbolTable.back().data_type << "  " << noArgs << '\n';
+		noArgs++;
 		$$ = createASTNode("parameter_list",&v);
 	}
 	;
@@ -1267,7 +1387,9 @@ int main(int argc, char* argv[]) {
 
         fclose(yyin);
     }
-
+	printSymbolTable();
+	printConstantTable();
+	printType();
     return 0;
 }
 
