@@ -15,6 +15,7 @@ void print_error(const std::string &message)
 void performLexing(const std::string &inputFile, bool lexPrint);
 void performParsing(const std::string &inputFile);
 
+void addStandardProceduresToSymbolTable();
 void printSymbolTable();
 void printConstantTable();
 void printType();
@@ -86,6 +87,7 @@ int main(int argc, char *argv[])
         print_error("lexical errors present, use -f to force parsing");
 
     fclose(yyin);
+    addStandardProceduresToSymbolTable();
     printSymbolTable();
 	printConstantTable();
 	printType();
