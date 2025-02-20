@@ -11,6 +11,7 @@ IS			(u|U|l|L)*
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <unordered_map>
 #include <fstream>
 #include "AST.hpp"
 #include "parser.hpp"

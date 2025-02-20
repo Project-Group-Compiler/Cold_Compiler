@@ -190,6 +190,14 @@ primary_expression
     : IDENTIFIER {
     	$$ = createASTNode($1);
     }
+	| CONSTANT IDENTIFIER {
+		yyerror("syntax error, invalid identifier syntax");
+		$$ = createASTNode($1);
+	}
+	| CONSTANT CONSTANT {
+		yyerror("syntax error, invalid constant syntax");
+		$$ = createASTNode($1);
+	}
 	| CONSTANT 	{
 		$$ = createASTNode($1);
 	}
