@@ -6,126 +6,13 @@
 #include <vector>
 #include <cstring>
 #include "AST.hpp"
+#include "data_structures.hpp"
 
 extern int yyleng;
 std::string currentDataType="";
 
-std::vector<std::pair<std::string,std::string>> typedefTable;
-
-typedef struct {
-    std::string token;
-    std::string data_type;
-} SymbolTableEntry;
-
-char type_of_declarator='n';
 int noArgs=0;
 bool flag=0,flag2=0;;
-
-std::vector<SymbolTableEntry> SymbolTable;
-extern std::vector<SymbolTableEntry> ConstantTable;
-extern void addToConstantTable(std::string Token, std::string Data_type);
-
-void addToSymbolTable(std::string Token, std::string Data_type) {
-    SymbolTableEntry entry;
-	entry.token=Token;
-	entry.data_type=Data_type;
-	SymbolTable.push_back(entry);
-}
-
-void addStandardProceduresToSymbolTable() {
-    std::vector<std::pair<std::string, std::string>> procedures = {
-        {"printf", "Procedure"},
-        {"scanf", "Procedure"},
-        {"malloc", "Procedure"},
-        {"calloc", "Procedure"},
-        {"free", "Procedure"},
-        {"fopen", "Procedure"},
-        {"fputs", "Procedure"},
-        {"fgets", "Procedure"},
-        {"fclose", "Procedure"},
-        {"fprintf", "Procedure"},
-        {"fscanf", "Procedure"},
-        {"fputc", "Procedure"},
-        {"fgetc", "Procedure"},
-        {"strlen", "Procedure"},
-        {"strcmp", "Procedure"},
-        {"strncmp", "Procedure"},
-        {"strcpy", "Procedure"},
-        {"strcat", "Procedure"},
-        {"strncat", "Procedure"},
-        {"atoi", "Procedure"}
-    };
-
-	addToSymbolTable("     ", "     ");
-    for (const auto& procedure : procedures) {
-		addToSymbolTable(procedure.first, procedure.second);
-    }
-}
-
-void updateLastSymbolEntry(){
-	if (!SymbolTable.empty()) {
-        SymbolTable.back().data_type+="[]";
-    } else {
-        std::cerr << "SymbolTable is already empty." << std::endl;
-    }
-}
-
-void updateFuncSymbolEntry(int args){
-	if (SymbolTable.size()>args) {
-        SymbolTable[SymbolTable.size()-1-args].data_type="Procedure";
-    } else {
-        std::cerr << "SymbolTable is too small" << std::endl;
-    }
-}
-
-std::string searchTypedefTable(std::string Token){
-	for (int i=0; i<typedefTable.size(); i++){
-		if(typedefTable[i].first==Token) return typedefTable[i].second;
-	}
-	return "";
-}
-
-void printSymbolTable() {
-    printf("\nSymbol Table:\n");
-    std::cout << std::left <<
-    	std::setw(20) << "Token" 
-     	<< std::setw(40) << "Data Type" << "\n"
-     	<< std::string(80, '-') << "\n";
-    for (int i = 0; i < SymbolTable.size(); i++) {
-        std::cout << std::left <<
-    	std::setw(20) << SymbolTable[i].token
-     	<< std::setw(40) << SymbolTable[i].data_type << "\n";
-    }
-    printf("---------------------------\n");
-}
-
-void printConstantTable() {
-    printf("\nConstant Table:\n");
-    std::cout << std::left <<
-    	std::setw(20) << "Constant" 
-     	<< std::setw(40) << "Constant Type" << "\n"
-     	<< std::string(80, '-') << "\n";
-    for (int i = 0; i < ConstantTable.size(); i++) {
-        std::cout << std::left <<
-    	std::setw(20) << ConstantTable[i].token
-     	<< std::setw(40) << ConstantTable[i].data_type << "\n";
-    }
-    printf("---------------------------\n");
-}
-
-void printType(){
-	printf("\nTypedef Table:\n");
-	std::cout << std::left <<
-		std::setw(20) << "Definition" 
-		<< std::setw(40) << "Keyword" << "\n"
-		<< std::string(80, '-') << "\n";
-	for (int i = 0; i < typedefTable.size(); i++) {
-		std::cout << std::left <<
-		std::setw(20) << typedefTable[i].first
-		<< std::setw(40) << typedefTable[i].second << "\n";
-	}
-	printf("---------------------------\n");
-}
 
 typedef struct token_data
 {
@@ -134,7 +21,6 @@ typedef struct token_data
 	std::string token_type;
 	std::string lexeme;
 } TOKEN;
-
 
 extern char* yytext;
 extern int column;
@@ -162,7 +48,7 @@ int yylex();
 %token<str> XOR_ASSIGN OR_ASSIGN TYPE_NAME
 
 %token<str> TYPEDEF EXTERN STATIC AUTO REGISTER
-%token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID
+%token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID FILE_MAN
 %token<str> STRUCT UNION ENUM ELLIPSIS
 %token<str> CLASS PUBLIC PRIVATE PROTECTED
 
@@ -600,22 +486,23 @@ init_declarator
 
 storage_class_specifier
 	: TYPEDEF	{ $$ = createASTNode($1); flag=1;}
-	| EXTERN	{ $$ = createASTNode($1);}
-	| STATIC	{ $$ = createASTNode($1);}
-	| AUTO		{ $$ = createASTNode($1);}
-	| REGISTER	{ $$ = createASTNode($1);}
+	| EXTERN	{ $$ = createASTNode($1); currentDataType="extern "; flag2=1;}
+	| STATIC	{ $$ = createASTNode($1); currentDataType="static "; flag2=1;}
+	| AUTO		{ $$ = createASTNode($1); currentDataType="auto "; flag2=1;}
+	| REGISTER	{ $$ = createASTNode($1); currentDataType="register "; flag2=1;}
 	;
 
 type_specifier
-	: VOID			{$$ = createASTNode($1); currentDataType="void"; type_of_declarator='d';}	
-	| CHAR			{$$ = createASTNode($1); if(flag2){currentDataType+=" char";flag2=0;}else{currentDataType="char";}; type_of_declarator='d';}	
-	| SHORT			{$$ = createASTNode($1); if(flag2){currentDataType+=" short";flag2=0;}else{currentDataType="short";}; type_of_declarator='d';}	
-	| INT			{$$ = createASTNode($1); if(flag2){currentDataType+=" int";flag2=0;}else{currentDataType="int";} type_of_declarator='d';}
-	| LONG			{$$ = createASTNode($1); if(flag2){currentDataType+=" long";flag2=0;}else{currentDataType="long";}; type_of_declarator='d';}
-	| FLOAT			{$$ = createASTNode($1); if(flag2){currentDataType+=" float";flag2=0;}else{currentDataType="float";}; type_of_declarator='d';}
-	| DOUBLE		{$$ = createASTNode($1); if(flag2){currentDataType+=" double";flag2=0;}else{currentDataType="double";}; type_of_declarator='d';}
-	| SIGNED		{$$ = createASTNode($1); currentDataType="signed"; flag2=1; type_of_declarator='d';}
-	| UNSIGNED		{$$ = createASTNode($1); currentDataType="unsigned"; flag2=1; type_of_declarator='d';}
+	: VOID			{$$ = createASTNode($1); currentDataType="void";}	
+	| CHAR			{$$ = createASTNode($1); if(flag2){currentDataType+=" char";flag2=0;}else{currentDataType="char";}; }	
+	| SHORT			{$$ = createASTNode($1); if(flag2){currentDataType+=" short";flag2=0;}else{currentDataType="short";}; }	
+	| INT			{$$ = createASTNode($1); if(flag2){currentDataType+=" int";flag2=0;}else{currentDataType="int";} }
+	| LONG			{$$ = createASTNode($1); if(flag2){currentDataType+=" long";flag2=0;}else{currentDataType="long";}; }
+	| FLOAT			{$$ = createASTNode($1); if(flag2){currentDataType+=" float";flag2=0;}else{currentDataType="float";}; }
+	| DOUBLE		{$$ = createASTNode($1); if(flag2){currentDataType+=" double";flag2=0;}else{currentDataType="double";}; }
+	| SIGNED		{$$ = createASTNode($1); currentDataType="signed"; flag2=1; }
+	| UNSIGNED		{$$ = createASTNode($1); currentDataType="unsigned"; flag2=1; }
+	| FILE_MAN          { $$ = createASTNode($1); currentDataType="file";  }
 	| struct_or_union_specifier	{$$ = $1;}	
 	| class_definition 			{$$ = $1;}
 	| enum_specifier			{$$ = $1;}
@@ -849,8 +736,8 @@ enumerator
 	;
 
 type_qualifier
-	: CONST		{ $$ = createASTNode($1); }
-	| VOLATILE	{ $$ = createASTNode($1); }
+	: CONST		{ $$ = createASTNode($1); currentDataType="const "; flag2=1;}
+	| VOLATILE	{ $$ = createASTNode($1); currentDataType="volatile "; flag2=1;}
 	;
 
 
@@ -878,7 +765,7 @@ direct_declarator
 		else{
 		std::string check=std::string($1);
 		addToSymbolTable(check,currentDataType);
-		type_of_declarator='n';}
+		}
 	}
 	| '(' declarator ')'  {
 		$$ = $2 ;
