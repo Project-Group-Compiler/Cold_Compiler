@@ -2,9 +2,11 @@
 
 An end-to-end compiler for a new custom programming language, `Cold`.
 
-`Cold` has a C-like syntax based on ANSI C.
+<!-- `Cold` has a C-like syntax based on ANSI C and also supports some object- -->
 
-- Source language : `Cold` (C-like but based on an older version, hence C-old)
+Regarding the name, 
+
+- Source language : `Cold` ()
 - Implementation language : `C++`
 - Intermediate Representaion : `3AC`
 - Target Language : `x86_32` assembly
@@ -55,8 +57,9 @@ bin/parser <input_file> [options]
 ```markdown
 Options:
     -h, --help       Show this help message and exit
-    -l, --lex        Print lexical analysis table also
+    -l, --lex        Print lexical analysis table
     -a, --ast        Print abstract syntax tree as dot file
+    -s, --symtab     Print symbol tables
     -f, --force      Force parsing even if lexical errors are present
 ```
 

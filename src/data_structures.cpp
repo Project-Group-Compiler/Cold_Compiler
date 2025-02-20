@@ -1,20 +1,22 @@
-#include<data_structures.hpp>
-#include<fstream>
+#include "data_structures.hpp"
+#include <fstream>
 #include <iomanip>
 #include <vector>
 
 std::vector<SymbolTableEntry> SymbolTable;
 std::vector<SymbolTableEntry> ConstantTable;
-std::vector<std::pair<std::string,std::string>> typedefTable;
+std::vector<std::pair<std::string, std::string>> typedefTable;
 
-void addToSymbolTable(std::string Token, std::string Data_type) {
+void addToSymbolTable(std::string Token, std::string Data_type)
+{
     SymbolTableEntry entry;
-	entry.token=Token;
-	entry.data_type=Data_type;
-	SymbolTable.push_back(entry);
+    entry.token = Token;
+    entry.data_type = Data_type;
+    SymbolTable.push_back(entry);
 }
 
-void addStandardProceduresToSymbolTable() {
+void addStandardProceduresToSymbolTable()
+{
     std::vector<std::pair<std::string, std::string>> procedures = {
         {"printf", "Procedure"},
         {"scanf", "Procedure"},
@@ -35,83 +37,116 @@ void addStandardProceduresToSymbolTable() {
         {"strcpy", "Procedure"},
         {"strcat", "Procedure"},
         {"strncat", "Procedure"},
-        {"atoi", "Procedure"}
-    };
+        {"atoi", "Procedure"}};
 
-	addToSymbolTable("     ", "     ");
-    for (const auto& procedure : procedures) {
-		addToSymbolTable(procedure.first, procedure.second);
+    addToSymbolTable("     ", "     ");
+    for (const auto &procedure : procedures)
+    {
+        addToSymbolTable(procedure.first, procedure.second);
     }
 }
 
-void updateLastSymbolEntry(){
-	if (!SymbolTable.empty()) {
-        SymbolTable.back().data_type+="[]";
-    } else {
+void updateLastSymbolEntry()
+{
+    if (!SymbolTable.empty())
+    {
+        SymbolTable.back().data_type += "[]";
+    }
+    else
+    {
         std::cerr << "SymbolTable is already empty." << std::endl;
     }
 }
 
-void updateFuncSymbolEntry(int args){
-	if (SymbolTable.size()>args) {
-        SymbolTable[SymbolTable.size()-1-args].data_type="Procedure";
-    } else {
+void updateFuncSymbolEntry(int args)
+{
+    if (SymbolTable.size() > args)
+    {
+        SymbolTable[SymbolTable.size() - 1 - args].data_type = "Procedure";
+    }
+    else
+    {
         std::cerr << "SymbolTable is too small" << std::endl;
     }
 }
 
-void printSymbolTable() {
-    printf("\nSymbol Table:\n");
-    std::cout << std::left <<
-    	std::setw(20) << "Token" 
-     	<< std::setw(40) << "Data Type" << "\n"
-     	<< std::string(80, '-') << "\n";
-    for (int i = 0; i < SymbolTable.size(); i++) {
-        std::cout << std::left <<
-    	std::setw(20) << SymbolTable[i].token
-     	<< std::setw(40) << SymbolTable[i].data_type << "\n";
+void printSymbolTable(std::ofstream &out)
+{
+    out << "\nSymbol Table:\n\n";
+    out << std::left << std::setw(60) << "Token"
+        << std::setw(25) << "Data Type" << std::endl;
+    out << std::string(90, '-') << "\n";
+    for (int i = 0; i < SymbolTable.size(); i++)
+    {
+        out << std::left << std::setw(60) << SymbolTable[i].token
+            << std::setw(25) << SymbolTable[i].data_type << "\n";
     }
-    printf("---------------------------\n");
+    out << std::string(90, '-') << "\n";
 }
 
-void addToConstantTable(std::string constnt, std::string const_type){
-	SymbolTableEntry entry;
-	entry.token=constnt;
-	entry.data_type=const_type;
-	ConstantTable.push_back(entry);
+void addToConstantTable(std::string constnt, std::string const_type)
+{
+    SymbolTableEntry entry;
+    entry.token = constnt;
+    entry.data_type = const_type;
+    ConstantTable.push_back(entry);
 }
 
-void printConstantTable() {
-    printf("\nConstant Table:\n");
-    std::cout << std::left <<
-    	std::setw(20) << "Constant" 
-     	<< std::setw(40) << "Constant Type" << "\n"
-     	<< std::string(80, '-') << "\n";
-    for (int i = 0; i < ConstantTable.size(); i++) {
-        std::cout << std::left <<
-    	std::setw(20) << ConstantTable[i].token
-     	<< std::setw(40) << ConstantTable[i].data_type << "\n";
+void printConstantTable(std::ofstream &out)
+{
+    if (ConstantTable.empty())
+        return;
+    out << "\nConstant Table:\n\n";
+    out << std::left << std::setw(60) << "Constant"
+        << std::setw(25) << "Constant Type" << std::endl;
+    out << std::string(90, '-') << "\n";
+    for (int i = 0; i < ConstantTable.size(); i++)
+    {
+        out << std::left << std::setw(60) << ConstantTable[i].token
+            << std::setw(25) << ConstantTable[i].data_type << "\n";
     }
-    printf("---------------------------\n");
+    out << std::string(90, '-') << "\n";
 }
 
-std::string searchTypedefTable(std::string Token){
-	for (int i=0; i<typedefTable.size(); i++){
-		if(typedefTable[i].first==Token) return typedefTable[i].second;
-	}
-	return "";
+std::string searchTypedefTable(std::string Token)
+{
+    for (int i = 0; i < typedefTable.size(); i++)
+    {
+        if (typedefTable[i].first == Token)
+            return typedefTable[i].second;
+    }
+    return "";
 }
 
-void printType(){
-	printf("\nTypedef Table:\n");
-	std::cout << std::left <<
-		std::setw(20) << "Definition" 
-		<< std::setw(40) << "Keyword" << "\n"
-		<< std::string(80, '-') << "\n";
-	for (int i = 0; i < typedefTable.size(); i++) {
-		std::cout << std::left <<
-		std::setw(20) << typedefTable[i].first
-		<< std::setw(40) << typedefTable[i].second << "\n";
-	}
-	printf("---------------------------\n");
+void printType(std::ofstream &out)
+{
+    if (typedefTable.empty())
+        return;
+    out << "\nTypedef Table:\n\n";
+    out << std::left << std::setw(60) << "Definition"
+        << std::setw(25) << "Keyword" << std::endl;
+    out << std::string(90, '-') << "\n";
+    for (int i = 0; i < typedefTable.size(); i++)
+    {
+        out << std::left << std::setw(60) << typedefTable[i].first
+            << std::setw(25) << typedefTable[i].second << "\n";
+    }
+    out << std::string(90, '-') << "\n";
+}
+
+extern std::string outputDir;
+void print_error(const std::string &message);
+
+void printTables(const std::string &inputFile)
+{
+    addStandardProceduresToSymbolTable();
+    std::ofstream out(outputDir + inputFile + "_tables.txt");
+    if (!out)
+    {
+        print_error("cannot open " + outputDir + inputFile + "_tables.txt");
+        return;
+    }
+    printSymbolTable(out);
+    printConstantTable(out);
+    printType(out);
 }

@@ -14,14 +14,6 @@ std::string currentDataType="";
 int noArgs=0;
 bool flag=0,flag2=0;;
 
-typedef struct token_data
-{
-	int line;
-	int column;
-	std::string token_type;
-	std::string lexeme;
-} TOKEN;
-
 extern char* yytext;
 extern int column;
 extern int line;
