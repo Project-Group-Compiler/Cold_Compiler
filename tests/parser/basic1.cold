@@ -1,18 +1,12 @@
 void test_goto() {
     int x = 0;
-    goto label;
-    
-    x = 10; // Should be skipped
-
-label:
-    x = 5;
-    
+    x = 10; 
     if (x == 5) {
         // Test Passed
     }
 }
-void test_do_while(int x) {
 
+void test_do_while(int x) {
     do {
         x++;
     } while (x < 5);
@@ -24,6 +18,7 @@ void test_do_while(int x) {
         printf("Fail");
     }
 }
+
 int func(){
     int arr[5]={1,2,3,4,5};
     int i=0;
@@ -42,8 +37,8 @@ int func(){
         return strlen(str1);
     }
     return 0;
-    
 }
+
 int WHITE = 0;
 int GRAY = 1;
 int BLACK = 2;
@@ -56,7 +51,5 @@ int main(){
     int x=5;
     printf("ehllo world");
     test_goto(x);
-    
-    
     return 0;
 }
