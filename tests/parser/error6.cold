@@ -1,0 +1,5 @@
+float fun(){
+    int i
+
+    //expected ';'
+}

@@ -4,9 +4,10 @@ int main(){
         This is a testcase for checking lexer
         .//Special Character: @#$%&   
     */
-    printf("ehllo world"); //checking unterminated string
+    
     char* a="asdf      
     kll";
+    printf("ehllo world"); //checking unterminated string
     return 0;
 }
 
