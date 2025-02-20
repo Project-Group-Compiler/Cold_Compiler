@@ -1,0 +1,9 @@
+typedef unsigned int uint;
+
+void test_typedef() {
+    uint a = 10;
+    uint b = 20;
+    if (a + b == 30) {
+        // Test Passed
+    }
+}

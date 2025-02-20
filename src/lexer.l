@@ -27,9 +27,31 @@ extern std::string outputDir;
 extern bool has_error;
 void print_error(const std::string &message);
 
+extern std::vector<std::pair<std::string,std::string>> typedefTable;
+
+std::string searchTypedefTable(std::string Token);
+
 void count();
 void reportError();
 int check_type();
+
+typedef struct {
+    std::string token;
+    std::string data_type;
+} SymbolTableEntry;
+
+std::vector<SymbolTableEntry> ConstantTable;
+extern std::vector<SymbolTableEntry> SymbolTable;
+extern void addToSymbolTable(std::string Token, std::string Data_type);
+extern bool searchSymbolTable(std::string Token);
+
+void addToConstantTable(std::string constnt, std::string const_type){
+	SymbolTableEntry entry;
+	entry.token=constnt;
+	entry.data_type=const_type;
+	ConstantTable.push_back(entry);
+}
+
 int column = 0;
 int line = 1;
 bool err_dur_parsing = false;
@@ -76,17 +98,22 @@ std::string current_token_type;
 "void"          { count(); yylval.str = strdup(yytext); current_token_type="VOID"; return(VOID); }
 "volatile"      { count(); yylval.str = strdup(yytext); current_token_type="VOLATILE"; return(VOLATILE); }
 "while"         { count(); yylval.str = strdup(yytext); current_token_type="WHILE"; return(WHILE); }
+"class"          { count(); yylval.str = strdup(yytext); current_token_type="CLASS"; return(CLASS); }
+"public"         { count(); yylval.str = strdup(yytext); current_token_type="PUBLIC"; return(PUBLIC); }
+"private"        { count(); yylval.str = strdup(yytext); current_token_type="PRIVATE"; return(PRIVATE); }
+"protected"      { count(); yylval.str = strdup(yytext); current_token_type="PROTECTED"; return(PROTECTED); }
+
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
 
-0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
+0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
+{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
+L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Character"); return(CONSTANT); }
 
-{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
 
 L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
 
@@ -136,6 +163,7 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 "^"            { count(); yylval.str = strdup(yytext); current_token_type="^"; return('^'); }
 "|"            { count(); yylval.str = strdup(yytext); current_token_type="|"; return('|'); }
 "?"            { count(); yylval.str = strdup(yytext); current_token_type="?"; return('?'); }
+"<-"   { count(); yylval.str = strdup(yytext); current_token_type = "INHERITANCE_OP"; return(INHERITANCE_OP); }
 
 [ \t\v\n\f]	   { count(); }
 
@@ -166,6 +194,10 @@ void count()
 
 int check_type()
 {
+	std::string str = searchTypedefTable(strdup(yytext));
+	if(str=="int"){
+		return(INT);
+	}
 	return(IDENTIFIER);
 }
 

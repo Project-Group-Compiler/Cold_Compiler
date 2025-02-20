@@ -11,7 +11,7 @@ void init(int n) {
     }
 }
 
-int get(int node) {// ultimate parent
+int get(int node) {// ultimate parent RECURSION
     if (node == parent[node])
         return node;
     return parent[node] = get(parent[node]);
