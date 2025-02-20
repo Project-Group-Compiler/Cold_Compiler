@@ -1,15 +1,15 @@
-
 struct Node {
     int val;
     struct Node* L;
     struct Node* R;
 };
+
 int main()
 {
     struct Node a;
     int a, b, c;
     char op;
-        a.val=5;
+    a.val=5;
     printf("%d", a.x);
     
     printf("Enter first number\n");
@@ -32,5 +32,6 @@ int main()
         default:
             printf("Not a valid operator\n");
     }
+
     return 0;
 }
