@@ -1,4 +1,3 @@
-
 D			[0-9]
 L			[a-zA-Z_]
 H			[a-fA-F0-9]
@@ -34,6 +33,7 @@ int column = 0;
 int line = 1;
 bool err_dur_parsing = false;
 std::string current_token_type;
+std::string current_token_lexeme; // Added global variable to store current token lexeme
 %}
 
 %option noyywrap
@@ -43,99 +43,99 @@ std::string current_token_type;
 
 "//"[^\n]*		{ count(); }
 
-"auto"          { count(); yylval.str = strdup(yytext); current_token_type="AUTO"; return(AUTO); }
-"break"         { count(); yylval.str = strdup(yytext); current_token_type="BREAK"; return(BREAK); }
-"case"          { count(); yylval.str = strdup(yytext); current_token_type="CASE"; return(CASE); }
-"char"          { count(); yylval.str = strdup(yytext); current_token_type="CHAR"; return(CHAR); }
-"const"         { count(); yylval.str = strdup(yytext); current_token_type="CONST"; return(CONST); }
-"continue"      { count(); yylval.str = strdup(yytext); current_token_type="CONTINUE"; return(CONTINUE); }
-"default"       { count(); yylval.str = strdup(yytext); current_token_type="DEFAULT"; return(DEFAULT); }
-"do"            { count(); yylval.str = strdup(yytext); current_token_type="DO"; return(DO); }
-"double"        { count(); yylval.str = strdup(yytext); current_token_type="DOUBLE"; return(DOUBLE); }
-"else"          { count(); yylval.str = strdup(yytext); current_token_type="ELSE"; return(ELSE); }
-"enum"          { count(); yylval.str = strdup(yytext); current_token_type="ENUM"; return(ENUM); }
-"extern"        { count(); yylval.str = strdup(yytext); current_token_type="EXTERN"; return(EXTERN); }
-"float"         { count(); yylval.str = strdup(yytext); current_token_type="FLOAT"; return(FLOAT); }
-"for"           { count(); yylval.str = strdup(yytext); current_token_type="FOR"; return(FOR); }
-"goto"          { count(); yylval.str = strdup(yytext); current_token_type="GOTO"; return(GOTO); }
-"if"            { count(); yylval.str = strdup(yytext); current_token_type="IF"; return(IF); }
-"int"           { count(); yylval.str = strdup(yytext); current_token_type="INT"; return(INT); }
-"long"          { count(); yylval.str = strdup(yytext); current_token_type="LONG"; return(LONG); }
-"register"      { count(); yylval.str = strdup(yytext); current_token_type="REGISTER"; return(REGISTER); }
-"return"        { count(); yylval.str = strdup(yytext); current_token_type="RETURN"; return(RETURN); }
-"short"         { count(); yylval.str = strdup(yytext); current_token_type="SHORT"; return(SHORT); }
-"signed"        { count(); yylval.str = strdup(yytext); current_token_type="SIGNED"; return(SIGNED); }
-"sizeof"        { count(); yylval.str = strdup(yytext); current_token_type="SIZEOF"; return(SIZEOF); }
-"static"        { count(); yylval.str = strdup(yytext); current_token_type="STATIC"; return(STATIC); }
-"struct"        { count(); yylval.str = strdup(yytext); current_token_type="STRUCT"; return(STRUCT); }
-"switch"        { count(); yylval.str = strdup(yytext); current_token_type="SWITCH"; return(SWITCH); }
-"typedef"       { count(); yylval.str = strdup(yytext); current_token_type="TYPEDEF"; return(TYPEDEF); }
-"union"         { count(); yylval.str = strdup(yytext); current_token_type="UNION"; return(UNION); }
-"unsigned"      { count(); yylval.str = strdup(yytext); current_token_type="UNSIGNED"; return(UNSIGNED); }
-"until"         { count(); yylval.str = strdup(yytext); current_token_type="UNTIL"; return(UNTIL); }
-"void"          { count(); yylval.str = strdup(yytext); current_token_type="VOID"; return(VOID); }
-"volatile"      { count(); yylval.str = strdup(yytext); current_token_type="VOLATILE"; return(VOLATILE); }
-"while"         { count(); yylval.str = strdup(yytext); current_token_type="WHILE"; return(WHILE); }
+"auto"          { count(); yylval.str = strdup(yytext); current_token_type="AUTO"; current_token_lexeme=yytext; return(AUTO); }
+"break"         { count(); yylval.str = strdup(yytext); current_token_type="BREAK"; current_token_lexeme=yytext; return(BREAK); }
+"case"          { count(); yylval.str = strdup(yytext); current_token_type="CASE"; current_token_lexeme=yytext; return(CASE); }
+"char"          { count(); yylval.str = strdup(yytext); current_token_type="CHAR"; current_token_lexeme=yytext; return(CHAR); }
+"const"         { count(); yylval.str = strdup(yytext); current_token_type="CONST"; current_token_lexeme=yytext; return(CONST); }
+"continue"      { count(); yylval.str = strdup(yytext); current_token_type="CONTINUE"; current_token_lexeme=yytext; return(CONTINUE); }
+"default"       { count(); yylval.str = strdup(yytext); current_token_type="DEFAULT"; current_token_lexeme=yytext; return(DEFAULT); }
+"do"            { count(); yylval.str = strdup(yytext); current_token_type="DO"; current_token_lexeme=yytext; return(DO); }
+"double"        { count(); yylval.str = strdup(yytext); current_token_type="DOUBLE"; current_token_lexeme=yytext; return(DOUBLE); }
+"else"          { count(); yylval.str = strdup(yytext); current_token_type="ELSE"; current_token_lexeme=yytext; return(ELSE); }
+"enum"          { count(); yylval.str = strdup(yytext); current_token_type="ENUM"; current_token_lexeme=yytext; return(ENUM); }
+"extern"        { count(); yylval.str = strdup(yytext); current_token_type="EXTERN"; current_token_lexeme=yytext; return(EXTERN); }
+"float"         { count(); yylval.str = strdup(yytext); current_token_type="FLOAT"; current_token_lexeme=yytext; return(FLOAT); }
+"for"           { count(); yylval.str = strdup(yytext); current_token_type="FOR"; current_token_lexeme=yytext; return(FOR); }
+"goto"          { count(); yylval.str = strdup(yytext); current_token_type="GOTO"; current_token_lexeme=yytext; return(GOTO); }
+"if"            { count(); yylval.str = strdup(yytext); current_token_type="IF"; current_token_lexeme=yytext; return(IF); }
+"int"           { count(); yylval.str = strdup(yytext); current_token_type="INT"; current_token_lexeme=yytext; return(INT); }
+"long"          { count(); yylval.str = strdup(yytext); current_token_type="LONG"; current_token_lexeme=yytext; return(LONG); }
+"register"      { count(); yylval.str = strdup(yytext); current_token_type="REGISTER"; current_token_lexeme=yytext; return(REGISTER); }
+"return"        { count(); yylval.str = strdup(yytext); current_token_type="RETURN"; current_token_lexeme=yytext; return(RETURN); }
+"short"         { count(); yylval.str = strdup(yytext); current_token_type="SHORT"; current_token_lexeme=yytext; return(SHORT); }
+"signed"        { count(); yylval.str = strdup(yytext); current_token_type="SIGNED"; current_token_lexeme=yytext; return(SIGNED); }
+"sizeof"        { count(); yylval.str = strdup(yytext); current_token_type="SIZEOF"; current_token_lexeme=yytext; return(SIZEOF); }
+"static"        { count(); yylval.str = strdup(yytext); current_token_type="STATIC"; current_token_lexeme=yytext; return(STATIC); }
+"struct"        { count(); yylval.str = strdup(yytext); current_token_type="STRUCT"; current_token_lexeme=yytext; return(STRUCT); }
+"switch"        { count(); yylval.str = strdup(yytext); current_token_type="SWITCH"; current_token_lexeme=yytext; return(SWITCH); }
+"typedef"       { count(); yylval.str = strdup(yytext); current_token_type="TYPEDEF"; current_token_lexeme=yytext; return(TYPEDEF); }
+"union"         { count(); yylval.str = strdup(yytext); current_token_type="UNION"; current_token_lexeme=yytext; return(UNION); }
+"unsigned"      { count(); yylval.str = strdup(yytext); current_token_type="UNSIGNED"; current_token_lexeme=yytext; return(UNSIGNED); }
+"until"         { count(); yylval.str = strdup(yytext); current_token_type="UNTIL"; current_token_lexeme=yytext; return(UNTIL); }
+"void"          { count(); yylval.str = strdup(yytext); current_token_type="VOID"; current_token_lexeme=yytext; return(VOID); }
+"volatile"      { count(); yylval.str = strdup(yytext); current_token_type="VOLATILE"; current_token_lexeme=yytext; return(VOLATILE); }
+"while"         { count(); yylval.str = strdup(yytext); current_token_type="WHILE"; current_token_lexeme=yytext; return(WHILE); }
 
-{L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
+{L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; current_token_lexeme=yytext; return(check_type()); }
 
-0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; current_token_lexeme=yytext; return(CONSTANT); }
+0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; current_token_lexeme=yytext; return(CONSTANT); }
+{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; current_token_lexeme=yytext; return(CONSTANT); }
+L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; current_token_lexeme=yytext; return(CONSTANT); }
 
-{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; return(CONSTANT); }
+{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; current_token_lexeme=yytext; return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; current_token_lexeme=yytext; return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; current_token_lexeme=yytext; return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
+L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; current_token_lexeme=yytext; return(STRING_LITERAL); }
 
-"..."          { count(); yylval.str = strdup(yytext); current_token_type="ELLIPSIS"; return(ELLIPSIS); }
-">>="          { count(); yylval.str = strdup(yytext); current_token_type="RIGHT_ASSIGN"; return(RIGHT_ASSIGN); }
-"<<="          { count(); yylval.str = strdup(yytext); current_token_type="LEFT_ASSIGN"; return(LEFT_ASSIGN); }
-"+="           { count(); yylval.str = strdup(yytext); current_token_type="ADD_ASSIGN"; return(ADD_ASSIGN); }
-"-="           { count(); yylval.str = strdup(yytext); current_token_type="SUB_ASSIGN"; return(SUB_ASSIGN); }
-"*="           { count(); yylval.str = strdup(yytext); current_token_type="MUL_ASSIGN"; return(MUL_ASSIGN); }
-"/="           { count(); yylval.str = strdup(yytext); current_token_type="DIV_ASSIGN"; return(DIV_ASSIGN); }
-"%="           { count(); yylval.str = strdup(yytext); current_token_type="MOD_ASSIGN"; return(MOD_ASSIGN); }
-"&="           { count(); yylval.str = strdup(yytext); current_token_type="AND_ASSIGN"; return(AND_ASSIGN); }
-"^="           { count(); yylval.str = strdup(yytext); current_token_type="XOR_ASSIGN"; return(XOR_ASSIGN); }
-"|="           { count(); yylval.str = strdup(yytext); current_token_type="OR_ASSIGN"; return(OR_ASSIGN); }
-">>"           { count(); yylval.str = strdup(yytext); current_token_type="RIGHT_OP"; return(RIGHT_OP); }
-"<<"           { count(); yylval.str = strdup(yytext); current_token_type="LEFT_OP"; return(LEFT_OP); }
-"++"           { count(); yylval.str = strdup(yytext); current_token_type="INC_OP"; return(INC_OP); }
-"--"           { count(); yylval.str = strdup(yytext); current_token_type="DEC_OP"; return(DEC_OP); }
-"->"           { count(); yylval.str = strdup(yytext); current_token_type="PTR_OP"; return(PTR_OP); }
-"&&"           { count(); yylval.str = strdup(yytext); current_token_type="AND_OP"; return(AND_OP); }
-"||"           { count(); yylval.str = strdup(yytext); current_token_type="OR_OP"; return(OR_OP); }
-"<="           { count(); yylval.str = strdup(yytext); current_token_type="LE_OP"; return(LE_OP); }
-">="           { count(); yylval.str = strdup(yytext); current_token_type="GE_OP"; return(GE_OP); }
-"=="           { count(); yylval.str = strdup(yytext); current_token_type="EQ_OP"; return(EQ_OP); }
-"!="           { count(); yylval.str = strdup(yytext); current_token_type="NE_OP"; return(NE_OP); }
-";"            { count(); yylval.str = strdup(yytext); current_token_type=";"; return(';'); }
-("{"|"<%")     { count(); yylval.str = strdup(yytext); current_token_type="{"; return('{'); }
-("}"|"%>")     { count(); yylval.str = strdup(yytext); current_token_type="}"; return('}'); }
-","            { count(); yylval.str = strdup(yytext); current_token_type=","; return(','); }
-":"            { count(); yylval.str = strdup(yytext); current_token_type=":"; return(':'); }
-"="            { count(); yylval.str = strdup(yytext); current_token_type="="; return('='); }
-"("            { count(); yylval.str = strdup(yytext); current_token_type="("; return('('); }
-")"            { count(); yylval.str = strdup(yytext); current_token_type=")"; return(')'); }
-("["|"<:")     { count(); yylval.str = strdup(yytext); current_token_type="["; return('['); }
-("]"|":>")     { count(); yylval.str = strdup(yytext); current_token_type="]"; return(']'); }
-"."            { count(); yylval.str = strdup(yytext); current_token_type="."; return('.'); }
-"&"            { count(); yylval.str = strdup(yytext); current_token_type="&"; return('&'); }
-"!"            { count(); yylval.str = strdup(yytext); current_token_type="!"; return('!'); }
-"~"            { count(); yylval.str = strdup(yytext); current_token_type="~"; return('~'); }
-"-"            { count(); yylval.str = strdup(yytext); current_token_type="-"; return('-'); }
-"+"            { count(); yylval.str = strdup(yytext); current_token_type="+"; return('+'); }
-"*"            { count(); yylval.str = strdup(yytext); current_token_type="*"; return('*'); }
-"/"            { count(); yylval.str = strdup(yytext); current_token_type="/"; return('/'); }
-"%"            { count(); yylval.str = strdup(yytext); current_token_type="%"; return('%'); }
-"<"            { count(); yylval.str = strdup(yytext); current_token_type="<"; return('<'); }
-">"            { count(); yylval.str = strdup(yytext); current_token_type=">"; return('>'); }
-"^"            { count(); yylval.str = strdup(yytext); current_token_type="^"; return('^'); }
-"|"            { count(); yylval.str = strdup(yytext); current_token_type="|"; return('|'); }
-"?"            { count(); yylval.str = strdup(yytext); current_token_type="?"; return('?'); }
+"..."          { count(); yylval.str = strdup(yytext); current_token_type="ELLIPSIS"; current_token_lexeme=yytext; return(ELLIPSIS); }
+">>="          { count(); yylval.str = strdup(yytext); current_token_type="RIGHT_ASSIGN"; current_token_lexeme=yytext; return(RIGHT_ASSIGN); }
+"<<="          { count(); yylval.str = strdup(yytext); current_token_type="LEFT_ASSIGN"; current_token_lexeme=yytext; return(LEFT_ASSIGN); }
+"+="           { count(); yylval.str = strdup(yytext); current_token_type="ADD_ASSIGN"; current_token_lexeme=yytext; return(ADD_ASSIGN); }
+"-="           { count(); yylval.str = strdup(yytext); current_token_type="SUB_ASSIGN"; current_token_lexeme=yytext; return(SUB_ASSIGN); }
+"*="           { count(); yylval.str = strdup(yytext); current_token_type="MUL_ASSIGN"; current_token_lexeme=yytext; return(MUL_ASSIGN); }
+"/="           { count(); yylval.str = strdup(yytext); current_token_type="DIV_ASSIGN"; current_token_lexeme=yytext; return(DIV_ASSIGN); }
+"%="           { count(); yylval.str = strdup(yytext); current_token_type="MOD_ASSIGN"; current_token_lexeme=yytext; return(MOD_ASSIGN); }
+"&="           { count(); yylval.str = strdup(yytext); current_token_type="AND_ASSIGN"; current_token_lexeme=yytext; return(AND_ASSIGN); }
+"^="           { count(); yylval.str = strdup(yytext); current_token_type="XOR_ASSIGN"; current_token_lexeme=yytext; return(XOR_ASSIGN); }
+"|="           { count(); yylval.str = strdup(yytext); current_token_type="OR_ASSIGN"; current_token_lexeme=yytext; return(OR_ASSIGN); }
+">>"           { count(); yylval.str = strdup(yytext); current_token_type="RIGHT_OP"; current_token_lexeme=yytext; return(RIGHT_OP); }
+"<<"           { count(); yylval.str = strdup(yytext); current_token_type="LEFT_OP"; current_token_lexeme=yytext; return(LEFT_OP); }
+"++"           { count(); yylval.str = strdup(yytext); current_token_type="INC_OP"; current_token_lexeme=yytext; return(INC_OP); }
+"--"           { count(); yylval.str = strdup(yytext); current_token_type="DEC_OP"; current_token_lexeme=yytext; return(DEC_OP); }
+"->"           { count(); yylval.str = strdup(yytext); current_token_type="PTR_OP"; current_token_lexeme=yytext; return(PTR_OP); }
+"&&"           { count(); yylval.str = strdup(yytext); current_token_type="AND_OP"; current_token_lexeme=yytext; return(AND_OP); }
+"||"           { count(); yylval.str = strdup(yytext); current_token_type="OR_OP"; current_token_lexeme=yytext; return(OR_OP); }
+"<="           { count(); yylval.str = strdup(yytext); current_token_type="LE_OP"; current_token_lexeme=yytext; return(LE_OP); }
+">="           { count(); yylval.str = strdup(yytext); current_token_type="GE_OP"; current_token_lexeme=yytext; return(GE_OP); }
+"=="           { count(); yylval.str = strdup(yytext); current_token_type="EQ_OP"; current_token_lexeme=yytext; return(EQ_OP); }
+"!="           { count(); yylval.str = strdup(yytext); current_token_type="NE_OP"; current_token_lexeme=yytext; return(NE_OP); }
+";"            { count(); yylval.str = strdup(yytext); current_token_type=";"; current_token_lexeme=yytext; return(';'); }
+("{"|"<%")     { count(); yylval.str = strdup(yytext); current_token_type="{"; current_token_lexeme=yytext; return('{'); }
+("}"|"%>")     { count(); yylval.str = strdup(yytext); current_token_type="}"; current_token_lexeme=yytext; return('}'); }
+","            { count(); yylval.str = strdup(yytext); current_token_type=","; current_token_lexeme=yytext; return(','); }
+":"            { count(); yylval.str = strdup(yytext); current_token_type=":"; current_token_lexeme=yytext; return(':'); }
+"="            { count(); yylval.str = strdup(yytext); current_token_type="="; current_token_lexeme=yytext; return('='); }
+"("            { count(); yylval.str = strdup(yytext); current_token_type="("; current_token_lexeme=yytext; return('('); }
+")"            { count(); yylval.str = strdup(yytext); current_token_type=")"; current_token_lexeme=yytext; return(')'); }
+("["|"<:")     { count(); yylval.str = strdup(yytext); current_token_type="["; current_token_lexeme=yytext; return('['); }
+("]"|":>")     { count(); yylval.str = strdup(yytext); current_token_type="]"; current_token_lexeme=yytext; return(']'); }
+"."            { count(); yylval.str = strdup(yytext); current_token_type="."; current_token_lexeme=yytext; return('.'); }
+"&"            { count(); yylval.str = strdup(yytext); current_token_type="&"; current_token_lexeme=yytext; return('&'); }
+"!"            { count(); yylval.str = strdup(yytext); current_token_type="!"; current_token_lexeme=yytext; return('!'); }
+"~"            { count(); yylval.str = strdup(yytext); current_token_type="~"; current_token_lexeme=yytext; return('~'); }
+"-"            { count(); yylval.str = strdup(yytext); current_token_type="-"; current_token_lexeme=yytext; return('-'); }
+"+"            { count(); yylval.str = strdup(yytext); current_token_type="+"; current_token_lexeme=yytext; return('+'); }
+"*"            { count(); yylval.str = strdup(yytext); current_token_type="*"; current_token_lexeme=yytext; return('*'); }
+"/"            { count(); yylval.str = strdup(yytext); current_token_type="/"; current_token_lexeme=yytext; return('/'); }
+"%"            { count(); yylval.str = strdup(yytext); current_token_type="%"; current_token_lexeme=yytext; return('%'); }
+"<"            { count(); yylval.str = strdup(yytext); current_token_type="<"; current_token_lexeme=yytext; return('<'); }
+">"            { count(); yylval.str = strdup(yytext); current_token_type=">"; current_token_lexeme=yytext; return('>'); }
+"^"            { count(); yylval.str = strdup(yytext); current_token_type="^"; current_token_lexeme=yytext; return('^'); }
+"|"            { count(); yylval.str = strdup(yytext); current_token_type="|"; current_token_lexeme=yytext; return('|'); }
+"?"            { count(); yylval.str = strdup(yytext); current_token_type="?"; current_token_lexeme=yytext; return('?'); }
 
 [ \t\v\n\f]	   { count(); }
 

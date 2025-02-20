@@ -2,6 +2,7 @@
 .cph/
 *.exe
 *.out
+*.dot
 build/
 bin/
 outputs/
@@ -10,3 +11,5 @@ src/parser.cpp
 src/lexer.hpp
 src/parser.hpp
 src/AST.dot
+command.txt
+tmp_parser
