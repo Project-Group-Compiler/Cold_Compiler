@@ -1,5 +1,5 @@
 class Person { 
-   // Data members of person 
+   // data members of person 
     private{
         long aadhar_number;
     };  
@@ -35,8 +35,7 @@ class Student <- public Person {
     };
 }; 
   
-class TA <- public Faculty, public Student  {
-
+class Instructor <- public Faculty, public Student  {
     private{
         char** courses;
         int maxSize =  1024;
@@ -48,11 +47,10 @@ class TA <- public Faculty, public Student  {
             for(i=0; i<this->numCourses;i++)
                 printf("%s", this->courses[i]); 
         }
-
     };
 }; 
   
 int main()  { 
-    class TA ta1;
-    ta1.printCourses(); 
+    class Instructor inst1;
+    inst1.printCourses(); 
 } 
