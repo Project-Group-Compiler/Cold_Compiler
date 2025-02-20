@@ -1,63 +1,102 @@
 #include "AST.hpp"
-#include <iostream>
+#include <fstream>
 
-extern FILE* dotfile;
+std::ofstream dotfile;
+extern bool print_ast;
+void print_error(const std::string &message);
+extern std::string outputDir;
 
 long long NodeCounter = 0;
+std::string padding = "0.1";
 
-void beginAST() {
-    std::fprintf(dotfile, "digraph AST {\n\trankdir=TB;\n\tordering=out;\n");
+void beginAST(const std::string &inputFile)
+{
+    if (print_ast)
+    {
+        dotfile = std::ofstream(outputDir + inputFile + "_AST.dot");
+        if (!dotfile)
+        {
+            print_error("cannot open " + outputDir + inputFile + "_AST.dot");
+            return;
+        }
+        dotfile << "digraph AST {\n\trankdir=TB;\n\tordering=out;\n";
+    }
 }
 
-void endAST() {
-    std::fprintf(dotfile, "}\n");
+void endAST()
+{
+    if (print_ast)
+    {
+        dotfile << "}\n";
+        dotfile.close();
+    }
 }
 
-void insertAttr(std::vector<Data>& v, Node* node, const std::string& str, bool isNode) {
+void insertAttr(std::vector<Data> &v, Node *node, const std::string &str, bool isNode)
+{
     v.push_back(Data{node, str, isNode});
 }
 
-Node* createASTNode(const std::string& str, std::vector<Data>* v) {
-    Node* node = new Node;
+Node *createASTNode(const std::string &str, std::vector<Data> *v)
+{
+    Node *node = new Node;
     node->node_id = ++NodeCounter;
     node->node_name = str;
 
-    if (!v) { // Leaf Node
+    if (!v)
+    { // Leaf Node
         std::string format;
-        for (char c : str) {
+        for (char c : str)
+        {
             format += c;
-            if (c == '\\') format += c;
+            if (c == '\\')
+                format += c;
         }
         node->node_name = format;
-        if (str[0] == '"') { // String literal
+        if (str[0] == '"')
+        { // String literal
             std::string s = format.substr(1, format.size() - 2);
-            std::fprintf(dotfile, "\t%lld [label=\"\\\"%s\\\"\" shape=box style=filled color=\"dodgerblue\" fillcolor=\"lightyellow\"]\n", 
-                         node->node_id, s.c_str());
-        } else {
-            std::fprintf(dotfile, "\t%lld [label=\"%s\" shape=box style=filled color=\"dodgerblue\" fillcolor=\"lightyellow\"]\n", 
-                         node->node_id, node->node_name.c_str());
+            if (print_ast)
+                dotfile << "\t" << node->node_id << " [label=\"\\\"" << s << "\\\"\" shape=box style=filled fillcolor=\"#98D8EF\" pad=" << padding << "]\n";
         }
-    } else { // Non-leaf Node
+        else
+        {
+            if (print_ast)
+                dotfile << "\t" << node->node_id << " [label=\"" << node->node_name << "\" shape=box style=filled fillcolor=\"#98D8EF\" pad=" << padding << "]\n";
+        }
+    }
+    else
+    { // Non-leaf Node
         std::vector<long long> op_id;
-        for (auto& data : *v) {
-            if (!data.is_node) {
+        for (auto &data : *v)
+        {
+            if (!data.is_node)
+            {
                 long long opid = ++NodeCounter;
                 op_id.push_back(opid);
-                if (!data.str.empty()) {
-                    std::fprintf(dotfile, "\t%lld [label=\"%s\"]\n", opid, data.str.c_str());
+                if (!data.str.empty())
+                {
+                    if (print_ast)
+                        dotfile << "\t" << opid << " [label=\"" << data.str << "\" shape=box style=filled fillcolor=\"#98D8EF\" pad=" << padding << "]\n";
                 }
             }
         }
-        
-        std::fprintf(dotfile, "\t%lld [label=\"%s\"]\n", node->node_id, node->node_name.c_str());
-        
+
+        if (print_ast)
+            dotfile << "\t" << node->node_id << " [label=\"" << node->node_name << "\" shape=box style=filled fillcolor=\"#F2EFE7\" pad=" << padding << "]\n";
+
         int j = 0;
-        for (auto& data : *v) {
-            if (data.is_node && data.node) {
-                std::fprintf(dotfile, "\t%lld -> %lld\n", node->node_id, data.node->node_id);
+        for (auto &data : *v)
+        {
+            if (data.is_node && data.node)
+            {
+                if (print_ast)
+                    dotfile << "\t" << node->node_id << " -> " << data.node->node_id << " [color=\"#578FCA\" pad=" << padding << "]\n";
             }
-            if (!data.is_node && !data.str.empty()) {
-                std::fprintf(dotfile, "\t%lld -> %lld\n", node->node_id, op_id[j]);
+            if (!data.is_node && !data.str.empty())
+            {
+                if (print_ast)
+                    dotfile << "\t" << node->node_id << " -> " << op_id[j] << " [color=\"#578FCA\" pad=" << padding << "]\n";
                 j++;
             }
         }

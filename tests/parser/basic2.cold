@@ -4,11 +4,8 @@ struct Node {
     struct Node* L;
     struct Node* R;
 };
-int main(){
-    /*
-        This is a testcase for checking lexer
-        .//Special Character: @#$%&   
-    */
+int main()
+{
     struct Node a;
     int a, b, c;
     char op;

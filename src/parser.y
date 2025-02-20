@@ -1,13 +1,13 @@
 %{
-#include "AST.hpp"
 #include <stdio.h>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <unordered_map>
 #include <vector>
 #include <cstring>
+#include "AST.hpp"
 
+extern int yyleng;
 std::string currentDataType="";
 
 std::vector<std::pair<std::string,std::string>> typedefTable;
@@ -139,19 +139,15 @@ typedef struct token_data
 extern char* yytext;
 extern int column;
 extern int line;
-extern std::string current_token_type;
+extern std::string inputFilename;
+extern bool has_error;
 
 int yyerror(const char*);
 int yylex();
-int onlyLexer = 0;
-FILE* dotfile;
-
-extern int yyleng;
-extern int yylex();
-extern int yyrestart(FILE*);
-extern FILE* yyin;
-#define YYERROR_VERBOSE
 %}
+
+%define parse.error detailed
+%define parse.lac full
 
 %union{
 	char* str;
@@ -194,6 +190,14 @@ primary_expression
     : IDENTIFIER {
     	$$ = createASTNode($1);
     }
+	| CONSTANT IDENTIFIER {
+		yyerror("syntax error, invalid identifier syntax");
+		$$ = createASTNode($1);
+	}
+	| CONSTANT CONSTANT {
+		yyerror("syntax error, invalid constant syntax");
+		$$ = createASTNode($1);
+	}
 	| CONSTANT 	{
 		$$ = createASTNode($1);
 	}
@@ -606,15 +610,7 @@ type_specifier
 	: VOID			{$$ = createASTNode($1); currentDataType="void"; type_of_declarator='d';}	
 	| CHAR			{$$ = createASTNode($1); if(flag2){currentDataType+=" char";flag2=0;}else{currentDataType="char";}; type_of_declarator='d';}	
 	| SHORT			{$$ = createASTNode($1); if(flag2){currentDataType+=" short";flag2=0;}else{currentDataType="short";}; type_of_declarator='d';}	
-	| INT			{
-		if (!$1) {
-			yyerror("Parser error: NULL INT token received");
-			YYABORT;
-		}
-		$$ = createASTNode($1);
-		if(flag2){currentDataType+=" int";flag2=0;}else{currentDataType="int";}
-		type_of_declarator='d';
-	}
+	| INT			{$$ = createASTNode($1); if(flag2){currentDataType+=" int";flag2=0;}else{currentDataType="int";} type_of_declarator='d';}
 	| LONG			{$$ = createASTNode($1); if(flag2){currentDataType+=" long";flag2=0;}else{currentDataType="long";}; type_of_declarator='d';}
 	| FLOAT			{$$ = createASTNode($1); if(flag2){currentDataType+=" float";flag2=0;}else{currentDataType="float";}; type_of_declarator='d';}
 	| DOUBLE		{$$ = createASTNode($1); if(flag2){currentDataType+=" double";flag2=0;}else{currentDataType="double";}; type_of_declarator='d';}
@@ -1130,6 +1126,7 @@ statement
 	| selection_statement	{$$ = $1;}
 	| iteration_statement	{$$ = $1;}
 	| jump_statement	{$$ = $1;}
+	| error ';' {$$ = new Node; yyclearin; yyerrok;}
 	;
 
 labeled_statement
@@ -1315,149 +1312,35 @@ function_definition
 
 %%
 
-std::string lexerOutputFile;
-std::string currentFilename; 
-
-void print_error(const std::string& message) {	
-    std::cerr << "\033[1;31mError: \033[0m" << message << "\n";
-}
-
-void print_options() {
-	//Later
-}
-
-void performLexicalAnalysis(const std::string& filename) {
-    std::ofstream out(lexerOutputFile);
-    if (!out) {
-        print_error("Cannot open output file " + lexerOutputFile);
-        return;
-    }
-
-    std::unordered_map<std::string, TOKEN> symbol_table;
-    std::vector<TOKEN> tokens;
-    
-    int token_id;
-    while ((token_id = yylex()) != 0) {
-        TOKEN token;
-        token.token_type = current_token_type;
-        token.lexeme = std::string(yytext);
-        token.line = line;
-        token.column = column - yyleng;
-
-        if (symbol_table.find(token.lexeme) == symbol_table.end()) {
-            symbol_table[token.lexeme] = token;
-        }
-        tokens.push_back(token);
-    }
-
-    out << "Lexical Analysis for " << filename << "\n\n";
-    out << std::left 
-        << std::setw(20) << "Token" 
-        << std::setw(40) << "Lexeme" 
-        << std::setw(10) << "Line" 
-        << std::setw(10) << "Column" << "\n"
-        << std::string(80, '-') << "\n";
-
-    for (auto& token : tokens) {
-        out << std::left 
-            << std::setw(20) << token.token_type
-            << std::setw(40) << token.lexeme
-            << std::setw(10) << token.line
-            << std::setw(10) << token.column << "\n";
-    }
-
-    out.close();
-}
-
-void performParsing() {
-    dotfile = fopen("src/AST.dot", "w");
-    if (!dotfile) {
-        print_error("Cannot open AST.dot for writing.");
-        return;
-    }
-
-    beginAST();
+void performParsing(const std::string &inputFile)
+{
+    beginAST(inputFile);
     yyparse();
     endAST();
-
-    fclose(dotfile);
 }
 
-int main(int argc, char* argv[]) {
-    if (argc <= 1) {
-        print_error("No input files provided.");
-        return -1;
-    }
-
-    for (int i = 1; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "-l") { // Lexer-only mode
-            if (i + 1 >= argc) {
-                print_error("Missing filename for -l option.");
-                return -1;
-            }
-            onlyLexer = true;
-            lexerOutputFile = argv[++i];
-            continue;
-        }
-
-		currentFilename = argv[i];
-        yyin = fopen(argv[i], "r");
-        if (!yyin) {
-            print_error("Cannot open file " + arg);
-            continue;
-        }
-
-        line = 1;
-        column = 0;
-        yyrestart(yyin);
-		
-        if (onlyLexer) {
-            performLexicalAnalysis(arg);
-        } else {
-            performParsing();
-			addStandardProceduresToSymbolTable();
-			printSymbolTable();
-			printConstantTable();
-			printType();
-        }
-
-        fclose(yyin);
-    }
-	
-    return 0;
-}
-
-// Error handling function
-int yyerror(const char* s) {
-    std::cerr << "\033[1;31mError:\033[0m " << s << " at line " << line 
-              << ", column " << column + 1 - (yytext ? strlen(yytext) : 0) 
-              << std::endl;
-
-    if (currentFilename.empty()) {
-        print_error("Filename not set.");
-        return -1;
-    }
-
-    std::ifstream file(currentFilename);  
-    if (!file) {
-        print_error("Cannot open source file: " + currentFilename);
-        return -1;
-    }
-
+int yyerror(const char* s) 
+{
+	has_error = true;
+    std::ifstream file(inputFilename);  
     std::string curr_line;
     int count = 1;
-    
-    while (std::getline(file, curr_line)) {
+	std::string heading("syntax error");
+	std::string error_line(s);
+	int pos = error_line.find_first_of(heading);
+	if (pos != std::string::npos)
+		error_line.erase(pos, heading.length() + 2);
+
+    while (std::getline(file, curr_line)) 
+	{
         if (count == line) {
-            std::cerr << "\n" << line << " | " << curr_line << "\n";
-            std::cerr << "    " << std::string(column - yyleng + 1, ' ') << "^\n";
-            std::cerr << "\033[1;31mError: \033[0m" << s << "\n\n";
+            std::cerr << "\033[1;31merror: \033[0m" << heading << "::" << line << ":" << column - yyleng << ": " << error_line << "\n\n";
+            std::cerr << line << " | " << curr_line << "\n";
+            std::cerr << std::string(column - yyleng + 4, ' ') << "^\n";
             break;
         }
         count++;
     }
-
     file.close();
     return -1;
 }
