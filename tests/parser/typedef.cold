@@ -3,7 +3,7 @@ typedef double decimal;
 
 void test_typedef() {
     integer a = 10;
-    double b = 20;
+    decimal b = 20;
     if (a == 30) {
         // Test Passed
     }
