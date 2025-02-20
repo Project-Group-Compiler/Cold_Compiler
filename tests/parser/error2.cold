@@ -5,13 +5,14 @@ int main(){
         .//Special Character: @#$%&   
     */
     printf("ehllo world"); //checking unterminated string
-    //char* a="asdf      
-    //kll";
+    char* a="asdf      
+    kll";
     return 0;
-}//multiline comment error
+}
+
+//multiline comment error
 
 /*
 
 ghghgh
 
-*/
