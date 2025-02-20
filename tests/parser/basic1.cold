@@ -1,5 +1,5 @@
 void test_goto() {
-    int x = 0;
+    unsigned int x = 0;
     x = 10; 
     if (x == 5) {
         // Test Passed
