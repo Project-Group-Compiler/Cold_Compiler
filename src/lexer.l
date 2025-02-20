@@ -15,6 +15,7 @@ IS			(u|U|l|L)*
 #include <fstream>
 #include "AST.hpp"
 #include "parser.hpp"
+#include "data_structures.hpp"
 
 struct TOKEN
 {
@@ -28,30 +29,9 @@ extern std::string outputDir;
 extern bool has_error;
 void print_error(const std::string &message);
 
-extern std::vector<std::pair<std::string,std::string>> typedefTable;
-
-std::string searchTypedefTable(std::string Token);
-
 void count();
 void reportError();
 int check_type();
-
-typedef struct {
-    std::string token;
-    std::string data_type;
-} SymbolTableEntry;
-
-std::vector<SymbolTableEntry> ConstantTable;
-extern std::vector<SymbolTableEntry> SymbolTable;
-extern void addToSymbolTable(std::string Token, std::string Data_type);
-extern bool searchSymbolTable(std::string Token);
-
-void addToConstantTable(std::string constnt, std::string const_type){
-	SymbolTableEntry entry;
-	entry.token=constnt;
-	entry.data_type=const_type;
-	ConstantTable.push_back(entry);
-}
 
 int column = 0;
 int line = 1;
@@ -103,6 +83,8 @@ std::string current_token_type;
 "public"         { count(); yylval.str = strdup(yytext); current_token_type="PUBLIC"; return(PUBLIC); }
 "private"        { count(); yylval.str = strdup(yytext); current_token_type="PRIVATE"; return(PRIVATE); }
 "protected"      { count(); yylval.str = strdup(yytext); current_token_type="PROTECTED"; return(PROTECTED); }
+"FILE"          { count(); yylval.str = strdup(yytext); current_token_type="FILE_MAN"; return(FILE_MAN); }
+
 
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
