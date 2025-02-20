@@ -189,11 +189,23 @@ void count()
 
 int check_type()
 {
-	std::string str = searchTypedefTable(strdup(yytext));
-	if(str=="int"){
-		return(INT);
-	}
-	return(IDENTIFIER);
+    std::string str = searchTypedefTable(strdup(yytext));
+    std::unordered_map<std::string, int> primitiveTypes = {
+        {"int", INT},
+        {"char", CHAR},
+        {"float", FLOAT},
+        {"double", DOUBLE},
+        {"void", VOID},
+        {"short", SHORT},
+        {"long", LONG},
+        {"signed", SIGNED},
+        {"unsigned", UNSIGNED}
+    };
+
+    if (primitiveTypes.find(str) != primitiveTypes.end()) {
+        return primitiveTypes[str];
+    }
+    return IDENTIFIER;
 }
 
 // int main(int argc, char *argv[])
