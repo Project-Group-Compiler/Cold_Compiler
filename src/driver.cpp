@@ -1,10 +1,12 @@
 #include <iostream>
 #include <filesystem>
+#include "data_structures.hpp"
 
 extern FILE *yyin;
 bool print_ast = false;
 std::string inputFilename;
 std::string outputDir = std::filesystem::current_path().string() + "/";
+std::string astDir = std::filesystem::current_path().string() + "/";
 
 bool has_error = false;
 void print_error(const std::string &message)
@@ -14,11 +16,6 @@ void print_error(const std::string &message)
 
 void performLexing(const std::string &inputFile, bool lexPrint);
 void performParsing(const std::string &inputFile);
-
-void addStandardProceduresToSymbolTable();
-void printSymbolTable();
-void printConstantTable();
-void printType();
 
 int main(int argc, char *argv[])
 {
@@ -38,6 +35,7 @@ int main(int argc, char *argv[])
                       << "  -h, --help       Show this help message and exit\n"
                       << "  -l, --lex        Print lexical analysis table\n"
                       << "  -a, --ast        Print abstract syntax tree\n"
+                      << "  -s, --symtab     Print symbol tables\n"
                       << "  -f, --force      Force parsing even if lexical errors are present\n";
             return 0;
         }
@@ -52,6 +50,7 @@ int main(int argc, char *argv[])
     inputFilename = argv[1];
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
     bool lexPrint = false;
+    bool print_symtab = false;
     bool force = false;
     for (int i = 2; i < argc; i++)
     {
@@ -60,6 +59,8 @@ int main(int argc, char *argv[])
             lexPrint = true;
         else if (arg == "-a" || arg == "--ast")
             print_ast = true;
+        else if (arg == "-s" || arg == "--symtab")
+            print_symtab = true;
         else if (arg == "-f" || arg == "--force")
             force = true;
         else if (arg == "-o" || arg == "--output")
@@ -69,6 +70,16 @@ int main(int argc, char *argv[])
             else
             {
                 print_error("no output directory provided.");
+                return -1;
+            }
+        }
+        else if (arg == "--astdir")
+        {
+            if (i + 1 < argc)
+                astDir = argv[++i];
+            else
+            {
+                print_error("no ast directory provided.");
                 return -1;
             }
         }
@@ -82,14 +93,16 @@ int main(int argc, char *argv[])
     performLexing(inputFileString, lexPrint);
 
     if (!has_error || force)
+    {
         performParsing(inputFileString);
+        if (print_symtab)
+            printTables(inputFileString);
+    }
     else
         print_error("lexical errors present, use -f to force parsing");
 
     fclose(yyin);
-    addStandardProceduresToSymbolTable();
-    printSymbolTable();
-	printConstantTable();
-	printType();
+    if (has_error)
+        return 1;
     return 0;
 }

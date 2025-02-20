@@ -17,14 +17,6 @@ IS			(u|U|l|L)*
 #include "parser.hpp"
 #include "data_structures.hpp"
 
-struct TOKEN
-{
-    int line;
-    int column;
-    std::string token_type;
-    std::string lexeme;
-};
-
 extern std::string outputDir;
 extern bool has_error;
 void print_error(const std::string &message);

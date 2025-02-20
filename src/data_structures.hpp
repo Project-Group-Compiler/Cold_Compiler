@@ -2,24 +2,36 @@
 #include <vector>
 #include <stdio.h>
 #include <cstring>
+#include <fstream>
 
-typedef struct {
+struct TOKEN
+{
+    int line;
+    int column;
+    std::string token_type;
+    std::string lexeme;
+};
+
+typedef struct
+{
     std::string token;
     std::string data_type;
 } SymbolTableEntry;
 
 extern std::vector<SymbolTableEntry> SymbolTable;
 extern std::vector<SymbolTableEntry> ConstantTable;
-extern std::vector<std::pair<std::string,std::string>> typedefTable;
+extern std::vector<std::pair<std::string, std::string>> typedefTable;
 
 void addToSymbolTable(std::string Token, std::string Data_type);
 void addStandardProceduresToSymbolTable();
 void updateLastSymbolEntry();
 void updateFuncSymbolEntry(int args);
-void printSymbolTable();
+void printSymbolTable(std::ofstream &out);
 
 void addToConstantTable(std::string constnt, std::string const_type);
-void printConstantTable();
+void printConstantTable(std::ofstream &out);
 
 std::string searchTypedefTable(std::string Token);
-void printType();
+void printType(std::ofstream &out);
+
+void printTables(const std::string &inputFile);
