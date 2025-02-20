@@ -106,14 +106,14 @@ std::string current_token_type;
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
 
-0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
-0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
-{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
-L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Character"); return(CONSTANT); }
+0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
+0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
+{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
+L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Character Constant"); return(CONSTANT); }
 
-{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
+{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
 
 L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
 
@@ -133,6 +133,7 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 "++"           { count(); yylval.str = strdup(yytext); current_token_type="INC_OP"; return(INC_OP); }
 "--"           { count(); yylval.str = strdup(yytext); current_token_type="DEC_OP"; return(DEC_OP); }
 "->"           { count(); yylval.str = strdup(yytext); current_token_type="PTR_OP"; return(PTR_OP); }
+"<-"           { count(); yylval.str = strdup(yytext); current_token_type = "INHERITANCE_OP"; return(INHERITANCE_OP); }
 "&&"           { count(); yylval.str = strdup(yytext); current_token_type="AND_OP"; return(AND_OP); }
 "||"           { count(); yylval.str = strdup(yytext); current_token_type="OR_OP"; return(OR_OP); }
 "<="           { count(); yylval.str = strdup(yytext); current_token_type="LE_OP"; return(LE_OP); }
@@ -163,7 +164,6 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 "^"            { count(); yylval.str = strdup(yytext); current_token_type="^"; return('^'); }
 "|"            { count(); yylval.str = strdup(yytext); current_token_type="|"; return('|'); }
 "?"            { count(); yylval.str = strdup(yytext); current_token_type="?"; return('?'); }
-"<-"   { count(); yylval.str = strdup(yytext); current_token_type = "INHERITANCE_OP"; return(INHERITANCE_OP); }
 
 [ \t\v\n\f]	   { count(); }
 

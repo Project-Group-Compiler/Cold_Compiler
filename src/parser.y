@@ -1,6 +1,7 @@
 %{
 #include <stdio.h>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <vector>
 #include <cstring>
@@ -1275,54 +1276,8 @@ void performParsing(const std::string &inputFile)
     beginAST(inputFile);
     yyparse();
     endAST();
-
-    fclose(dotfile);
 }
 
-int main(int argc, char* argv[]) {
-    if (argc <= 1) {
-        print_error("No input files provided.");
-        return -1;
-    }
-
-    for (int i = 1; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "-l") { // Lexer-only mode
-            if (i + 1 >= argc) {
-                print_error("Missing filename for -l option.");
-                return -1;
-            }
-            onlyLexer = true;
-            lexerOutputFile = argv[++i];
-            continue;
-        }
-
-		currentFilename = argv[i];
-        yyin = fopen(argv[i], "r");
-        if (!yyin) {
-            print_error("Cannot open file " + arg);
-            continue;
-        }
-
-        line = 1;
-        column = 0;
-        yyrestart(yyin);
-
-        if (onlyLexer) {
-            performLexicalAnalysis(arg);
-        } else {
-            performParsing();
-        }
-
-        fclose(yyin);
-    }
-	printSymbolTable();
-	printConstantTable();
-	printType();
-    return 0;
-}
-
-// Error handling function
 int yyerror(const char* s) 
 {
 	has_error = true;
