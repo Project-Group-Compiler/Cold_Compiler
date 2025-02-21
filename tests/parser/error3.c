@@ -26,5 +26,8 @@ int main() {
         printf("%d ", j);
     } 
 
+    until [x < 10] {  
+        x++;
+    } 
     return 0;
 }

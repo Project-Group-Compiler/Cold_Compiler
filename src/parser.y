@@ -11,7 +11,6 @@ extern int column;
 extern int line;
 extern std::string inputFilename;
 extern bool has_error;
-extern std::string current_token_lexeme; // Declare the external variable
 
 int yyerror(const char*);
 int yylex();
@@ -586,6 +585,10 @@ struct_or_union_specifier
 		insertAttr(v, createASTNode($2), "", 1);
 		$$ = createASTNode($1, &v);
 	}
+	| struct_or_union IDENTIFIER '{' '}'	{
+		yyerror("struct must be non-empty");
+		$$ = createASTNode("Invalid Struct", nullptr);
+	}
 	;
 
 struct_or_union
@@ -733,6 +736,14 @@ declarator
 direct_declarator
 	: IDENTIFIER {
 		$$ = createASTNode($1);
+	}
+	| CONSTANT IDENTIFIER {
+		yyerror("Invalid Identifier");
+		$$ = createASTNode("Invalid Identifier");
+	}
+	| CONSTANT {
+		yyerror("Invalid Identifier");
+		$$ = createASTNode("Invalid Identifier");
 	}
 	| '(' declarator ')'  {
 		$$ = $2 ;
@@ -979,9 +990,9 @@ statement
 	| jump_statement	{
 		$$ = $1;
 	}
-	| error ';' {
-		$$ = new Node; yyclearin; yyerrok;
-	}
+	// | error ';' {
+	// 	$$ = new Node; yyclearin; yyerrok;
+	// }
 	;
 
 labeled_statement
@@ -1126,10 +1137,11 @@ iteration_statement
 	}
     | WHILE '[' expression ']' statement {
         yyerror("Incorrect parentheses in while-loop. Expected 'while (condition) {...}'");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("Invalid While-loop", &v);
+		$$ = createASTNode("Invalid While-loop", nullptr);
+    }
+    | UNTIL '[' expression ']' statement {
+        yyerror("Incorrect parentheses in until-loop. Expected 'until (condition) {...}'");
+		$$ = createASTNode("Invalid Until-loop", nullptr);
     }
     | FOR '(' expression ',' expression ',' expression ')' statement {
         yyerror("Comma used instead of semicolons. Expected 'for(init; condition; update)'");
@@ -1170,6 +1182,15 @@ translation_unit
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("program", &v);
+	}
+	| error ';' {
+		$$ = new Node; yyerrok;
+	}
+	| error ','{
+		$$ = new Node; yyerrok;
+	}
+	| error{
+		$$ = new Node; yyerrok;
 	}
 	;
 
@@ -1225,6 +1246,7 @@ void performParsing(const std::string &inputFile)
 // Error handling function
 int yyerror(const char* s) 
 {
+	yyclearin;
 	has_error = true;
     std::ifstream file(inputFilename);  
     std::string curr_line;
