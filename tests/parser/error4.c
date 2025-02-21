@@ -20,12 +20,6 @@ int main() {
         printf("This is an error\n");
     }
     
-    if () { 
-        printf("This is an error\n");
-    }
-    else {
-    }
-
     switch () {
         case 1: printf("Error case\n"); break;
     }

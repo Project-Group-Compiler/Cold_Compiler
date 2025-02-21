@@ -990,9 +990,9 @@ statement
 	| jump_statement	{
 		$$ = $1;
 	}
-	// | error ';' {
-	// 	$$ = new Node; yyclearin; yyerrok;
-	// }
+	| error ';' {
+		$$ = new Node; yyclearin; yyerrok;
+	}
 	;
 
 labeled_statement
@@ -1091,10 +1091,10 @@ selection_statement
         yyerror("Missing condition in 'if' statement. Expected 'if (condition) {...}'");
         $$ = createASTNode("error-node");
     }
-	| IF '(' ')' statement ELSE statement{
-		yyerror("Missing condition in 'if' statement. Expected 'if (condition) {...}'");
-		$$ = createASTNode("error-node");
-	}
+	// | IF '(' ')' statement ELSE statement{
+	// 	yyerror("Missing condition in 'if' statement. Expected 'if (condition) {...}'");
+	// 	$$ = createASTNode("error-node");
+	// }
 	| SWITCH '(' ')' statement {
         yyerror("Missing condition in 'switch' statement. Expected 'switch (expression) {...}'");
         $$ = createASTNode("error-node");
@@ -1183,15 +1183,15 @@ translation_unit
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("program", &v);
 	}
-	| error ';' {
-		$$ = new Node; yyerrok;
-	}
-	| error ','{
-		$$ = new Node; yyerrok;
-	}
-	| error{
-		$$ = new Node; yyerrok;
-	}
+	// | error ';' {
+	// 	$$ = new Node; yyerrok;
+	// }
+	// | error ','{
+	// 	$$ = new Node; yyerrok;
+	// }
+	// | error{
+	// 	$$ = new Node; yyerrok;
+	// }
 	;
 
 external_declaration
