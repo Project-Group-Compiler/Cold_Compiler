@@ -61,7 +61,8 @@ int yylex();
 %type<ptr> class_definition inheritance_specifier inheritance_specifier_list access_specifier class class_definition_head class_internal_definition_list class_internal_definition	class_member_list class_member
 
 %left ';'
-%expect 3
+//%expect 4
+//%expect-rr 1
 %%
 
 primary_expression
@@ -621,6 +622,10 @@ struct_or_union_specifier
 		currentDataType+=check;
 		$$ = createASTNode($1, &v);
 	}
+	| struct_or_union IDENTIFIER '{' '}'	{
+		yyerror("syntax error, struct must be non-empty");
+		$$ = createASTNode("Invalid Struct", nullptr);
+	}
 	;
 
 struct_or_union
@@ -758,6 +763,14 @@ direct_declarator
 		std::string check=std::string($1);
 		addToSymbolTable(check,currentDataType);
 		}
+	}
+	| CONSTANT IDENTIFIER {
+		yyerror("syntax error, invalid identifier");
+		$$ = createASTNode("Invalid Identifier");
+	}
+	| CONSTANT {
+		yyerror("syntax error, invalid identifier");
+		$$ = createASTNode("Invalid Identifier");
 	}
 	| '(' declarator ')'  {
 		$$ = $2 ;
@@ -1005,7 +1018,6 @@ statement
 	| selection_statement	{$$ = $1;}
 	| iteration_statement	{$$ = $1;}
 	| jump_statement	{$$ = $1;}
-	| error ';' {$$ = new Node; yyclearin; yyerrok;}
 	;
 
 labeled_statement
@@ -1086,6 +1098,14 @@ selection_statement
 		insertAttr(v, $5, "", 1);
 		$$ = createASTNode("switch", &v);
 	}
+	| IF '(' ')' statement {
+        yyerror("syntax error, missing condition in 'if' statement.");
+        $$ = createASTNode("error-node");
+    }
+	| SWITCH '(' ')' statement {
+        yyerror("syntax error, missing condition in 'switch' statement.");
+        $$ = createASTNode("error-node");
+    }
 	;
 
 iteration_statement
@@ -1122,6 +1142,18 @@ iteration_statement
 		insertAttr(v, $5, "", 1);
 		$$ = createASTNode("until-loop", &v);
 	}
+	| WHILE '[' expression ']' statement {
+        yyerror("syntax error, incorrect parentheses in while-loop.");
+		$$ = createASTNode("Invalid While-loop", nullptr);
+    }
+    | UNTIL '[' expression ']' statement {
+        yyerror("syntax error, incorrect parentheses in until-loop.");
+		$$ = createASTNode("Invalid Until-loop", nullptr);
+    }
+    | FOR '(' expression ',' expression ',' expression ')' statement {
+        yyerror("syntax error, comma used instead of semicolons.");
+        $$ = createASTNode("Invalid for-loop", nullptr);
+    }
 	;
 
 jump_statement
@@ -1150,6 +1182,15 @@ translation_unit
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("program", &v);
+	}
+	| error ';' {
+		$$ = new Node; yyerrok;
+	}
+	| error ','{
+		$$ = new Node; yyerrok;
+	}
+	| error{
+		$$ = new Node; yyerrok;
 	}
 	;
 
@@ -1200,6 +1241,7 @@ void performParsing(const std::string &inputFile)
 
 int yyerror(const char* s) 
 {
+	yyclearin;
 	has_error = true;
     std::ifstream file(inputFilename);  
     std::string curr_line;
