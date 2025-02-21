@@ -32,7 +32,7 @@ $(LEXER_CPP): $(LEXER) | $(BUILD_DIR)
 
 # Ensure build directory exists before running Bison
 $(PARSER_CPP) $(PARSER_HPP): $(PARSER) | $(BUILD_DIR)
-	$(BISON) -d -o $(PARSER_CPP) $(PARSER)
+	$(BISON) -d -o $(PARSER_CPP) $(PARSER) -Wno-conflicts-rr -Wno-conflicts-sr
 
 # Compile the lexer object file
 $(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP)

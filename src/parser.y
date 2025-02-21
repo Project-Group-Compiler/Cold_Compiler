@@ -61,8 +61,6 @@ int yylex();
 %type<ptr> class_definition inheritance_specifier inheritance_specifier_list access_specifier class class_definition_head class_internal_definition_list class_internal_definition	class_member_list class_member
 
 %left ';'
-//%expect 4
-//%expect-rr 1
 %%
 
 primary_expression
