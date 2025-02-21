@@ -147,7 +147,7 @@ void reportError()
 {
     has_error = true;
     if(!err_dur_parsing)
-	    std::cerr<<"\033[1;31merror: \033[0munknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
+	    std::cerr<<"\033[1;31merror: \033[0munknown token "<<yytext<<" 1at line "<<line<<" column "<<column - yyleng<<"\n";
 }
 
 void count()

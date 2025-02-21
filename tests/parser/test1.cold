@@ -29,6 +29,7 @@ int main(){
         default:
             printf("Not a valid operator\n");
     }
+    
     return 0;
 }
 
