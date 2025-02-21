@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
             printTables(inputFileString);
     }
     else
-        print_error("lexical errors present, use -f to force parsing");
+        print_error("\nlexical errors present, use -f to force parsing");
 
     fclose(yyin);
     if (has_error)
