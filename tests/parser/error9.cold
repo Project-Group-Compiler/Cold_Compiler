@@ -1,0 +1,15 @@
+class Person [
+   // data members of person 
+    private{
+        long aadhar_number;
+    };  
+    private{
+        char* name;
+    }; 
+    public{ 
+        char * returnName()  { return this->name;} 
+    };
+]; 
+int main(){
+    class Person op;
+}
