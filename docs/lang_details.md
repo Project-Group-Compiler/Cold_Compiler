@@ -5,7 +5,7 @@
     - Declaring a class :
 
         ```markdown
-        class <name of class>
+        class <class_name>
         {
             ...fields and methods...
         };
@@ -37,7 +37,7 @@
         };
         ```
 
-    - For declaring objects of a class, specify as `class <class_name> <object_name>` and access members using `.` operator.
+    - For declaring objects of a class, specify as `class <class_name> <object_name>` and access members using `.` and `->` operators.
 
         ```markdown
         class Student s1;
