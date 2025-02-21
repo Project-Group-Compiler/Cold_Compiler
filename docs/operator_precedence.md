@@ -22,7 +22,7 @@ Due to this change, modifying a boolean flag and testing it won't need parenthes
 
 For comparison here are ASTs for `int a = 0 == 1 & 2;` for ANSI C and Cold:
 
- | ANSI C              |     | Cold                |
- | ------------------- | --- | ------------------- |
- | ![](old_op_pre.png) |     | ![](new_op_pre.png) |
+ | ANSI C                  |     | Cold                    |
+ | ----------------------- | --- | ----------------------- |
+ | ![](img/old_op_pre.png) |     | ![](img/new_op_pre.png) |
  
