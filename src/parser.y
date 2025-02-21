@@ -70,11 +70,11 @@ primary_expression
     	$$ = createASTNode($1);
     }
 	| CONSTANT IDENTIFIER {
-		yyerror("syntax error, invalid identifier syntax");
+		yyerror("syntax error, invalid identifier");
 		$$ = createASTNode($1);
 	}
 	| CONSTANT CONSTANT {
-		yyerror("syntax error, invalid constant syntax");
+		yyerror("syntax error, invalid constant");
 		$$ = createASTNode($1);
 	}
 	| CONSTANT 	{
@@ -765,10 +765,6 @@ direct_declarator
 		}
 	}
 	| CONSTANT IDENTIFIER {
-		yyerror("syntax error, invalid identifier");
-		$$ = createASTNode("Invalid Identifier");
-	}
-	| CONSTANT {
 		yyerror("syntax error, invalid identifier");
 		$$ = createASTNode("Invalid Identifier");
 	}

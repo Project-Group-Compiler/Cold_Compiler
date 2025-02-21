@@ -1,4 +1,4 @@
-void test_goto() {
+void solve() {
     unsigned int x = 0;
     x = 10; 
     if (x == 5) {
@@ -22,7 +22,7 @@ void test_do_while(int x) {
 int func(){
     int arr[5]={1,2,3,4,5};
     int i=0;
-        char str1[] = "Hello";
+    char str1[] = "Hello";
     char str2[] = "Hello";
     for(i=0;i<5;i++){
         printf("%d ", arr[i]);
@@ -44,12 +44,13 @@ int GRAY = 1;
 int BLACK = 2;
 int head, tail;
 
+extern int d;
 int main(){
     const int a=5;
     static char b='c';
     int* b;
     int x=5;
     printf("ehllo world");
-    test_goto(x);
+    solve(x);
     return 0;
 }

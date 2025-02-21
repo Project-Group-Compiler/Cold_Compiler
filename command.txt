@@ -1,0 +1,2 @@
+bin/parser tests/parser/test6.cold
+dot -Tpng test1_AST.dot -o outputs/graph.png

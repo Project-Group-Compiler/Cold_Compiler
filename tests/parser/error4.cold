@@ -1,13 +1,10 @@
+struct Point {
+
+};
+
 int main(){
-       int a;
-    int b;
-    int c;
-    int d, e,f;
-    int 
-    flot
-    float g, i,k;
-    int
-    k
-    int b;
-    return 0;
+    int 123abc1 = 10;
+    int x = 10;
+    int y = 3 j;
+    int z = 10;
 }
