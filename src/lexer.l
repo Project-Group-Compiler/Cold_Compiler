@@ -8,51 +8,27 @@ IS			(u|U|l|L)*
 
 %{
 #include <stdio.h>
-#include "AST.hpp"
-#include "parser.hpp"
 #include <iostream>
 #include <iomanip>
-#include <fstream>
-#include <unordered_map>
 #include <vector>
+#include <unordered_map>
+#include <fstream>
+#include "AST.hpp"
+#include "parser.hpp"
+#include "data_structures.hpp"
 
-typedef struct token_data
-{
-	int line;
-	int column;
-	std::string token_type;
-	std::string lexeme;
-} TOKEN;
-
-extern std::vector<std::pair<std::string,std::string>> typedefTable;
-
-std::string searchTypedefTable(std::string Token);
+extern std::string outputDir;
+extern bool has_error;
+void print_error(const std::string &message);
 
 void count();
 void reportError();
 int check_type();
 
-typedef struct {
-    std::string token;
-    std::string data_type;
-} SymbolTableEntry;
-
-std::vector<SymbolTableEntry> ConstantTable;
-extern std::vector<SymbolTableEntry> SymbolTable;
-extern void addToSymbolTable(std::string Token, std::string Data_type);
-extern bool searchSymbolTable(std::string Token);
-
-void addToConstantTable(std::string constnt, std::string const_type){
-	SymbolTableEntry entry;
-	entry.token=constnt;
-	entry.data_type=const_type;
-	ConstantTable.push_back(entry);
-}
-
-int column = 1;
+int column = 0;
 int line = 1;
+bool err_dur_parsing = false;
 std::string current_token_type;
-bool has_error = false;
 %}
 
 %option noyywrap
@@ -95,17 +71,24 @@ bool has_error = false;
 "void"          { count(); yylval.str = strdup(yytext); current_token_type="VOID"; return(VOID); }
 "volatile"      { count(); yylval.str = strdup(yytext); current_token_type="VOLATILE"; return(VOLATILE); }
 "while"         { count(); yylval.str = strdup(yytext); current_token_type="WHILE"; return(WHILE); }
+"class"          { count(); yylval.str = strdup(yytext); current_token_type="CLASS"; return(CLASS); }
+"public"         { count(); yylval.str = strdup(yytext); current_token_type="PUBLIC"; return(PUBLIC); }
+"private"        { count(); yylval.str = strdup(yytext); current_token_type="PRIVATE"; return(PRIVATE); }
+"protected"      { count(); yylval.str = strdup(yytext); current_token_type="PROTECTED"; return(PROTECTED); }
+"FILE"          { count(); yylval.str = strdup(yytext); current_token_type="FILE_MAN"; return(FILE_MAN); }
+
+
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }
 
-0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
-0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
-{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer"); return(CONSTANT); }
-L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Character"); return(CONSTANT); }
+0[xX]{H}+{IS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
+0{D}+{IS}?      { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
+{D}+{IS}?       { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
+L?'(\\.|[^\\'])+'  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Character Constant"); return(CONSTANT); }
 
-{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float"); return(CONSTANT); }
+{D}+{E}{FS}?    { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?  { count(); yylval.str = strdup(yytext); current_token_type="CONSTANT"; addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
 
 L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
 
@@ -125,6 +108,7 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 "++"           { count(); yylval.str = strdup(yytext); current_token_type="INC_OP"; return(INC_OP); }
 "--"           { count(); yylval.str = strdup(yytext); current_token_type="DEC_OP"; return(DEC_OP); }
 "->"           { count(); yylval.str = strdup(yytext); current_token_type="PTR_OP"; return(PTR_OP); }
+"<-"           { count(); yylval.str = strdup(yytext); current_token_type = "INHERITANCE_OP"; return(INHERITANCE_OP); }
 "&&"           { count(); yylval.str = strdup(yytext); current_token_type="AND_OP"; return(AND_OP); }
 "||"           { count(); yylval.str = strdup(yytext); current_token_type="OR_OP"; return(OR_OP); }
 "<="           { count(); yylval.str = strdup(yytext); current_token_type="LE_OP"; return(LE_OP); }
@@ -162,9 +146,11 @@ L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type=
 
 %%
 
-void reportError() {
+void reportError() 
+{
     has_error = true;
-	std::cerr<<"Error: Unknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
+    if(!err_dur_parsing)
+	    std::cerr<<"\033[1;31merror: \033[0munknown token "<<yytext<<" at line "<<line<<" column "<<column - yyleng<<"\n";
 }
 
 void count()
@@ -183,65 +169,68 @@ void count()
 
 int check_type()
 {
-	std::string str = searchTypedefTable(strdup(yytext));
-	if(str=="int"){
-		return(INT);
-	}
-	return(IDENTIFIER);
+    std::string str = searchTypedefTable(strdup(yytext));
+    std::unordered_map<std::string, int> primitiveTypes = {
+        {"int", INT},
+        {"char", CHAR},
+        {"float", FLOAT},
+        {"double", DOUBLE},
+        {"void", VOID},
+        {"short", SHORT},
+        {"long", LONG},
+        {"signed", SIGNED},
+        {"unsigned", UNSIGNED}
+    };
+
+    if (primitiveTypes.find(str) != primitiveTypes.end()) {
+        return primitiveTypes[str];
+    }
+    return IDENTIFIER;
 }
 
-// int main(int argc, char *argv[])
-// {
-// 	if(argc != 3)
-// 	{
-// 		std::cerr << "Usage : ./lexer <input_file> <output_file>\n";
-// 		return 1;
-// 	}
-// 	yyin = fopen(argv[1], "r");
-// 	if(!yyin)
-// 	{
-// 		std::cerr << "Error : Can't open input file "<<argv[1]<<"\n";
-// 		return 1;
-// 	}
-// 	std::ofstream out(argv[2]);
-// 	if(!out)
-// 	{
-// 		std::cerr << "Error : Can't open output file "<<argv[2]<<"\n";
-// 		return 1;
-// 	}
-// 	std::unordered_map<std::string, TOKEN> symbol_table;
-// 	std::vector<TOKEN> tokens;
-// 	int token_id;
-// 	while((token_id = yylex()) != 0)
-// 	{
-// 		TOKEN token;
-// 		token.token_type = current_token_type;
-// 		token.lexeme = std::string(yytext);
-// 		token.line = line;
-// 		token.column = column - yyleng;
-// 		if(symbol_table.find(token.lexeme) == symbol_table.end())
-// 			symbol_table[token.lexeme] = token;	
-// 		tokens.push_back(token);
-// 	}
-// 	if (has_error)
-// 	{
-// 		out << "Lexical errors printed on stdout.\n";
-// 		return 1;
-// 	}
-// 	out << "Lexical Analysis for " << argv[1] << "\n\n";
-// 	out << std::left 
-//     	<< std::setw(20) << "Token" 
-//     	<< std::setw(40) << "Lexeme" 
-//     	<< std::setw(10) << "Line" 
-//     	<< std::setw(10) << "Column" << "\n"
-//     	<< std::string(80, '-') << "\n";
-// 	for(auto &token : tokens)
-// 	{
-// 		out << std::left 
-// 			<< std::setw(20) << token.token_type
-// 			<< std::setw(40) << token.lexeme
-// 			<< std::setw(10) << token.line
-// 			<< std::setw(10) << token.column << "\n";
-// 	}
-// 	return 0;
-// }
+void performLexing(const std::string &inputFile, bool lexPrint)
+{
+    std::vector<TOKEN> tokens;
+    int token_id;
+    while ((token_id = yylex()) != 0)
+    {
+        TOKEN token;
+        token.token_type = current_token_type;
+        token.lexeme = std::string(yytext);
+        token.line = line;
+        token.column = column - yyleng;
+        tokens.push_back(token);
+    }
+
+    if(lexPrint)
+    {
+        std::ofstream out(outputDir + inputFile + "_lexfile.txt");
+        if (!out)
+        {
+            print_error("cannot open " + outputDir + inputFile + "_lexfile.txt");
+            return;
+        }
+        out << "Lexical Analysis for " << inputFile << "\n\n";
+        out << std::left
+            << std::setw(20) << "Token"
+            << std::setw(40) << "Lexeme"
+            << std::setw(10) << "Line"
+            << std::setw(10) << "Column" << "\n"
+            << std::string(80, '-') << "\n";
+
+        for (auto &token : tokens)
+        {
+            out << std::left
+                << std::setw(20) << token.token_type
+                << std::setw(40) << token.lexeme
+                << std::setw(10) << token.line
+                << std::setw(10) << token.column << "\n";
+        }
+        out.close();
+    }
+    line = 1;
+    column = 0;
+    err_dur_parsing = true;
+    rewind(yyin);
+    yyrestart(yyin);
+}

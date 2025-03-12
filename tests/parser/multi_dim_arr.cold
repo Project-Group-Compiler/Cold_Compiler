@@ -1,0 +1,6 @@
+void test_multi_dimensional_arrays() {
+    int arr[2][2] = {{1, 2}, {3, 4}};
+    if (arr[1][0] == 3 && arr[0][1] == 2) {
+        // Test Passed
+    }
+}

@@ -2,11 +2,11 @@
 .cph/
 *.exe
 *.out
+*.dot
+*.o
+*_lexfile.txt
+*_tables.txt
 build/
 bin/
 outputs/
-src/lexer.cpp
-src/parser.cpp
-src/lexer.hpp
-src/parser.hpp
-src/AST.dot
+ast/
