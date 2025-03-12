@@ -1,0 +1,10 @@
+typedef int integer;
+typedef double decimal;
+
+void test_typedef() {
+    integer a = 10;
+    decimal b = 20;
+    if (a == 30) {
+        // Test Passed
+    }
+}

@@ -1,0 +1,17 @@
+// negative testcase
+
+#include <stdio.h>
+#define INF 1000000000 // pre-proccessing directives are not supported thus will raise errors
+
+int main(){
+    const int a = 4, b = 10;
+    int $c = a + b; // shows invalid symbol error
+
+    if(a>b){
+        a += b;
+    }else{
+        a -= b;
+    }
+    
+    return 0;
+}   

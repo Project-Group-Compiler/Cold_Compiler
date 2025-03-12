@@ -1,0 +1,12 @@
+.vscode/
+.cph/
+*.exe
+*.out
+*.dot
+*.o
+*_lexfile.txt
+*_tables.txt
+build/
+bin/
+outputs/
+ast/

@@ -1,0 +1,51 @@
+
+int parent[20], size[20];
+int comp = 0;
+
+void init(int n) {
+    comp = n;
+    for (int i = 0; i <= n; i++) {
+        parent[i] = i;
+        size[i] = 1;
+    }
+}
+
+int get(int node) {// ultimate parent
+    if (node == parent[node])
+        return node;
+    return parent[node] = get(parent[node]);
+}
+
+void unite(int u, int v) {
+    int upu = get(u);
+    int upv = get(v);
+    if (upu == upv) return;
+    if (size[upu] < size[upv]){
+        upu = upu ^ upv;  
+        upv = upu ^ upv; 
+        upu = upu ^ upv; 
+    } 
+    comp--;
+    parent[upv] = upu;
+    size[upu] += size[upv];
+}
+
+int main(){
+    //No of connected component after each edge insertion
+
+    int n, e;
+    int u, v;
+
+    scanf("%d",&n);
+    scanf("%d",&e);
+
+    init(n);
+
+    for(int i=0;i<e;i++){
+        scanf("%d %d",&u,&v);
+        unite(u,v);
+        printf("No of connected component is %d\n",comp);
+    }
+
+}
+

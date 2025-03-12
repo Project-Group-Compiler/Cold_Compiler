@@ -1,0 +1,37 @@
+struct Node {
+    int val;
+    struct Node* L;
+    struct Node* R;
+};
+
+int main()
+{
+    struct Node a;
+    int a, b, c;
+    char op;
+    a.val=5;
+    printf("%d", a.x);
+    
+    printf("Enter first number\n");
+    scanf("%d",&a);
+    printf("Enter second number\n");
+    scanf("%d",&b);
+    
+    printf("Type\n\t'+' for addition\n\t'-' for subtraction\n");
+    scanf(" %c",&op);
+
+    switch(op){
+        case '+':
+            c = a+b;
+            printf("%d\n",c);
+            break;
+        case '-':
+            c = a-b;
+            printf("%d\n",c);
+            break;
+        default:
+            printf("Not a valid operator\n");
+    }
+
+    return 0;
+}
