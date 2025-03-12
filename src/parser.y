@@ -1228,6 +1228,7 @@ function_definition
 
 void performParsing(const std::string &inputFile)
 {
+	onlyLexin = false;
     beginAST(inputFile);
     yyparse();
     endAST();

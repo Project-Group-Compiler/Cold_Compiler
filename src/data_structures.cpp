@@ -6,6 +6,7 @@
 std::vector<SymbolTableEntry> SymbolTable;
 std::vector<SymbolTableEntry> ConstantTable;
 std::vector<std::pair<std::string, std::string>> typedefTable;
+bool onlyLexin = false;
 
 void addToSymbolTable(std::string Token, std::string Data_type)
 {

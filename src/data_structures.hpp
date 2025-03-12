@@ -21,6 +21,7 @@ typedef struct
 extern std::vector<SymbolTableEntry> SymbolTable;
 extern std::vector<SymbolTableEntry> ConstantTable;
 extern std::vector<std::pair<std::string, std::string>> typedefTable;
+extern bool onlyLexin;
 
 void addToSymbolTable(std::string Token, std::string Data_type);
 void addStandardProceduresToSymbolTable();
