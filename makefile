@@ -12,10 +12,14 @@ AST_HPP = $(SRC_DIR)/AST.hpp
 AST_CPP = $(SRC_DIR)/AST.cpp
 DS_HPP = $(SRC_DIR)/data_structures.hpp
 DS_CPP = $(SRC_DIR)/data_structures.cpp
+TAC_HPP = $(SRC_DIR)/tac.hpp
+TAC_GEN_CPP = $(SRC_DIR)/tac_gen.cpp
+TAC_OPT_CPP = $(SRC_DIR)/tac_opt.cpp
 DRIVER = $(SRC_DIR)/driver.cpp
 
-OUTPUT = $(BIN_DIR)/parser
-OBJS = $(BUILD_DIR)/lexer.o $(BUILD_DIR)/parser.o $(BUILD_DIR)/AST.o $(BUILD_DIR)/data_structures.o $(BUILD_DIR)/driver.o
+OUTPUT = $(BIN_DIR)/ir_gen
+OBJS = $(BUILD_DIR)/lexer.o $(BUILD_DIR)/parser.o $(BUILD_DIR)/AST.o $(BUILD_DIR)/data_structures.o \
+       $(BUILD_DIR)/tac_gen.o $(BUILD_DIR)/tac_opt.o $(BUILD_DIR)/driver.o
 
 # Compiler and tools
 FLEX = flex
@@ -50,11 +54,19 @@ $(BUILD_DIR)/AST.o: $(AST_CPP) $(AST_HPP)
 $(BUILD_DIR)/data_structures.o: $(DS_CPP) $(DS_HPP)
 	$(CXX) $(CXXFLAGS) -c -o $@ $(DS_CPP)
 
+# Compile the TAC generator object file
+$(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP)
+	$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_GEN_CPP)
+
+# Compile the TAC optimizer object file
+$(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP) $(DS_HPP)
+	$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
+
 # Compile the driver object file
-$(BUILD_DIR)/driver.o: $(DRIVER) $(DS_HPP)
+$(BUILD_DIR)/driver.o: $(DRIVER) $(TAC_HPP) $(DS_HPP) 
 	$(CXX) $(CXXFLAGS) -c -o $@ $(DRIVER)
 
-# Link the final parser binary
+# Link the final binary
 $(OUTPUT): $(OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^
