@@ -4,7 +4,7 @@ An end-to-end compiler for a new custom programming language, **`Cold`**.
 
 `Cold` has a C-like syntax based on ANSI C and also supports some object-oriented features.
 
-Regarding the name of our language, since it is C-like but based on an older version, hence *C-old*. Also since some object-oriented features are supported, hence `Cold` can also be thought of as "`C` but with `O`bject-oriented `L`anguage `D`esign features".
+Regarding the name of our language, since it is C-like but based on an older version, hence *`C-old`*. Also since some object-oriented features are supported, hence `Cold` can also be thought of as "`C` but with `O`bject-oriented `L`anguage `D`esign features".
 
 - Source language : `Cold`
 - Implementation language : `C++`
@@ -59,26 +59,27 @@ cd Cold_Compiler
     make
     ```
 
-2. Run script for executing testcases. *Output symbol tables get saved in `outputs` directory*. ASTs are also generated which get saved in `ast` directory.
+2. Run script for executing testcases. Output IR gets saved in `outputs` directory.
 
     ```bash
     chmod +x run.sh
     ./run.sh
     ```
 
-Alternatively, execute for a single input file using:
+Alternatively, generate IR for a single input file using:
 
 ```bash
-bin/parser <input_file> [options]
+bin/ir_gen <input_file> [options]
 ```
 
 ```markdown
-Options:
+Extra Options:
     -h, --help       Show this help message and exit
+    -O0              Generate unoptimized IR
     -l, --lex        Print lexical analysis table
     -a, --ast        Print abstract syntax tree as dot file
     -s, --symtab     Print symbol tables
-    -f, --force      Force parsing even if lexical errors are present
+    -f, --force      Forcefully continue even if errors are present
 ```
 
 Optionally, convert AST DOT file into image using:

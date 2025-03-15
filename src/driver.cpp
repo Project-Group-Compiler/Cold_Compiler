@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
                       << "  -l, --lex        Print lexical analysis table\n"
                       << "  -a, --ast        Print abstract syntax tree\n"
                       << "  -s, --symtab     Print symbol tables\n"
-                      << "  -t, --tac        Print three address code\n"
+                      // << "  -t, --tac        Print three address code\n"
                       << "  -f, --force      Forcefully continue even if errors are present\n";
             return 0;
         }
