@@ -13,59 +13,78 @@ AST_CPP = $(SRC_DIR)/AST.cpp
 DS_HPP = $(SRC_DIR)/data_structures.hpp
 DS_CPP = $(SRC_DIR)/data_structures.cpp
 DRIVER = $(SRC_DIR)/driver.cpp
+SYM_TABLE = $(SRC_DIR)/symbol_table.cpp
+TYPECHECK = $(SRC_DIR)/typecheck.cpp
 
+# Final binary output
 OUTPUT = $(BIN_DIR)/parser
-OBJS = $(BUILD_DIR)/lexer.o $(BUILD_DIR)/parser.o $(BUILD_DIR)/AST.o $(BUILD_DIR)/data_structures.o $(BUILD_DIR)/driver.o
+
+# Object files including new ones
+OBJS = \
+	$(BUILD_DIR)/lexer.o \
+	$(BUILD_DIR)/parser.o \
+	$(BUILD_DIR)/AST.o \
+	$(BUILD_DIR)/data_structures.o \
+	$(BUILD_DIR)/symbol_table.o \
+	$(BUILD_DIR)/typecheck.o \
+	$(BUILD_DIR)/driver.o
 
 # Compiler and tools
 FLEX = flex
 BISON = bison
-CXX = g++ 
+CXX = g++
 CXXFLAGS = -g -I$(SRC_DIR)
 
 # Default target
 all: $(OUTPUT)
 
-# Ensure build directory exists before running Flex
+# Create build directory if it doesn't exist
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+# Generate lexer C++ source from lexer.l
 $(LEXER_CPP): $(LEXER) | $(BUILD_DIR)
 	$(FLEX) -o $(LEXER_CPP) $(LEXER)
 
-# Ensure build directory exists before running Bison
+# Generate parser C++ source and header from parser.y
 $(PARSER_CPP) $(PARSER_HPP): $(PARSER) | $(BUILD_DIR)
 	$(BISON) -d -o $(PARSER_CPP) $(PARSER) -Wno-conflicts-rr -Wno-conflicts-sr
 
-# Compile the lexer object file
+# Compile lexer object file
 $(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP)
 	$(CXX) $(CXXFLAGS) -c -o $@ $(LEXER_CPP)
 
-# Compile the parser object file
+# Compile parser object file
 $(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP)
 	$(CXX) $(CXXFLAGS) -c -o $@ $(PARSER_CPP)
 
-# Compile the AST object file
+# Compile AST object file
 $(BUILD_DIR)/AST.o: $(AST_CPP) $(AST_HPP)
 	$(CXX) $(CXXFLAGS) -c -o $@ $(AST_CPP)
 
-# Compile the data_structures object file
+# Compile data_structures object file
 $(BUILD_DIR)/data_structures.o: $(DS_CPP) $(DS_HPP)
 	$(CXX) $(CXXFLAGS) -c -o $@ $(DS_CPP)
 
-# Compile the driver object file
+# Compile symbol_table object file
+$(BUILD_DIR)/symbol_table.o: $(SYM_TABLE) $(SRC_DIR)/symbol_table.h
+	$(CXX) $(CXXFLAGS) -c -o $@ $(SYM_TABLE)
+
+# Compile typecheck object file
+$(BUILD_DIR)/typecheck.o: $(TYPECHECK) $(SRC_DIR)/typecheck.h
+	$(CXX) $(CXXFLAGS) -c -o $@ $(TYPECHECK)
+
+# Compile driver object file
 $(BUILD_DIR)/driver.o: $(DRIVER) $(DS_HPP)
 	$(CXX) $(CXXFLAGS) -c -o $@ $(DRIVER)
 
-# Link the final parser binary
+# Link all object files into the final binary
 $(OUTPUT): $(OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
-# Create the build directory
-$(BUILD_DIR):
-	@mkdir -p $(BUILD_DIR)
 
 # Clean up generated files
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-# Phony targets
 .PHONY: all clean
