@@ -151,3 +151,29 @@ void printTables(const std::string &inputFile)
     printConstantTable(out);
     printType(out);
 }
+
+SymbolTableEntry* lookup(std::string Token)
+{
+    for (int i = 0; i < SymbolTable.size(); i++)
+    {
+        if (SymbolTable[i].token == Token)
+            return &SymbolTable[i];
+    }
+
+    for(auto &entry : ConstantTable)
+    {
+        if(entry.token == Token)
+            return &entry;
+    }
+    return nullptr;
+}
+
+
+void debugEntry(SymbolTableEntry* entry){
+    if(entry != nullptr) {
+        std::cerr << entry->token << '\n';
+        std::cerr << entry->data_type << '\n';
+    }else{
+        std::cerr << "Entry is null\n";
+    }
+}

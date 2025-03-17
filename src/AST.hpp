@@ -1,10 +1,12 @@
+#pragma once
 #ifndef AST_HPP
 #define AST_HPP
-
 #include <iostream>
 #include <vector>
 #include <string>
 #include <cstdio>
+#include "data_structures.hpp"
+typedef std::pair<std::string, SymbolTableEntry*> qid;
 
 struct Node
 {
@@ -14,6 +16,21 @@ struct Node
     long long realVal;
     char charVal;
     std::string strVal;
+
+    int size;
+	std::string type;
+	int expType = 0;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  
+    bool is_error = false;
+    qid place;
+    std::string temp_name;
+    std::vector<int> truelist;
+    std::vector<int> falselist;
+    std::vector<int> breaklist;
+    std::vector<int> continuelist;
+    std::vector<int> nextlist;
+    std::vector<int> caselist;
+    
+    int argCount = 0;
 };
 
 struct Data

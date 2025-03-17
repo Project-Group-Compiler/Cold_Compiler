@@ -1,6 +1,6 @@
 #include <iostream>
 #include <filesystem>
-#include "data_structures.hpp"
+// #include "data_structures.hpp"
 #include "tac.hpp"
 
 extern FILE *yyin;

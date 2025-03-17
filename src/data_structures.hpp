@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <vector>
 #include <stdio.h>
@@ -36,3 +37,6 @@ std::string searchTypedefTable(std::string Token);
 void printType(std::ofstream &out);
 
 void printTables(const std::string &inputFile);
+
+SymbolTableEntry* lookup(std::string Token);
+void debugEntry(SymbolTableEntry* entry);

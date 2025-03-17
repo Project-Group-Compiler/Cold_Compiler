@@ -6,6 +6,7 @@
 #include <vector>
 #include <cstring>
 #include "AST.hpp"
+#include "tac.hpp"
 #include "data_structures.hpp"
 
 extern int yyleng;
@@ -65,290 +66,566 @@ int yylex();
 
 primary_expression
     : IDENTIFIER {
-    	$$ = createASTNode($1);
+        $$ = createASTNode($1);
+
+        // -- 3AC Generation
+        SymbolTableEntry* entry = lookup($1);
+		
+        if(entry) {
+			$$->type = entry->data_type;
+			$$->temp_name = entry->token;
+			$$->nextlist.clear();
+            if(entry->data_type == "Procedure") {
+                $$->place = qid("CALL " + std::string($1), entry);
+            } 
+            else {
+                $$->place = qid(std::string($1), entry);
+            }
+        } 
+        else {
+            $$->place = qid("UNKNOWN", nullptr);
+        }
     }
-	| CONSTANT IDENTIFIER {
-		yyerror("syntax error, invalid identifier");
-		$$ = createASTNode($1);
-	}
-	| CONSTANT CONSTANT {
-		yyerror("syntax error, invalid constant");
-		$$ = createASTNode($1);
-	}
-	| CONSTANT 	{
-		$$ = createASTNode($1);
-	}
-	| STRING_LITERAL {
-		std::string check=std::string($1);
-		addToConstantTable(check,"String Literal");
-		$$ = createASTNode($1);
-	}
-	| '(' expression ')' {
-		$$ = $2;
-	}
-	;
+    | CONSTANT {
+        $$ = createASTNode($1);
+
+        // -- 3AC Generation
+		SymbolTableEntry* entry = lookup($1);
+		if(entry) {
+			$$->type = entry->data_type;
+			$$->temp_name = entry->token;
+			$$->nextlist.clear();
+			$$->place = qid(entry->token, entry);
+		}else {
+            $$->place = qid("UNKNOWN", nullptr);
+        }
+    }
+    | STRING_LITERAL {
+        addToConstantTable(std::string($1), "String Literal");
+        $$ = createASTNode($1);
+
+        // -- 3AC Generation
+        SymbolTableEntry* entry = lookup($1);
+		if(entry) {
+			$$->type = entry->data_type;
+			$$->temp_name = entry->token;
+			$$->nextlist.clear();
+			$$->place = qid(entry->token, entry);
+		}else {
+            $$->place = qid("UNKNOWN", nullptr);
+        }
+    }
+    | '(' expression ')' {
+        $$ = $2; 
+    }
+;
 
 postfix_expression
-	: primary_expression {
-		$$ = $1;
-	}
-	| postfix_expression '[' expression ']' {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("postfix_expression", &attr);
-	}
-	| postfix_expression '(' ')' {
-		$$ = $1;
-	}
-	| postfix_expression '(' argument_expression_list ')' {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("postfix_expression", &attr);
-	}
-	| postfix_expression '.' IDENTIFIER {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, createASTNode($3), "", 1);
-		$$ = createASTNode("expression.id", &attr);
-	}
-	| postfix_expression PTR_OP IDENTIFIER {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, createASTNode($3), "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	| postfix_expression INC_OP {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	| postfix_expression DEC_OP {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	;
+    : primary_expression {
+        $$ = $1;
+    }
+    | postfix_expression '[' expression ']' {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("postfix_expression", &attr);
+
+        //-- 3AC Generation
+		$$->type = $1->type;
+		$$->temp_name = $1->temp_name;
+		qid temp_var = getTempVariable($$->type);
+		$$->place = temp_var;
+		$$->nextlist.clear();
+		emit(qid("[ ]", NULL), $1->place, $3->place, temp_var, -1);
+    }
+    | postfix_expression '(' ')' {
+        $$ = $1;
+
+        //-- 3AC Generation
+		// Todo -> $$->type
+		qid q = getTempVariable($1->type);
+		$$->place = q;
+		$$->temp_name = $1->temp_name;
+		$$->nextlist.clear();
+		emit(qid("CALL", NULL), qid($$->temp_name, NULL), qid("0", NULL), q, -1);
+    }
+    | postfix_expression '(' argument_expression_list ')' {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("postfix_expression", &attr);
+
+        //-- 3AC Generation
+		// Todo -> $$->type
+		qid q = getTempVariable($1->type);
+		$$->place = q;
+		$$->temp_name = $1->temp_name;
+		$$->nextlist.clear();
+		emit(qid("CALL", NULL), qid($$->temp_name, NULL), qid(std::to_string($3->argCount), NULL), q, -1);
+    }
+    | postfix_expression '.' IDENTIFIER { //p.x
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, createASTNode($3), "", 1);
+        $$ = createASTNode("expression.id", &attr);
+
+        //-- 3AC Generation
+		// Todo -> $$->type
+        qid temp_var = getTempVariable($$->type);
+        $$->place = temp_var;
+		// $$->nextlist.clear();
+        emit(qid("member_access", NULL), $1->place, qid(std::string($3), lookup($3)), temp_var, -1);
+    }
+    | postfix_expression PTR_OP IDENTIFIER {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, createASTNode($3), "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+		// Todo $$ -> type
+		qid temp_var = getTempVariable($$->type);
+		emit(qid("PTR_OP", NULL), $1->place, qid(std::string($3), lookup($3)), temp_var, -1);
+		$$->place = temp_var;
+    }
+    | postfix_expression INC_OP {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable($1->type);
+        $$->place = q;
+		$$->type = $1->type;
+		$$->nextlist.clear();
+        emit(qid("S++", NULL), $1->place, qid("", NULL), q, -1);
+    }
+    | postfix_expression DEC_OP {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable($1->type);
+        $$->place = q;
+		$$->type = $1->type;
+		$$->nextlist.clear();
+        emit(qid("S--", NULL), $1->place, qid("", NULL), q, -1);
+    }
+;
+
 
 argument_expression_list
-	: assignment_expression {
-		$$ = $1;
-	}
-	| argument_expression_list ',' assignment_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("argument_list", &attr);
-	}
-	;
+    : assignment_expression {
+        $$ = $1;
+
+        //-- 3AC Generation
+        $$->argCount = 1;
+		$$->nextlist.clear();
+        emit(qid("param", NULL), $$->place, qid("", NULL), qid("", NULL), -1);
+    }
+    | argument_expression_list ',' assignment_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("argument_list", &attr);
+
+        //-- 3AC Generation
+		$$->nextlist.clear();
+        $$->argCount = $1->argCount + 1;
+        int Label = emit(qid("param", NULL), $3->place, qid("", NULL), qid("", NULL), -1);
+		backpatch($1->nextlist, Label);
+    }
+;
 
 unary_expression
-	: postfix_expression {
-		$$ = $1;
-	}
-	| INC_OP unary_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode($1, &attr);
-	}
-	| DEC_OP unary_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode($1, &attr);
-	}
-	| unary_operator cast_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode("unary_exp", &attr);
-	}
-	| SIZEOF unary_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode($1, &attr);
-	}
-	| SIZEOF '(' type_name ')' {
-		std::vector<Data> attr;
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($1, &attr);
-	}
-	;
+    : postfix_expression {
+        $$ = $1;
+    }
+    | INC_OP unary_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $2, "", 1);
+        $$ = createASTNode($1, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable($2->type);
+        $$->place = q;
+		$$->type = $2->type;
+        $$->nextlist.clear();
+        emit(qid("++P", NULL), $2->place, qid("", NULL), q, -1);
+    }
+    | DEC_OP unary_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $2, "", 1);
+        $$ = createASTNode($1, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable($2->type);
+        $$->place = q;
+		$$->type = $2->type;
+        $$->nextlist.clear();
+        emit(qid("--P", NULL), $2->place, qid("", NULL), q, -1);
+    }
+    | unary_operator cast_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $2, "", 1);
+        $$ = createASTNode("unary_exp", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable($2->type);
+		$$->place = q;
+		$$->type = $2->type; //Todo not always
+		$$->temp_name = $2->temp_name;
+        $$->place = q;
+        $$->nextlist.clear();
+        emit($1->place, $2->place, qid("", NULL), q, -1);
+    }
+    | SIZEOF unary_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $2, "", 1);
+        $$ = createASTNode($1, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");
+		$$->type = "int";
+        $$->place = q;
+        $$->nextlist.clear();
+        emit(qid("SIZEOF", NULL), $2->place, qid("", NULL), q, -1);
+    }
+    | SIZEOF '(' type_name ')' {
+        std::vector<Data> attr;
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode($1, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");
+        $$->place = q;
+		$$->type = "int";
+        $$->nextlist.clear();
+
+        emit(qid("SIZEOF", NULL), $3->place, qid("", NULL), q, -1);
+    }
+;
 
 unary_operator
-	: '&' {
-		$$ = createASTNode("&");
-	}
-	| '*' {
-		$$ = createASTNode("*");
-	}
-	| '+' {
-		$$ = createASTNode("+");
-	}
-	| '-' {
-		$$ = createASTNode("-");
-	}
-	| '~' {
-		$$ = createASTNode("~");
-	}
-	| '!' {
-		$$ = createASTNode("!");
-	}
-	;
+    : '&' {
+        $$ = createASTNode("&");
+
+        //-- 3AC Generation
+        $$->place = qid("unary&", lookup("&"));
+    }
+    | '*' {
+        $$ = createASTNode("*");
+
+        //-- 3AC Generation
+        $$->place = qid("unary*", lookup("*"));
+    }
+    | '+' {
+        $$ = createASTNode("+");
+
+        //-- 3AC Generation
+        $$->place = qid("unary+", lookup("+"));
+    }
+    | '-' {
+        $$ = createASTNode("-");
+
+        //-- 3AC Generation
+        $$->place = qid("unary-", lookup("-"));
+    }
+    | '~' {
+        $$ = createASTNode("~");
+
+        //-- 3AC Generation
+        $$->place = qid("~", lookup("~"));
+    }
+    | '!' {
+        $$ = createASTNode("!");
+
+        //-- 3AC Generation
+        $$->place = qid("!", lookup("!"));
+    }
+;
 
 cast_expression
-	: unary_expression {
-		$$ = $1;
-	}
-	| '(' type_name ')' cast_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $2, "", 1);
-		insertAttr(attr, $4, "", 1);
-		$$ = createASTNode("cast_expression", &attr);
-	}
-	;
+    : unary_expression {
+        $$ = $1;
+    }
+    | '(' type_name ')' cast_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $2, "", 1);
+        insertAttr(attr, $4, "", 1);
+        $$ = createASTNode("cast_expression", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable($2->type);
+        $$->place = q;
+		$$->type = $2->type;
+		$4->nextlist.clear();
+		//TODO: Try to do CAST_typename
+        emit(qid("CAST", NULL), $4->place, qid("", NULL), q, -1);
+    }
+;
 
 multiplicative_expression
-	: cast_expression {
-		$$ = $1;
-	}
-	| multiplicative_expression '*' cast_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("*", &attr);
-	}
-	| multiplicative_expression '/' cast_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("/", &attr);
-	}
-	| multiplicative_expression '%' cast_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("%", &attr);
-	}
-	;
+    : cast_expression {
+        $$ = $1;
+    }
+    | multiplicative_expression '*' cast_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("*", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int"); //TODO not always int
+		$$->type = "int"; //TODO not always int
+        $$->place = q;
+        $$->nextlist.clear();
+        emit(qid("*", NULL), $1->place, $3->place, q, -1);
+    }
+    | multiplicative_expression '/' cast_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("/", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int"); //TODO not always int
+		$$->type = "int"; //TODO not always int
+        $$->place = q;
+        $$->nextlist.clear();
+        emit(qid("/", NULL), $1->place, $3->place, q, -1);
+    }
+    | multiplicative_expression '%' cast_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("%", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int"); //TODO not always int
+		$$->type = "int"; //TODO not always int
+        $$->place = q;
+        $$->nextlist.clear();
+        emit(qid("%", NULL), $1->place, $3->place, q, -1);
+    }
+;
+
 
 additive_expression
-	: multiplicative_expression {
-		$$ = $1;
-	}
-	| additive_expression '+' multiplicative_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("+", &attr);
-	}
-	| additive_expression '-' multiplicative_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("-", &attr);
-	}
-	;
+    : multiplicative_expression {
+        $$ = $1;
+    }
+    | additive_expression '+' multiplicative_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("+", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");//TODO not always int
+		$$->type = "int"; // TODO not always int
+        $$->place = q;
+        $$->nextlist.clear();
+
+        emit(qid("+", NULL), $1->place, $3->place, q, -1);
+    }
+    | additive_expression '-' multiplicative_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("-", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");//TODO not always int
+		$$->type = "int"; // TODO not always int
+        $$->place = q;
+        $$->nextlist.clear();
+
+        emit(qid("-", NULL), $1->place, $3->place, q, -1);
+    }
+;
+
 
 shift_expression
-	: additive_expression {
-		$$ = $1;
-	}
-	| shift_expression LEFT_OP additive_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	| shift_expression RIGHT_OP additive_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	; 
+    : additive_expression {
+        $$ = $1;
+    }
+    | shift_expression LEFT_OP additive_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");//TODO not always int
+		$$->type = "int"; 
+        $$->place = q;
+        $$->nextlist.clear();
+
+        emit(qid("<<", NULL), $1->place, $3->place, q, -1);
+    }
+    | shift_expression RIGHT_OP additive_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");//TODO not always int
+		$$->type = "int"; 
+        $$->place = q;
+        $$->nextlist.clear();
+
+        emit(qid(">>", NULL), $1->place, $3->place, q, -1);
+    }
+;
+
 
 relational_expression
-	: inclusive_or_expression {
-		 $$ = $1;
-	}
-	| relational_expression '<' inclusive_or_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("<", &attr);
-	}
-	| relational_expression '>' inclusive_or_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode(">", &attr);
-	}
-	| relational_expression LE_OP inclusive_or_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	| relational_expression GE_OP inclusive_or_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	;
+    : inclusive_or_expression {
+        $$ = $1;
+    }
+    | relational_expression '<' inclusive_or_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("<", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");
+        emit(qid("<", NULL), $1->place, $3->place, q, -1);
+        $$->place = q;
+        $$->nextlist.clear();
+    }
+    | relational_expression '>' inclusive_or_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode(">", &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");
+        emit(qid(">", NULL), $1->place, $3->place, q, -1);
+        $$->place = q;
+        $$->nextlist.clear();
+    }
+    | relational_expression LE_OP inclusive_or_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");
+        emit(qid("<=", NULL), $1->place, $3->place, q, -1);
+        $$->place = q;
+        $$->nextlist.clear();
+    }
+    | relational_expression GE_OP inclusive_or_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");
+        emit(qid(">=", NULL), $1->place, $3->place, q, -1);
+        $$->place = q;
+        $$->nextlist.clear();
+    }
+;
+
 
 equality_expression
-	: relational_expression { 
-		$$ = $1;
-	}
-	| equality_expression EQ_OP relational_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	| equality_expression NE_OP relational_expression {
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-	}
-	;
+    : relational_expression { 
+        $$ = $1;
+    }
+    | equality_expression EQ_OP relational_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");
+        emit(qid("==", NULL), $1->place, $3->place, q, -1);
+        $$->place = q;
+        $$->nextlist.clear();
+    }
+    | equality_expression NE_OP relational_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        //-- 3AC Generation
+        qid q = getTempVariable("int");
+        emit(qid("!=", NULL), $1->place, $3->place, q, -1);
+        $$->place = q;
+        $$->nextlist.clear();
+    }
+;
 
 and_expression
-	: shift_expression {	
-		$$ = $1; 
-	}
-	| and_expression '&' shift_expression{
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("&", &attr);
-	}
-	;
+    : shift_expression {	
+        $$ = $1; 
+    }
+    | and_expression '&' shift_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("&", &attr);
+
+        // --- 3AC Generation ---
+		qid temp = getTempVariable("int");  
+		emit(qid("&", NULL), $1->place, $3->place, temp, -1);
+		$$->place = temp;
+        $$->nextlist.clear();
+    }
+;
+
 
 exclusive_or_expression
-	: and_expression {
-		$$ = $1;
-	}
-	| exclusive_or_expression '^' and_expression{
+    : and_expression {
+        $$ = $1;
+    }
+    | exclusive_or_expression '^' and_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("^", &attr);
+
+        // --- 3AC Generation ---
+        qid temp = getTempVariable("int");  
+        emit(qid("^", NULL), $1->place, $3->place, temp, -1);
+        $$->place = temp;
+
+        $$->nextlist.clear();
     }
-	;
+;
+
 
 inclusive_or_expression
-	: exclusive_or_expression {$$ = $1;}
-	| inclusive_or_expression '|' exclusive_or_expression{
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("|", &attr);
-	}
-	;
+    : exclusive_or_expression { 
+        $$ = $1; 
+    }
+    | inclusive_or_expression '|' exclusive_or_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("|", &attr);
+
+        // --- 3AC Generation ---
+        qid temp = getTempVariable("int"); 
+        emit(qid("|", NULL), $1->place, $3->place, temp, -1);
+        $$->place = temp;
+
+        $$->nextlist.clear();
+    }
+;
+
 
 logical_and_expression
 	: equality_expression {$$ = $1;}
