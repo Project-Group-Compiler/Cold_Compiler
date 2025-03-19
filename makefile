@@ -31,7 +31,7 @@ OBJS = \
 
 # Compiler and tools
 FLEX = flex
-BISON = bison
+BISON = bison -d -t -v
 CXX = g++
 CXXFLAGS = -g -I$(SRC_DIR)
 

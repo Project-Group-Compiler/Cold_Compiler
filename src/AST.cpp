@@ -58,7 +58,7 @@ Node *createASTNode(const std::string &str, std::vector<Data> *v)
                 format += c;
         }
         node->node_name = format;
-        if (str[0] == '"')
+        if (!str.empty() && str[0] == '"') 
         { // String literal
             std::string s = format.substr(1, format.size() - 2);
             if (print_ast)

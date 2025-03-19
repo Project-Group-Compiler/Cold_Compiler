@@ -207,7 +207,7 @@ postfix_expression
 					string msg = checkType(funcArgs[i],currArgs[i]);
 					
 					if(msg =="warning"){
-						yyerror(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
+						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
 					}
 					else if(msg.empty()){
 						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str());
@@ -865,7 +865,7 @@ assignment_expression
 			}
 			else if(temp == "warning"){
 				$$->type = $1->type;
-				yyerror("Assignment with incompatible pointer type");
+				warning("Assignment with incompatible pointer type");
 			}
 		}
 		else{
@@ -1513,6 +1513,17 @@ direct_declarator
 		insertAttr(v, node, "", 1);
 		$$ = createASTNode("direct_declarator", &v);
 		updateLastSymbolEntry();
+
+		// Semantics
+		if($1->expType == 1 || $1->expType == 2) {
+			$$->expType = 2;
+			$$->type = $1->type + "*";
+			$$->temp_name = $1->temp_name;
+			$$->size = $1->size * $3->intVal;
+		}
+		else {
+			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str());
+		}
 	}
 	| direct_declarator '[' ']'{
 		std::vector<Data> v;
@@ -1520,6 +1531,17 @@ direct_declarator
 		insertAttr(v, NULL, "[ ]", 0);
 		updateLastSymbolEntry();
 		$$ = createASTNode("direct_declarator", &v);
+
+		// Semantics
+		if($1->expType <=2 ) {
+			$$->expType = 2;
+			$$->type = $1->type + "*";
+			$$->temp_name = $1->temp_name;
+			$$->size = 8;
+		}
+		else {
+			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str());
+		}
 	}
 	| direct_declarator '(' parameter_type_list ')'{
 		std::vector<Data> v, v2;
@@ -1530,6 +1552,41 @@ direct_declarator
 		$$ = createASTNode("direct_declarator", &v);
 		updateFuncSymbolEntry(noArgs);
 		noArgs=0;
+
+		// Semantics
+		if($1->expType == 1) {
+			$$->temp_name = $1->temp_name;
+			$$->expType = 3;
+			$$->type = $1->type;
+			$$->size = getSize($$->type);
+
+			vector<string> temp = getFuncArgs($1->temp_name);
+			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
+				insertFuncArg($$->temp_name, funcArgs);
+				funcArgs.clear();
+				funcName = string($1->temp_name);
+				funcType = $1->type;
+			}
+			else{
+				// Check if temp is correct
+				if(temp == funcArgs){
+					funcArgs.clear();
+					funcName = string($1->temp_name);
+					funcType = $1->type;
+				}
+				else {
+					yyerror(("Conflicting types for " + $1->temp_name).c_str());
+				}
+			}
+		}
+		else {
+			if($1->expType == 2){
+				yyerror( ($1->temp_name + "declared as array of function").c_str());
+			}
+			else{
+				yyerror( ($1->temp_name + "declared as function of function").c_str());
+			}
+		}
 	}
 	| direct_declarator '(' identifier_list ')'{
 		std::vector<Data> v, v2;
@@ -1538,6 +1595,42 @@ direct_declarator
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
 		$$ = createASTNode("direct_declarator", &v);
+
+		// Semantics
+		// ToDo : check if A is needed
+		// ToDo : Check if func declaration exists and args match
+		fn_decl = 1;
+		$$->temp_name = $1->temp_name;
+		$$->expType = 3;
+		$$->type = $1->type;
+		$$->size = getSize($$->type);
+		funcType = $1->type;
+		funcName = string($1->temp_name);
+
+		vector<string> args = getFuncArgs($$->temp_name);
+		if(args.size() == 1 && args[0] == "#NO_FUNC"){
+			args.clear();
+			for(int i = 0; i < idList.size(); i++){
+				insertSymbol(*curr_table, idList[i], "int", 4, 1, NULL);
+				args.push_back("int");
+			}
+			insertFuncArg($1->temp_name, args);
+		}
+
+		if(args.size() == idList.size()) {
+			for(int i = 0; i < args.size(); i++) {
+				if(args[i] == "..."){
+					yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+					break;
+				}
+				insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
+			}
+			idList.clear();
+		}
+		else {
+			yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+			idList.clear();
+		}
 	}
 	| direct_declarator '(' ')'{
 		std::vector<Data> v;
@@ -1545,8 +1638,43 @@ direct_declarator
 		insertAttr(v, NULL, "( )", 0);
 		$$ = createASTNode("direct_declarator", &v);
 		updateFuncSymbolEntry(0);
+
+		// Semantics
+		if($1->expType == 1) {
+			$$->temp_name = $1->temp_name;
+			$$->expType = 3;
+			$$->type = $1->type;
+			$$->size = getSize($$->type);
+
+			vector<string> temp = getFuncArgs($1->temp_name);
+			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
+				insertFuncArg($$->temp_name, funcArgs);
+				funcArgs.clear();
+				funcName = string($1->temp_name);
+				funcType = $1->type;
+			}
+			else{
+				yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+			}
+		}
+		else {
+			if($1->expType == 2){
+				yyerror( ($1->temp_name + "declared as array of function").c_str());
+			}
+			else{
+				yyerror( ($1->temp_name + "declared as function of function").c_str());
+			}
+		}
 	}
 	;
+
+A  //can remove
+	: %empty	{
+		type ="";
+		func_flag = 0;
+		funcArgs.clear();
+		createParamList();
+	}
 
 pointer
 	: '*' {
