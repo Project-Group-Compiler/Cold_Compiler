@@ -431,30 +431,38 @@ unary_expression
 
 unary_operator
 	: '&' {
+		DEBUG_PARSER("unary_operator -> '&'");
 		$$ = createASTNode("&");
 	}
 	| '*' {
+		DEBUG_PARSER("unary_operator -> '*'");
 		$$ = createASTNode("*");
 	}
 	| '+' {
+		DEBUG_PARSER("unary_operator -> '+'");
 		$$ = createASTNode("+");
 	}
 	| '-' {
+		DEBUG_PARSER("unary_operator -> '-'");
 		$$ = createASTNode("-");
 	}
 	| '~' {
+		DEBUG_PARSER("unary_operator -> '~'");
 		$$ = createASTNode("~");
 	}
 	| '!' {
+		DEBUG_PARSER("unary_operator -> '!'");
 		$$ = createASTNode("!");
 	}
 	;
 
 cast_expression
 	: unary_expression {
+		DEBUG_PARSER("cast_expression -> unary_expression");
 		$$ = $1;
 	}
 	| '(' type_name ')' cast_expression {
+		DEBUG_PARSER("cast_expression -> '(' type_name ')' cast_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $2, "", 1);
 		insertAttr(attr, $4, "", 1);
@@ -468,9 +476,11 @@ cast_expression
 
 multiplicative_expression
 	: cast_expression {
+		DEBUG_PARSER("multiplicative_expression -> cast_expression");
 		$$ = $1;
 	}
 	| multiplicative_expression '*' cast_expression {
+		DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '*' cast_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -495,6 +505,7 @@ multiplicative_expression
 		}
 	}
 	| multiplicative_expression '/' cast_expression {
+		DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '/' cast_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -517,6 +528,7 @@ multiplicative_expression
 		}
 	}
 	| multiplicative_expression '%' cast_expression {
+		DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '%' cast_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -537,9 +549,11 @@ multiplicative_expression
 
 additive_expression
 	: multiplicative_expression {
+		DEBUG_PARSER("additive_expression -> multiplicative_expression");
 		$$ = $1;
 	}
 	| additive_expression '+' multiplicative_expression {
+        DEBUG_PARSER("additive_expression -> additive_expression '+' multiplicative_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -559,6 +573,7 @@ additive_expression
 		}
 	}
 	| additive_expression '-' multiplicative_expression {
+		DEBUG_PARSER("additive_expression -> additive_expression '-' multiplicative_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -581,9 +596,11 @@ additive_expression
 
 shift_expression
 	: additive_expression {
+		DEBUG_PARSER("shift_expression -> additive_expression");
 		$$ = $1;
 	}
 	| shift_expression LEFT_OP additive_expression {
+		DEBUG_PARSER("shift_expression -> shift_expression LEFT_OP additive_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -599,6 +616,7 @@ shift_expression
 		}
 	}
 	| shift_expression RIGHT_OP additive_expression {
+		DEBUG_PARSER("shift_expression -> shift_expression RIGHT_OP additive_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -618,97 +636,97 @@ shift_expression
 relational_expression   //POTENTIAL ISSUE
     : inclusive_or_expression {
         DEBUG_PARSER("relational_expression -> inclusive_or_expression");
-          $$ = $1;
-      }
+		$$ = $1;
+	}
     | relational_expression '<' inclusive_or_expression {
         DEBUG_PARSER("relational_expression -> relational_expression '<' inclusive_or_expression");
-          std::vector<Data> attr;
-          insertAttr(attr, $1, "", 1);
-          insertAttr(attr, $3, "", 1);
+		std::vector<Data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $3, "", 1);
           $$ = createASTNode("<", &attr);
 
           // Semantic actions:
           if($1->isInit == 1 && $3->isInit == 1)
               $$->isInit = 1;
           std::string temp = relExp($1->type, $3->type);
-          if(!temp.empty()){
-              if(temp == "bool"){
-                  $$->type = "bool";
+		if(!temp.empty()){
+			if(temp == "bool"){
+				$$->type = "bool";
               } else if(temp == "Bool"){
-                  $$->type = "bool";
-                  warning("Comparison between pointer and integer");
-              }
+				$$->type = "bool";
+				 warning("Comparison between pointer and integer");
+			}
           } else {
-              yyerror("Invalid operands to binary <");
-          }
-      }
+			yyerror("Invalid operands to binary <");
+		}
+	}
     | relational_expression '>' inclusive_or_expression {
         DEBUG_PARSER("relational_expression -> relational_expression '>' inclusive_or_expression");
-          std::vector<Data> attr;
-          insertAttr(attr, $1, "", 1);
-          insertAttr(attr, $3, "", 1);
+		std::vector<Data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $3, "", 1);
           $$ = createASTNode(">", &attr);
 
           // Semantic actions:
           if($1->isInit == 1 && $3->isInit == 1)
               $$->isInit = 1;
           std::string temp = relExp($1->type, $3->type);
-          if(!temp.empty()){
-              if(temp == "bool"){
-                  $$->type = "bool";
+		if(!temp.empty()){
+			if(temp == "bool"){
+				$$->type = "bool";
               } else if(temp == "Bool"){
-                  $$->type = "bool";
-                  warning("Comparison between pointer and integer");
-              }
+				$$->type = "bool";
+				 warning("Comparison between pointer and integer");
+			}
           } else {
-              yyerror("Invalid operands to binary >");
-          }
-      }
+			yyerror("Invalid operands to binary >");
+		}
+	}
     | relational_expression LE_OP inclusive_or_expression {
         DEBUG_PARSER("relational_expression -> relational_expression LE_OP inclusive_or_expression");
-          std::vector<Data> attr;
-          insertAttr(attr, $1, "", 1);
-          insertAttr(attr, $3, "", 1);
+		std::vector<Data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $3, "", 1);
           $$ = createASTNode($2, &attr);
 
           // Semantic actions:
           if($1->isInit == 1 && $3->isInit == 1)
               $$->isInit = 1;
           std::string temp = relExp($1->type, $3->type);
-          if(!temp.empty()){
-              if(temp == "bool"){
-                  $$->type = "bool";
+		if(!temp.empty()){
+			if(temp == "bool"){
+				$$->type = "bool";
               } else if(temp == "Bool"){
-                  $$->type = "bool";
-                  warning("Comparison between pointer and integer");
-              }
+				$$->type = "bool";
+				 warning("Comparison between pointer and integer");
+			}
           } else {
-              yyerror("Invalid operands to binary <=");
-          }
-      }
+			yyerror("Invalid operands to binary <=");
+		}
+	}
     | relational_expression GE_OP inclusive_or_expression {
         DEBUG_PARSER("relational_expression -> relational_expression GE_OP inclusive_or_expression");
-          std::vector<Data> attr;
-          insertAttr(attr, $1, "", 1);
-          insertAttr(attr, $3, "", 1);
+		std::vector<Data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $3, "", 1);
           $$ = createASTNode($2, &attr);
 
           // Semantic actions:
           if($1->isInit == 1 && $3->isInit == 1)
               $$->isInit = 1;
           std::string temp = relExp($1->type, $3->type);
-          if(!temp.empty()){
-              if(temp == "bool"){
-                  $$->type = "bool";
+		if(!temp.empty()){
+			if(temp == "bool"){
+				$$->type = "bool";
               } else if(temp == "Bool"){
-                  $$->type = "bool";
-                  warning("Comparison between pointer and integer");
-              }
+				$$->type = "bool";
+				 warning("Comparison between pointer and integer");
+			}
           } else {
-              yyerror("Invalid operands to binary >=");
-          }
-      }
-    ;
+			yyerror("Invalid operands to binary >=");
+		}
+	}
+	;
 
 
 equality_expression
@@ -761,7 +779,7 @@ equality_expression
 and_expression
 	: shift_expression {	
         DEBUG_PARSER("and_expression -> shift_expression");
-		$$ = $1; 
+		$$ = $1;
 	}
 	| and_expression '&' shift_expression{
         DEBUG_PARSER("and_expression -> and_expression '&' shift_expression");
@@ -842,18 +860,18 @@ inclusive_or_expression
 logical_and_expression
 	: equality_expression {
         DEBUG_PARSER("logical_and_expression -> equality_expression");
-        $$ = $1;
-    }
+		$$ = $1;
+	}
 	| logical_and_expression AND_OP equality_expression{
         DEBUG_PARSER("logical_and_expression -> logical_and_expression AND_OP equality_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode("&&", &attr);
-		
+
 		// Semantics
 		$$->type = string("bool");
-		$$->isInit = (($1->isInit) & ($3->isInit));
+		$$->isInit = (($1->isInit) & ($3->isInit));   
 		$$->intVal = $1->intVal && $3->intVal;
 	}
 	;
