@@ -29,6 +29,9 @@ vector<string> funcArgs;
 vector<string> idList;
 vector<string> currArgs;
 
+// Debug tracking
+bool debug_enabled = true; // Flag to enable or disable debugging
+#define DEBUG_PARSER(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 extern int yylex();
 extern int yyrestart(FILE*);
@@ -76,6 +79,7 @@ extern FILE* yyin;
 
 primary_expression
     : IDENTIFIER {
+        DEBUG_PARSER("primary_expression -> IDENTIFIER");
     	$$ = makeleaf($1);
 		
 		// Semantics
@@ -99,6 +103,7 @@ primary_expression
 		}
     }
 	| CONSTANT {
+        DEBUG_PARSER("primary_expression -> CONSTANT");
 		$$ = makeleaf($1->str);
 		$$->type = $1->type;
 		$$->intVal = $1->intVal;
@@ -107,21 +112,25 @@ primary_expression
 		$$->temp_name = $1->str;
 	}
 	| STRING_LITERAL {
+        DEBUG_PARSER("primary_expression -> STRING_LITERAL");
 		$$ = makeleaf($1);
 		$$->type = string("char*");
 		$$->temp_name = string($1);
 		$$->strVal = string($1);
 	}
 	| '(' expression ')' {
+        DEBUG_PARSER("primary_expression -> '(' expression ')'");
 		$$ = $2;
 	}
 	;
 
 postfix_expression
 	: primary_expression {
+        DEBUG_PARSER("postfix_expression -> primary_expression");
 		$$ = $1;
 	}
 	| postfix_expression '[' expression ']' {
+        DEBUG_PARSER("postfix_expression -> postfix_expression '[' expression ']'");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -140,6 +149,7 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')' {
+        DEBUG_PARSER("postfix_expression -> postfix_expression '(' ')'");
 		$$ = $1;
 
 		//Semantics
@@ -160,6 +170,7 @@ postfix_expression
 		currArgs.clear(); 
 	}
 	| postfix_expression '(' argument_expression_list ')' {
+        DEBUG_PARSER("postfix_expression -> postfix_expression '(' argument_expression_list ')'");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -205,6 +216,7 @@ postfix_expression
 		currArgs.clear(); 
 	}
 	| postfix_expression '.' IDENTIFIER {
+        DEBUG_PARSER("postfix_expression -> postfix_expression '.' IDENTIFIER");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, makeleaf($3), "", 1);
@@ -227,6 +239,7 @@ postfix_expression
 		}
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
+        DEBUG_PARSER("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, makeleaf($3), "", 1);
@@ -256,6 +269,7 @@ postfix_expression
 
 	}
 	| postfix_expression INC_OP {
+        DEBUG_PARSER("postfix_expression -> postfix_expression INC_OP");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		$$ = makenode($2, attr);
@@ -273,6 +287,7 @@ postfix_expression
 
 	}
 	| postfix_expression DEC_OP {
+        DEBUG_PARSER("postfix_expression -> postfix_expression DEC_OP");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		$$ = makenode($2, attr);
@@ -293,6 +308,7 @@ postfix_expression
 
 argument_expression_list
 	: assignment_expression {
+        DEBUG_PARSER("argument_expression_list -> assignment_expression");
 		$$ = $1;
 
 		//Semantic
@@ -302,6 +318,7 @@ argument_expression_list
 
 	}
 	| argument_expression_list ',' assignment_expression {
+        DEBUG_PARSER("argument_expression_list -> argument_expression_list ',' assignment_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -319,9 +336,11 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression {
+        DEBUG_PARSER("unary_expression -> postfix_expression");
 		$$ = $1;
 	}
 	| INC_OP unary_expression {
+        DEBUG_PARSER("unary_expression -> INC_OP unary_expression");
 		vector<data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode($1,attr);
@@ -340,6 +359,7 @@ unary_expression
 		}
 	}
 	| DEC_OP unary_expression {
+        DEBUG_PARSER("unary_expression -> DEC_OP unary_expression");
 		vector<data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode($1,attr);
@@ -358,6 +378,7 @@ unary_expression
 		}
 	}
 	| unary_operator cast_expression {
+        DEBUG_PARSER("unary_expression -> unary_operator cast_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
@@ -377,6 +398,7 @@ unary_expression
 		}
 	}
 	| SIZEOF unary_expression {
+        DEBUG_PARSER("unary_expression -> SIZEOF unary_expression");
 		vector<data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = makenode($1,attr);
@@ -387,6 +409,7 @@ unary_expression
 		$$->intVal = $2->size;
 	}
 	| SIZEOF '(' type_name ')' {
+        DEBUG_PARSER("unary_expression -> SIZEOF '(' type_name ')'");
 		vector<data> attr;
 		insertAttr(attr, $3, "", 1);
 		$$ = makenode($1,attr);
@@ -400,30 +423,38 @@ unary_expression
 
 unary_operator
 	: '&' {
+        DEBUG_PARSER("unary_operator -> '&'");
 		$$ = makeleaf("&");
 	}
 	| '*' {
+        DEBUG_PARSER("unary_operator -> '*'");
 		$$ = makeleaf("*");
 	}
 	| '+' {
+        DEBUG_PARSER("unary_operator -> '+'");
 		$$ = makeleaf("+");
 	}
 	| '-' {
+        DEBUG_PARSER("unary_operator -> '-'");
 		$$ = makeleaf("-");
 	}
 	| '~' {
+        DEBUG_PARSER("unary_operator -> '~'");
 		$$ = makeleaf("~");
 	}
 	| '!' {
+        DEBUG_PARSER("unary_operator -> '!'");
 		$$ = makeleaf("!");
 	}
 	;
 
 cast_expression
 	: unary_expression {
+        DEBUG_PARSER("cast_expression -> unary_expression");
 		$$ = $1;
 	}
 	| '(' type_name ')' cast_expression {
+        DEBUG_PARSER("cast_expression -> '(' type_name ')' cast_expression");
 		vector<data> attr;
 		insertAttr(attr, $2, "", 1);
 		insertAttr(attr, $4, "", 1);
@@ -437,9 +468,11 @@ cast_expression
 
 multiplicative_expression
 	: cast_expression {
+        DEBUG_PARSER("multiplicative_expression -> cast_expression");
 		$$ = $1;
 	}
 	| multiplicative_expression '*' cast_expression {
+        DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '*' cast_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -469,6 +502,7 @@ multiplicative_expression
 
 	}
 	| multiplicative_expression '/' cast_expression {
+        DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '/' cast_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -493,6 +527,7 @@ multiplicative_expression
 		}
 	}
 	| multiplicative_expression '%' cast_expression {
+        DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '%' cast_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -516,9 +551,11 @@ multiplicative_expression
 
 additive_expression
 	: multiplicative_expression {
+        DEBUG_PARSER("additive_expression -> multiplicative_expression");
 		$$ = $1;
 	}
 	| additive_expression '+' multiplicative_expression {
+        DEBUG_PARSER("additive_expression -> additive_expression '+' multiplicative_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -539,6 +576,7 @@ additive_expression
 		}
 	}
 	| additive_expression '-' multiplicative_expression {
+        DEBUG_PARSER("additive_expression -> additive_expression '-' multiplicative_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -562,9 +600,11 @@ additive_expression
 
 shift_expression
 	: additive_expression {
+        DEBUG_PARSER("shift_expression -> additive_expression");
 		$$ = $1;
 	}
 	| shift_expression LEFT_OP additive_expression {
+        DEBUG_PARSER("shift_expression -> shift_expression LEFT_OP additive_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -582,6 +622,7 @@ shift_expression
 
 	}
 	| shift_expression RIGHT_OP additive_expression {
+        DEBUG_PARSER("shift_expression -> shift_expression RIGHT_OP additive_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -601,13 +642,15 @@ shift_expression
 
 relational_expression
 	: shift_expression {
+        DEBUG_PARSER("relational_expression -> shift_expression");
 		$$ = $1;
 	}
 	| relational_expression '<' shift_expression {
+        DEBUG_PARSER("relational_expression -> relational_expression '<' shift_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		$$ = makenode("<" ,attr);
+			$$ = makenode("<" ,attr);
 
 		//Semantic
 		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
@@ -628,6 +671,7 @@ relational_expression
 
 	}
 	| relational_expression '>' shift_expression {
+        DEBUG_PARSER("relational_expression -> relational_expression '>' shift_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -650,6 +694,7 @@ relational_expression
 		}
 	}
 	| relational_expression LE_OP shift_expression {
+        DEBUG_PARSER("relational_expression -> relational_expression LE_OP shift_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -672,6 +717,7 @@ relational_expression
 		}
 	}
 	| relational_expression GE_OP shift_expression {
+        DEBUG_PARSER("relational_expression -> relational_expression GE_OP shift_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -697,9 +743,11 @@ relational_expression
 
 equality_expression
 	: relational_expression {
+        DEBUG_PARSER("equality_expression -> relational_expression");
 		$$ = $1;
 	}
 	| equality_expression EQ_OP relational_expression {
+        DEBUG_PARSER("equality_expression -> equality_expression EQ_OP relational_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -720,6 +768,7 @@ equality_expression
 		}
 	}
 	| equality_expression NE_OP relational_expression {
+        DEBUG_PARSER("equality_expression -> equality_expression NE_OP relational_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -742,8 +791,12 @@ equality_expression
 	;
 
 and_expression
-	: equality_expression		{$$ = $1;}
+	: equality_expression		{
+        DEBUG_PARSER("and_expression -> equality_expression");
+		$$ = $1;
+	}
 	| and_expression '&' equality_expression {
+        DEBUG_PARSER("and_expression -> and_expression '&' equality_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -766,8 +819,12 @@ and_expression
 	;
 
 exclusive_or_expression
-	: and_expression													{$$ = $1;}
+	: and_expression													{
+        DEBUG_PARSER("exclusive_or_expression -> and_expression");
+		$$ = $1;
+	}
 	| exclusive_or_expression '^' and_expression 	{
+        DEBUG_PARSER("exclusive_or_expression -> exclusive_or_expression '^' and_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -791,8 +848,12 @@ exclusive_or_expression
 
 
 inclusive_or_expression
-	: exclusive_or_expression											{$$ = $1;}
+	: exclusive_or_expression											{
+        DEBUG_PARSER("inclusive_or_expression -> exclusive_or_expression");
+		$$ = $1;
+	}
 	| inclusive_or_expression '|' exclusive_or_expression	{
+        DEBUG_PARSER("inclusive_or_expression -> inclusive_or_expression '|' exclusive_or_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -818,8 +879,12 @@ inclusive_or_expression
 
 
 logical_and_expression
-	: inclusive_or_expression	{$$ = $1;}
+	: inclusive_or_expression	{
+        DEBUG_PARSER("logical_and_expression -> inclusive_or_expression");
+		$$ = $1;
+	}
 	| logical_and_expression AND_OP inclusive_or_expression	{
+        DEBUG_PARSER("logical_and_expression -> logical_and_expression AND_OP inclusive_or_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -834,8 +899,12 @@ logical_and_expression
 
 
 logical_or_expression
-	: logical_and_expression	{$$ = $1;}
+	: logical_and_expression	{
+        DEBUG_PARSER("logical_or_expression -> logical_and_expression");
+		$$ = $1;
+	}
 	| logical_or_expression OR_OP logical_and_expression	{
+        DEBUG_PARSER("logical_or_expression -> logical_or_expression OR_OP logical_and_expression");
 			vector<data> attr;
 			insertAttr(attr, $1, "", 1);
 			insertAttr(attr, $3, "", 1);
@@ -849,8 +918,12 @@ logical_or_expression
 	;
 
 conditional_expression
-	: logical_or_expression		{$$ = $1;}
+	: logical_or_expression		{
+        DEBUG_PARSER("conditional_expression -> logical_or_expression");
+		$$ = $1;
+	}
 	| logical_or_expression '?' expression ':' conditional_expression	{
+        DEBUG_PARSER("conditional_expression -> logical_or_expression '?' expression ':' conditional_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -871,8 +944,12 @@ conditional_expression
 
 
 assignment_expression
-	: conditional_expression	{$$ = $1;}
+	: conditional_expression	{
+        DEBUG_PARSER("assignment_expression -> conditional_expression");
+		$$ = $1;
+	}
 	| unary_expression assignment_operator assignment_expression 	{
+        DEBUG_PARSER("assignment_expression -> unary_expression assignment_operator assignment_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -902,22 +979,59 @@ assignment_expression
 
 
 assignment_operator
-	: '='				{$$ = "=";}
-	| MUL_ASSIGN		{$$ = $1;}
-	| DIV_ASSIGN		{$$ = $1;}
-	| MOD_ASSIGN		{$$ = $1;}
-	| ADD_ASSIGN		{$$ = $1;}
-	| SUB_ASSIGN		{$$ = $1;}
-	| LEFT_ASSIGN		{$$ = $1;}
-	| RIGHT_ASSIGN		{$$ = $1;}
-	| AND_ASSIGN		{$$ = $1;}
-	| XOR_ASSIGN		{$$ = $1;}
-	| OR_ASSIGN			{$$ = $1;}
+	: '='				{
+        DEBUG_PARSER("assignment_operator -> '='");
+		$$ = "=";
+	}
+	| MUL_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> MUL_ASSIGN");
+		$$ = $1;
+	}
+	| DIV_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> DIV_ASSIGN");
+		$$ = $1;
+	}
+	| MOD_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> MOD_ASSIGN");
+		$$ = $1;
+	}
+	| ADD_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> ADD_ASSIGN");
+		$$ = $1;
+	}
+	| SUB_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> SUB_ASSIGN");
+		$$ = $1;
+	}
+	| LEFT_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> LEFT_ASSIGN");
+		$$ = $1;
+	}
+	| RIGHT_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> RIGHT_ASSIGN");
+		$$ = $1;
+	}
+	| AND_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> AND_ASSIGN");
+		$$ = $1;
+	}
+	| XOR_ASSIGN		{
+        DEBUG_PARSER("assignment_operator -> XOR_ASSIGN");
+		$$ = $1;
+	}
+	| OR_ASSIGN			{
+        DEBUG_PARSER("assignment_operator -> OR_ASSIGN");
+		$$ = $1;
+	}
 	;
 
 expression
-	: assignment_expression				{ $$ = $1; }
+	: assignment_expression				{
+        DEBUG_PARSER("expression -> assignment_expression");
+		$$ = $1;
+	}
 	| expression ',' assignment_expression		{
+        DEBUG_PARSER("expression -> expression ',' assignment_expression");
 		vector<data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -929,67 +1043,91 @@ expression
 
 
 constant_expression
-	: conditional_expression							{$$ = $1;}
+	: conditional_expression							{
+        DEBUG_PARSER("constant_expression -> conditional_expression");
+		$$ = $1;
+	}
 	;
 
 declaration
-	: declaration_specifiers ';'						{$$ = $1;  type = "";}
+	: declaration_specifiers ';'						{
+        DEBUG_PARSER("declaration -> declaration_specifiers ';'");
+		$$ = $1;  type = "";
+	}
 	| declaration_specifiers init_declarator_list ';'	{
-															vector<data> attr;
-															insertAttr(attr, $1, "", 1);
-															insertAttr(attr, $2, "", 1);
-															$$ = makenode("declaration",attr);
+        DEBUG_PARSER("declaration -> declaration_specifiers init_declarator_list ';'");
+		vector<data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $2, "", 1);
+		$$ = makenode("declaration",attr);
 
-															type = "";
-															if($2->expType == 3){
-																// Clear the Symbol table of Function;
-																// But which function? We need func_name?
-																// $2->temp_name
-																// if func is already in the FuncArgs Map => Check argument types
-																// If argument types dont match, return error!
+		type = "";
+		if($2->expType == 3){
+			// Clear the Symbol table of Function;
+			// But which function? We need func_name?
+			// $2->temp_name
+			// if func is already in the FuncArgs Map => Check argument types
+			// If argument types dont match, return error!
 
-															}
+		}
 															
-														}
+	}
 	;
 
 
 declaration_specifiers
-	: storage_class_specifier							{ $$ = $1; }
+	: storage_class_specifier							{
+        DEBUG_PARSER("declaration_specifiers -> storage_class_specifier");
+		$$ = $1;
+	}
 	| storage_class_specifier declaration_specifiers	{
-															vector<data> attr;
-															insertAttr(attr, $1, "", 1);
-															insertAttr(attr, $2, "", 1);
-															$$ = makenode("declaration_specifiers",attr);
-														}
-	| type_specifier									{ $$ = $1; }
+        DEBUG_PARSER("declaration_specifiers -> storage_class_specifier declaration_specifiers");
+		vector<data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $2, "", 1);
+		$$ = makenode("declaration_specifiers",attr);
+	}
+	| type_specifier									{
+        DEBUG_PARSER("declaration_specifiers -> type_specifier");
+		$$ = $1;
+	}
 	| type_specifier declaration_specifiers				{
-															vector<data> attr;
-															insertAttr(attr, $1, "", 1);
-															insertAttr(attr, $2, "", 1);
-															$$ = makenode("declaration_specifiers",attr);
-														}
-	| type_qualifier									{ $$ = $1; }
+        DEBUG_PARSER("declaration_specifiers -> type_specifier declaration_specifiers");
+		vector<data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $2, "", 1);
+		$$ = makenode("declaration_specifiers",attr);
+	}
+	| type_qualifier									{
+        DEBUG_PARSER("declaration_specifiers -> type_qualifier");
+		$$ = $1;
+	}
 	| type_qualifier declaration_specifiers				{
-															vector<data> attr;
-															insertAttr(attr, $1, "", 1);
-															insertAttr(attr, $2, "", 1);
-															$$ = makenode("declaration_specifiers",attr);
-														}
+        DEBUG_PARSER("declaration_specifiers -> type_qualifier declaration_specifiers");
+		vector<data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $2, "", 1);
+		$$ = makenode("declaration_specifiers",attr);
+	}
 	;
 
 init_declarator_list
-	: init_declarator									{$$ = $1;}
+	: init_declarator									{
+        DEBUG_PARSER("init_declarator_list -> init_declarator");
+		$$ = $1;
+	}
 	| init_declarator_list ',' init_declarator			{
-															vector<data> attr;
-															insertAttr(attr, $1, "", 1);
-															insertAttr(attr, $3, "", 1);
-															$$ = makenode("init_declarator_list",attr);
-														}
+        DEBUG_PARSER("init_declarator_list -> init_declarator_list ',' init_declarator");
+		vector<data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, $3, "", 1);
+		$$ = makenode("init_declarator_list",attr);
+	}
 	;
 
 init_declarator
 	: declarator	{
+        DEBUG_PARSER("init_declarator -> declarator");
 		$$ = $1;
 
 		// Semantics
@@ -1009,6 +1147,7 @@ init_declarator
 		}
 	}
 	| declarator '=' initializer	{
+        DEBUG_PARSER("init_declarator -> declarator '=' initializer");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1027,24 +1166,30 @@ init_declarator
 
 storage_class_specifier
 	: TYPEDEF	{
+        DEBUG_PARSER("storage_class_specifier -> TYPEDEF");
 		$$ = makeleaf($1);
 	}
 	| EXTERN	{
+        DEBUG_PARSER("storage_class_specifier -> EXTERN");
 		$$ = makeleaf($1);
 	}
 	| STATIC	{
+        DEBUG_PARSER("storage_class_specifier -> STATIC");
 		$$ = makeleaf($1);
 	}
 	| AUTO	{
+        DEBUG_PARSER("storage_class_specifier -> AUTO");
 		$$ = makeleaf($1);
 	}
 	| REGISTER	{
+        DEBUG_PARSER("storage_class_specifier -> REGISTER");
 		$$ = makeleaf($1);
 	}
 	;
 
 type_specifier
 	: VOID		{
+        DEBUG_PARSER("type_specifier -> VOID");
 		$$ = makeleaf($1);
 
 		// Semantics
@@ -1052,6 +1197,7 @@ type_specifier
 		else type += " " + string($1);
 	}	
 	| CHAR		{
+        DEBUG_PARSER("type_specifier -> CHAR");
 		$$ = makeleaf($1);
 
 		// Semantics
@@ -1059,12 +1205,14 @@ type_specifier
 		else type += " " + string($1);
 	}	
 	| SHORT		{
+        DEBUG_PARSER("type_specifier -> SHORT");
 		$$ = makeleaf($1);
 		
 		// Semantics
 		if(type == "") type = string($1);
 		else type += " " + string($1);	}	
 	| INT			{
+        DEBUG_PARSER("type_specifier -> INT");
 		$$ = makeleaf($1);
 
 		// Semantics
@@ -1072,6 +1220,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| LONG			{
+        DEBUG_PARSER("type_specifier -> LONG");
 		$$ = makeleaf($1);
 		
 		// Semantics
@@ -1079,6 +1228,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| FLOAT			{
+        DEBUG_PARSER("type_specifier -> FLOAT");
 		$$ = makeleaf($1);
 
 		// Semantics
@@ -1086,6 +1236,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| DOUBLE		{
+        DEBUG_PARSER("type_specifier -> DOUBLE");
 		$$ = makeleaf($1);
 
 		// Semantics
@@ -1093,6 +1244,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| SIGNED		{
+        DEBUG_PARSER("type_specifier -> SIGNED");
 		$$ = makeleaf($1);
 
 		// Semantics
@@ -1100,6 +1252,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| UNSIGNED		{
+        DEBUG_PARSER("type_specifier -> UNSIGNED");
 		$$ = makeleaf($1);
 
 		// Semantics
@@ -1107,13 +1260,16 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| struct_or_union_specifier	{
+        DEBUG_PARSER("type_specifier -> struct_or_union_specifier");
 		$$ = $1;
 	}	
 	| enum_specifier	{
+        DEBUG_PARSER("type_specifier -> enum_specifier");
 		$$ = $1;
 		// TODO
 	}
 	| TYPE_NAME		{
+        DEBUG_PARSER("type_specifier -> TYPE_NAME");
 		$$ = makeleaf($1);
 		string temp = getType($1);
 		type = temp;
@@ -1122,6 +1278,7 @@ type_specifier
 
 struct_or_union_specifier
 	: struct_or_union G S '{' struct_declaration_list '}'	{
+        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union G S '{' struct_declaration_list '}'");
 		vector<data> v;
 		insertAttr(v, makeleaf($2), "", 1);
 		insertAttr(v, $5, "", 1);
@@ -1138,6 +1295,7 @@ struct_or_union_specifier
 		
 	}
 	| struct_or_union S '{' struct_declaration_list '}'		{
+        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union S '{' struct_declaration_list '}'");
 		vector<data> v;
 		insertAttr(v, $4, "", 1);
 		$$ = makenode($1, v);
@@ -1154,6 +1312,7 @@ struct_or_union_specifier
 		}
 	}
 	| struct_or_union IDENTIFIER {
+        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union IDENTIFIER");
 		vector<data> v;
 		insertAttr(v, makeleaf($2), "", 1);
 		$$ = makenode($1, v);
@@ -1177,6 +1336,7 @@ struct_or_union_specifier
 
 G 	
 	: IDENTIFIER 	{
+        DEBUG_PARSER("G -> IDENTIFIER");
 		$$ = $1;
 		structName = $1;
 	}
@@ -1184,18 +1344,29 @@ G
 
 S 
 	: %empty {
+        DEBUG_PARSER("S -> %empty");
 		createStructTable();
 		
 	}
 
 struct_or_union
-	: STRUCT	{$$ = $1;}
-	| UNION		{$$ = $1;}
+	: STRUCT	{
+        DEBUG_PARSER("struct_or_union -> STRUCT");
+		$$ = $1;
+	}
+	| UNION		{
+        DEBUG_PARSER("struct_or_union -> UNION");
+		$$ = $1;
+	}
 	;
 
 struct_declaration_list
-	: struct_declaration	{ $$ = $1 ;}
+	: struct_declaration	{
+        DEBUG_PARSER("struct_declaration_list -> struct_declaration");
+		$$ = $1 ;
+	}
 	| struct_declaration_list struct_declaration 	{
+        DEBUG_PARSER("struct_declaration_list -> struct_declaration_list struct_declaration");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1205,6 +1376,7 @@ struct_declaration_list
 
 struct_declaration
 	: specifier_qualifier_list struct_declarator_list ';' 	{
+        DEBUG_PARSER("struct_declaration -> specifier_qualifier_list struct_declarator_list ';'");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1216,24 +1388,36 @@ struct_declaration
 
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list	{
+        DEBUG_PARSER("specifier_qualifier_list -> type_specifier specifier_qualifier_list");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = makenode("specifier_qualifier_list", v);
 	}
-	| type_specifier	{ $$ = $1; }
+	| type_specifier	{
+        DEBUG_PARSER("specifier_qualifier_list -> type_specifier");
+		$$ = $1;
+	}
 	| type_qualifier specifier_qualifier_list 	{
+        DEBUG_PARSER("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = makenode("specifier_qualifier_list", v);
 	}
-	| type_qualifier	{ $$ = $1; }
+	| type_qualifier	{
+        DEBUG_PARSER("specifier_qualifier_list -> type_qualifier");
+		$$ = $1;
+	}
 	;
 
 struct_declarator_list
-	: struct_declarator { $$ = $1; }
+	: struct_declarator {
+        DEBUG_PARSER("struct_declarator_list -> struct_declarator");
+		$$ = $1;
+	}
 	| struct_declarator_list ',' struct_declarator {
+        DEBUG_PARSER("struct_declarator_list -> struct_declarator_list ',' struct_declarator");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1243,6 +1427,7 @@ struct_declarator_list
 
 struct_declarator
 	: declarator	{ 
+        DEBUG_PARSER("struct_declarator -> declarator");
 		$$ = $1;
 		// Semantics
 		if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1){
@@ -1250,10 +1435,12 @@ struct_declarator
 		} 
 	}
 	| ':' constant_expression	{ 
+        DEBUG_PARSER("struct_declarator -> ':' constant_expression");
 		$$ = $2; 
 		// ????
 	}
 	| declarator ':' constant_expression	{
+        DEBUG_PARSER("struct_declarator -> declarator ':' constant_expression");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1268,18 +1455,21 @@ struct_declarator
 
 enum_specifier
 	: ENUM '{' enumerator_list '}'		{
+        DEBUG_PARSER("enum_specifier -> ENUM '{' enumerator_list '}'");
 		// TODO
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		$$ = makenode($1, v);
 	}
 	| ENUM IDENTIFIER '{' enumerator_list '}'	{
+        DEBUG_PARSER("enum_specifier -> ENUM IDENTIFIER '{' enumerator_list '}'");
 		vector<data> v;
 		insertAttr(v, makeleaf($2), "", 1);
 		insertAttr(v, $4, "", 1);
 		$$ = makenode($1, v);
 	}
 	| ENUM IDENTIFIER {
+        DEBUG_PARSER("enum_specifier -> ENUM IDENTIFIER");
 		vector<data> v;
 		insertAttr(v, makeleaf($2), "", 1);
 		$$ = makenode($1, v);
@@ -1287,8 +1477,12 @@ enum_specifier
 	;
 
 enumerator_list
-	: enumerator 	{ $$ = $1; }
+	: enumerator 	{
+        DEBUG_PARSER("enumerator_list -> enumerator");
+		$$ = $1;
+	}
 	| enumerator_list ',' enumerator 	{
+        DEBUG_PARSER("enumerator_list -> enumerator_list ',' enumerator");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1297,8 +1491,12 @@ enumerator_list
 	;
 
 enumerator
-	: IDENTIFIER	{ $$ = makeleaf($1); }
+	: IDENTIFIER	{
+        DEBUG_PARSER("enumerator -> IDENTIFIER");
+		$$ = makeleaf($1);
+	}
 	| IDENTIFIER '=' constant_expression 	{
+        DEBUG_PARSER("enumerator -> IDENTIFIER '=' constant_expression");
 		vector<data> v;
 		insertAttr(v, makeleaf($1), "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1307,13 +1505,20 @@ enumerator
 	;
 
 type_qualifier
-	: CONST		{ $$ = makeleaf($1); }
-	| VOLATILE	{ $$ = makeleaf($1); }
+	: CONST		{
+        DEBUG_PARSER("type_qualifier -> CONST");
+		$$ = makeleaf($1);
+	}
+	| VOLATILE	{
+        DEBUG_PARSER("type_qualifier -> VOLATILE");
+		$$ = makeleaf($1);
+	}
 	;
 
 
 declarator
 	: pointer direct_declarator{
+        DEBUG_PARSER("declarator -> pointer direct_declarator");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1335,6 +1540,7 @@ declarator
 		
 	}
 	| direct_declarator {
+        DEBUG_PARSER("declarator -> direct_declarator");
 		$$ = $1 ;
 	}
 	;
@@ -1343,6 +1549,7 @@ declarator
 
 direct_declarator
 	: IDENTIFIER {
+        DEBUG_PARSER("direct_declarator -> IDENTIFIER");
 		$$ = makeleaf($1);
 
 		// Semantics
@@ -1352,9 +1559,11 @@ direct_declarator
 		$$->size = getSize(type);
 	}
 	| '(' declarator ')'  {
+        DEBUG_PARSER("direct_declarator -> '(' declarator ')'");
 		$$ = $2 ;
 	}
 	| direct_declarator '[' constant_expression ']'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '[' constant_expression ']'");
 		vector<data> v, v2;
 		insertAttr(v2, $3, "", 1);
 		treeNode* node = makenode("[ ]", v2);
@@ -1375,6 +1584,7 @@ direct_declarator
 
 	}
 	| direct_declarator '[' ']'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '[' ']'");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "[ ]", 0);
@@ -1392,6 +1602,7 @@ direct_declarator
 		}
 	}
 	| direct_declarator '(' A parameter_type_list ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A parameter_type_list ')'");
 		vector<data> v, v2;
 		insertAttr(v2, $4, "", 1);
 		treeNode* node = makenode("( )", v2);
@@ -1435,6 +1646,7 @@ direct_declarator
 		}
 	}
 	| direct_declarator '(' A identifier_list ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A identifier_list ')'");
 		// Function should be already declared and used here.
 
 		vector<data> v, v2;
@@ -1481,6 +1693,7 @@ direct_declarator
 		}
 	}
 	| direct_declarator '(' A ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A ')'");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "( )", 0);
@@ -1517,6 +1730,7 @@ direct_declarator
 
 A
 	: %empty	{
+        DEBUG_PARSER("A -> %empty");
 		type ="";
 		func_flag = 0;
 		funcArgs.clear();
@@ -1525,10 +1739,12 @@ A
 
 pointer
 	: '*' {
+        DEBUG_PARSER("pointer -> '*'");
 		$$ = makeleaf("*(Pointer)");
 		$$->type = "*";
 	}
 	| '*' type_qualifier_list{
+        DEBUG_PARSER("pointer -> '*' type_qualifier_list");
 		vector<data> v;
 		insertAttr(v,$2,"",1);
 		$$ = makenode("*(Pointer)",v);
@@ -1536,6 +1752,7 @@ pointer
 		$$->type = "*";
 	}
 	| '*' pointer{
+        DEBUG_PARSER("pointer -> '*' pointer");
 		vector<data> v;
 		insertAttr(v,$2,"",1);
 		$$ = makenode("*(Pointer)",v);
@@ -1543,6 +1760,7 @@ pointer
 		$$->type = "*" + $2->type;
 	}
 	| '*' type_qualifier_list pointer{
+        DEBUG_PARSER("pointer -> '*' type_qualifier_list pointer");
 		vector<data> v;
 		insertAttr(v,$2,"",1);
 		insertAttr(v,$3,"",1);
@@ -1554,9 +1772,11 @@ pointer
 
 type_qualifier_list
 	: type_qualifier {
+        DEBUG_PARSER("type_qualifier_list -> type_qualifier");
 		$$ = $1 ;
 	}
 	| type_qualifier_list type_qualifier{
+        DEBUG_PARSER("type_qualifier_list -> type_qualifier_list type_qualifier");
 		vector<data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
@@ -1567,9 +1787,11 @@ type_qualifier_list
 
 parameter_type_list
 	: parameter_list {
+        DEBUG_PARSER("parameter_type_list -> parameter_list");
 		$$ = $1 ;
 	}
 	| parameter_list ',' ELLIPSIS{
+        DEBUG_PARSER("parameter_type_list -> parameter_list ',' ELLIPSIS");
 		vector<data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v, makeleaf($3), "", 1);
@@ -1582,9 +1804,11 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration{
+        DEBUG_PARSER("parameter_list -> parameter_declaration");
 		$$ = $1;
 	}
 	| parameter_list ',' parameter_declaration{
+        DEBUG_PARSER("parameter_list -> parameter_list ',' parameter_declaration");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1594,6 +1818,7 @@ parameter_list
 
 parameter_declaration
 	: declaration_specifiers declarator{
+        DEBUG_PARSER("parameter_declaration -> declaration_specifiers declarator");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1612,6 +1837,7 @@ parameter_declaration
 		}
 	}
 	| declaration_specifiers abstract_declarator{
+        DEBUG_PARSER("parameter_declaration -> declaration_specifiers abstract_declarator");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1620,6 +1846,7 @@ parameter_declaration
 		type = "";
 	}
 	| declaration_specifiers {
+        DEBUG_PARSER("parameter_declaration -> declaration_specifiers");
 		$$ = $1;
 		funcArgs.push_back(type);
 		type = "";
@@ -1628,12 +1855,14 @@ parameter_declaration
 
 identifier_list
 	: IDENTIFIER {			// Give id types acc to func args
+        DEBUG_PARSER("identifier_list -> IDENTIFIER");
 		$$ =makeleaf($1);
 
 		// Semantics
 		idList.push_back($1);
 	}
 	| identifier_list ',' IDENTIFIER {
+        DEBUG_PARSER("identifier_list -> identifier_list ',' IDENTIFIER");
 		vector<data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,makeleaf($3),"",1);
@@ -1648,9 +1877,11 @@ identifier_list
 
 type_name
 	: specifier_qualifier_list{
+        DEBUG_PARSER("type_name -> specifier_qualifier_list");
 		$$ = $1;
 	}
 	| specifier_qualifier_list abstract_declarator{
+        DEBUG_PARSER("type_name -> specifier_qualifier_list abstract_declarator");
 		vector<data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
@@ -1660,12 +1891,15 @@ type_name
 
 abstract_declarator
 	: pointer {
+        DEBUG_PARSER("abstract_declarator -> pointer");
 		$$ =$1;
 	}
 	| direct_abstract_declarator{
+        DEBUG_PARSER("abstract_declarator -> direct_abstract_declarator");
 		$$ = $1;
 	}
 	| pointer direct_abstract_declarator{
+        DEBUG_PARSER("abstract_declarator -> pointer direct_abstract_declarator");
 		vector<data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
@@ -1675,21 +1909,26 @@ abstract_declarator
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')' {
+        DEBUG_PARSER("direct_abstract_declarator -> '(' abstract_declarator ')'");
 		$$ = $2;
 	}
 	| '[' ']'{
+        DEBUG_PARSER("direct_abstract_declarator -> '[' ']'");
 		$$ = makeleaf("[ ]") ;
 	}
 	| '[' constant_expression ']' {
+        DEBUG_PARSER("direct_abstract_declarator -> '[' constant_expression ']'");
 		$$ = $2;
 	}
 	| direct_abstract_declarator '[' ']' {
+        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '[' ']'");
 		vector<data> v;
 		insertAttr(v,NULL,"[ ]",0);
 		insertAttr(v,$1,"",1);
 		$$ = makenode("direct_abstract_declarator",v);
 	}
 	| direct_abstract_declarator '[' constant_expression ']'{
+        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '[' constant_expression ']'");
 		vector<data> v, v2;
 		insertAttr(v2, $3, NULL, 1);
 		treeNode* node = makenode("[ ]", v2);
@@ -1698,18 +1937,22 @@ direct_abstract_declarator
 		$$ = makenode("direct_abstract_declarator", v);
 	}
 	| '(' ')'{
+        DEBUG_PARSER("direct_abstract_declarator -> '(' ')'");
 		$$ = makeleaf("( )") ;
 	}
 	| '(' parameter_type_list ')'{
+        DEBUG_PARSER("direct_abstract_declarator -> '(' parameter_type_list ')'");
 		$$ = $2 ;
 	}
 	| direct_abstract_declarator '(' ')'{
+        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '(' ')'");
 		vector<data> v;
 		insertAttr(v, NULL, "( )", 0);
 		insertAttr(v, $1, "", 1);
 		$$ = makenode("direct_abstract_declarator",v);
 	}
 	| direct_abstract_declarator '(' parameter_type_list ')'{
+        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '(' parameter_type_list ')'");
 		vector<data> v, v2;
 		insertAttr(v2, $3, "", 1);
 		treeNode* node = makenode("( )", v2);
@@ -1721,12 +1964,15 @@ direct_abstract_declarator
 
 initializer
 	: assignment_expression{
+        DEBUG_PARSER("initializer -> assignment_expression");
 		$$ = $1 ;
 	}
 	| '{' initializer_list '}' {
+        DEBUG_PARSER("initializer -> '{' initializer_list '}'");
 		$$ = $2 ;
 	}
 	| '{' initializer_list ',' '}'{
+        DEBUG_PARSER("initializer -> '{' initializer_list ',' '}'");
 		$$ = $2;
 	}
 	;
@@ -1734,9 +1980,11 @@ initializer
 
 initializer_list
 	: initializer	{
+        DEBUG_PARSER("initializer_list -> initializer");
 		$$ = $1;
 	}
 	| initializer_list ',' initializer	{
+        DEBUG_PARSER("initializer_list -> initializer_list ',' initializer");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1745,28 +1993,49 @@ initializer_list
 	;
 
 statement
-	: labeled_statement		{$$ = $1;}
-	| compound_statement	{$$ = $1;}
-	| expression_statement	{$$ = $1;}
-	| selection_statement	{$$ = $1;}
-	| iteration_statement	{$$ = $1;}
-	| jump_statement		{$$ = $1;}
+	: labeled_statement		{
+        DEBUG_PARSER("statement -> labeled_statement");
+		$$ = $1;
+	}
+	| compound_statement	{
+        DEBUG_PARSER("statement -> compound_statement");
+		$$ = $1;
+	}
+	| expression_statement	{
+        DEBUG_PARSER("statement -> expression_statement");
+		$$ = $1;
+	}
+	| selection_statement	{
+        DEBUG_PARSER("statement -> selection_statement");
+		$$ = $1;
+	}
+	| iteration_statement	{
+        DEBUG_PARSER("statement -> iteration_statement");
+		$$ = $1;
+	}
+	| jump_statement		{
+        DEBUG_PARSER("statement -> jump_statement");
+		$$ = $1;
+	}
 	;
 
 labeled_statement
 	: IDENTIFIER ':' statement	{
+        DEBUG_PARSER("labeled_statement -> IDENTIFIER ':' statement");
 		vector<data> v;
 		insertAttr(v, makeleaf($1), "", 1);
 		insertAttr(v, $3, "", 1);
 		$$ = makenode("labeled_statement", v);
 	}
 	| CASE constant_expression ':' statement	{
+        DEBUG_PARSER("labeled_statement -> CASE constant_expression ':' statement");
 		vector<data> v;
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $4, "", 1);
 		$$ = makenode("case", v);
 	}
 	| DEFAULT ':' statement	{
+        DEBUG_PARSER("labeled_statement -> DEFAULT ':' statement");
 		vector<data> v;
 		insertAttr(v, NULL, "default", 0);
 		insertAttr(v, $3, "", 1);
@@ -1775,8 +2044,12 @@ labeled_statement
 	;
 
 compound_statement
-	: '{' '}'	{$$ = makeleaf("{ }");}
+	: '{' '}'	{
+        DEBUG_PARSER("compound_statement -> '{' '}'");
+		$$ = makeleaf("{ }");
+	}
 	| '{' CHANGE_TABLE statement_list '}'	{
+        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE statement_list '}'");
 		$$ = $3;
 
 		if(func_flag>=2){
@@ -1790,6 +2063,7 @@ compound_statement
 		}
 	}
 	| '{' CHANGE_TABLE declaration_list '}'	{
+        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE declaration_list '}'");
 		$$ = $3;
 
 		if(func_flag>=2){
@@ -1803,6 +2077,7 @@ compound_statement
 		}
 	}
 	| '{' CHANGE_TABLE declaration_list statement_list '}'	{
+        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
@@ -1822,6 +2097,7 @@ compound_statement
 
 CHANGE_TABLE
 	: %empty {
+        DEBUG_PARSER("CHANGE_TABLE -> %empty");
 		if(func_flag){
 			string str = "Block" +to_string(block_count);
 			block_stack.push(block_count);
@@ -1834,8 +2110,12 @@ CHANGE_TABLE
 	;
 
 declaration_list
-	: declaration	{$$ = $1;}
+	: declaration	{
+        DEBUG_PARSER("declaration_list -> declaration");
+		$$ = $1;
+	}
 	| declaration_list declaration	{
+        DEBUG_PARSER("declaration_list -> declaration_list declaration");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1844,8 +2124,12 @@ declaration_list
 	;
 
 statement_list
-	: statement	{$$ = $1;}
+	: statement	{
+        DEBUG_PARSER("statement_list -> statement");
+		$$ = $1;
+	}
 	| statement_list statement	{
+        DEBUG_PARSER("statement_list -> statement_list statement");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1854,18 +2138,26 @@ statement_list
 	;
 
 expression_statement
-	: ';'	{$$ = makeleaf(";");}
-	| expression ';'	{$$ = $1;}
+	: ';'	{
+        DEBUG_PARSER("expression_statement -> ';'");
+		$$ = makeleaf(";");
+	}
+	| expression ';'	{
+        DEBUG_PARSER("expression_statement -> expression ';'");
+		$$ = $1;
+	}
 	;
 
 selection_statement
 	: IF '(' expression ')' statement	{
+        DEBUG_PARSER("selection_statement -> IF '(' expression ')' statement");
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = makenode("if", v);
 	}
 	| IF '(' expression ')' statement ELSE statement	{
+        DEBUG_PARSER("selection_statement -> IF '(' expression ')' statement ELSE statement");
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
@@ -1873,6 +2165,7 @@ selection_statement
 		$$ = makenode("if-else", v);
 	}
 	| SWITCH '(' expression ')' statement	{
+        DEBUG_PARSER("selection_statement -> SWITCH '(' expression ')' statement");
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
@@ -1882,18 +2175,21 @@ selection_statement
 
 iteration_statement
 	: WHILE '(' expression ')' statement	{
+        DEBUG_PARSER("iteration_statement -> WHILE '(' expression ')' statement");
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = makenode("while-loop", v);
 	}
 	| DO statement WHILE '(' expression ')' ';'	{
+        DEBUG_PARSER("iteration_statement -> DO statement WHILE '(' expression ')' ';'");
 		vector<data> v;
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = makenode("do-while-loop", v);
 	}
 	| FOR '(' expression_statement expression_statement ')' statement	{
+        DEBUG_PARSER("iteration_statement -> FOR '(' expression_statement expression_statement ')' statement");
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
@@ -1901,6 +2197,7 @@ iteration_statement
 		$$ = makenode("for-loop(w/o update stmt)", v);
 	}
 	| FOR '(' expression_statement expression_statement expression ')' statement	{
+        DEBUG_PARSER("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
 		vector<data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
@@ -1913,17 +2210,26 @@ iteration_statement
 		 
 jump_statement
 	: GOTO IDENTIFIER ';'	{
+        DEBUG_PARSER("jump_statement -> GOTO IDENTIFIER ';'");
 		string s;
 		s = (string)$1 + " : " + (string)$2;
         $$ = makeleaf(s);
 	}
-	| CONTINUE ';'	{$$ = makeleaf($1);}
-	| BREAK ';'		{$$ = makeleaf($1);}
+	| CONTINUE ';'	{
+        DEBUG_PARSER("jump_statement -> CONTINUE ';'");
+		$$ = makeleaf($1);
+	}
+	| BREAK ';'		{
+        DEBUG_PARSER("jump_statement -> BREAK ';'");
+		$$ = makeleaf($1);
+	}
 	| RETURN ';'	{
+        DEBUG_PARSER("jump_statement -> RETURN ';'");
 		$$ = makeleaf($1);
 		
 	}
 	| RETURN expression ';'	{
+        DEBUG_PARSER("jump_statement -> RETURN expression ';'");
 		vector<data> v;
 		insertAttr(v, makeleaf($1), "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1933,9 +2239,11 @@ jump_statement
 
 translation_unit 
 	: external_declaration	{
+        DEBUG_PARSER("translation_unit -> external_declaration");
 		$$ = $1;
 	}
 	| translation_unit external_declaration	{
+        DEBUG_PARSER("translation_unit -> translation_unit external_declaration");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1944,13 +2252,20 @@ translation_unit
 	;
 
 external_declaration
-	: function_definition	{ $$ = $1; }
-	| declaration			{ $$ = $1; }
+	: function_definition	{
+        DEBUG_PARSER("external_declaration -> function_definition");
+		$$ = $1;
+	}
+	| declaration			{
+        DEBUG_PARSER("external_declaration -> declaration");
+		$$ = $1;
+	}
 	;
 
 
 function_definition
 	: declaration_specifiers declarator F declaration_list compound_statement	{
+        DEBUG_PARSER("function_definition -> declaration_specifiers declarator F declaration_list compound_statement");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1966,6 +2281,7 @@ function_definition
 	}
 
 	| declaration_specifiers declarator F compound_statement 	{
+        DEBUG_PARSER("function_definition -> declaration_specifiers declarator F compound_statement");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1980,6 +2296,7 @@ function_definition
 
 	}
 	| declarator F declaration_list compound_statement	{
+        DEBUG_PARSER("function_definition -> declarator F declaration_list compound_statement");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1994,6 +2311,7 @@ function_definition
 
 	}
 	| declarator F compound_statement	{
+        DEBUG_PARSER("function_definition -> declarator F compound_statement");
 		vector<data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -2010,7 +2328,7 @@ function_definition
 
 F 
 	: %empty 		{
-		
+        DEBUG_PARSER("F -> %empty");
 		if (gst.find(funcName) != gst.end()){
 			yyerror(("Redefinition of function " + funcName).c_str());
 		}
