@@ -36,6 +36,10 @@ vector<string> funcArgs;
 vector<string> idList;
 vector<string> currArgs;
 
+// Debug tracking
+bool debug_enabled = 1; // Flag to enable or disable debugging
+#define DEBUG_PARSER(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
+
 int yyerror(const char*);
 int yylex();
 int warning(const char*);
@@ -86,6 +90,7 @@ int warning(const char*);
 
 primary_expression
     : IDENTIFIER {
+        DEBUG_PARSER("primary_expression -> IDENTIFIER");
     	$$ = createASTNode($1);
 		
 		// Semantics
@@ -109,10 +114,12 @@ primary_expression
 		}
     }
 	| CONSTANT IDENTIFIER {
+        DEBUG_PARSER("primary_expression -> CONSTANT IDENTIFIER");
 		yyerror("syntax error, invalid identifier");
 		$$ = createASTNode($1->str);
 	}
 	| CONSTANT CONSTANT {
+        DEBUG_PARSER("primary_expression -> CONSTANT CONSTANT");
 		yyerror("syntax error, invalid constant");
 		$$ = createASTNode($1->str);
 	}
@@ -127,6 +134,7 @@ primary_expression
 		$$->temp_name = $1->str;
 	}
 	| STRING_LITERAL {
+        DEBUG_PARSER("primary_expression -> STRING_LITERAL");
 		std::string check=std::string($1);
 		addToConstantTable(check,"String Literal");
 		$$ = createASTNode($1);
@@ -137,15 +145,18 @@ primary_expression
 		$$->strVal = string($1);
 	}
 	| '(' expression ')' {
+        DEBUG_PARSER("primary_expression -> '(' expression ')'");
 		$$ = $2;
 	}
 	;
 
 postfix_expression
 	: primary_expression {
+        DEBUG_PARSER("postfix_expression -> primary_expression");
 		$$ = $1;
 	}
 	| postfix_expression '[' expression ']' {
+        DEBUG_PARSER("postfix_expression -> postfix_expression '[' expression ']'");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -164,6 +175,7 @@ postfix_expression
 		}
 	}
 	| postfix_expression '(' ')' {
+        DEBUG_PARSER("postfix_expression -> postfix_expression '(' ')'");
 		$$ = $1;
 		
 		// Semantics
@@ -184,6 +196,7 @@ postfix_expression
 		currArgs.clear(); 
 	}
 	| postfix_expression '(' argument_expression_list ')' {
+        DEBUG_PARSER("postfix_expression -> postfix_expression '(' argument_expression_list ')'");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -226,6 +239,7 @@ postfix_expression
 		currArgs.clear();
 	}
 	| postfix_expression '.' IDENTIFIER {
+        DEBUG_PARSER("postfix_expression -> postfix_expression '.' IDENTIFIER");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, createASTNode($3), "", 1);
@@ -246,6 +260,7 @@ postfix_expression
 		}
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
+        DEBUG_PARSER("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, createASTNode($3), "", 1);
@@ -272,6 +287,7 @@ postfix_expression
 		}
 	}
 	| postfix_expression INC_OP {
+        DEBUG_PARSER("postfix_expression -> postfix_expression INC_OP");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		$$ = createASTNode($2, &attr);
@@ -288,6 +304,7 @@ postfix_expression
 		}
 	}
 	| postfix_expression DEC_OP {
+        DEBUG_PARSER("postfix_expression -> postfix_expression DEC_OP");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		$$ = createASTNode($2, &attr);
@@ -307,6 +324,7 @@ postfix_expression
 
 argument_expression_list
 	: assignment_expression {
+        DEBUG_PARSER("argument_expression_list -> assignment_expression");
 		$$ = $1;
 		
 		// Semantic
@@ -315,6 +333,7 @@ argument_expression_list
 		$$->type = "void";
 	}
 	| argument_expression_list ',' assignment_expression {
+        DEBUG_PARSER("argument_expression_list -> argument_expression_list ',' assignment_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -331,9 +350,11 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression {
+        DEBUG_PARSER("unary_expression -> postfix_expression");
 		$$ = $1;
 	}
 	| INC_OP unary_expression {
+        DEBUG_PARSER("unary_expression -> INC_OP unary_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = createASTNode($1, &attr);
@@ -350,6 +371,7 @@ unary_expression
 		}
 	}
 	| DEC_OP unary_expression {
+        DEBUG_PARSER("unary_expression -> DEC_OP unary_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = createASTNode($1, &attr);
@@ -366,6 +388,7 @@ unary_expression
 		}
 	}
 	| unary_operator cast_expression {
+        DEBUG_PARSER("unary_expression -> unary_operator cast_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
@@ -383,6 +406,7 @@ unary_expression
 		}
 	}
 	| SIZEOF unary_expression {
+        DEBUG_PARSER("unary_expression -> SIZEOF unary_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $2, "", 1);
 		$$ = createASTNode($1, &attr);
@@ -393,6 +417,7 @@ unary_expression
 		$$->intVal = $2->size;
 	}
 	| SIZEOF '(' type_name ')' {
+        DEBUG_PARSER("unary_expression -> SIZEOF '(' type_name ')'");
 		std::vector<Data> attr;
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode($1, &attr);
@@ -592,9 +617,11 @@ shift_expression
 
 relational_expression   //POTENTIAL ISSUE
     : inclusive_or_expression {
+        DEBUG_PARSER("relational_expression -> inclusive_or_expression");
           $$ = $1;
       }
     | relational_expression '<' inclusive_or_expression {
+        DEBUG_PARSER("relational_expression -> relational_expression '<' inclusive_or_expression");
           std::vector<Data> attr;
           insertAttr(attr, $1, "", 1);
           insertAttr(attr, $3, "", 1);
@@ -616,6 +643,7 @@ relational_expression   //POTENTIAL ISSUE
           }
       }
     | relational_expression '>' inclusive_or_expression {
+        DEBUG_PARSER("relational_expression -> relational_expression '>' inclusive_or_expression");
           std::vector<Data> attr;
           insertAttr(attr, $1, "", 1);
           insertAttr(attr, $3, "", 1);
@@ -637,6 +665,7 @@ relational_expression   //POTENTIAL ISSUE
           }
       }
     | relational_expression LE_OP inclusive_or_expression {
+        DEBUG_PARSER("relational_expression -> relational_expression LE_OP inclusive_or_expression");
           std::vector<Data> attr;
           insertAttr(attr, $1, "", 1);
           insertAttr(attr, $3, "", 1);
@@ -658,6 +687,7 @@ relational_expression   //POTENTIAL ISSUE
           }
       }
     | relational_expression GE_OP inclusive_or_expression {
+        DEBUG_PARSER("relational_expression -> relational_expression GE_OP inclusive_or_expression");
           std::vector<Data> attr;
           insertAttr(attr, $1, "", 1);
           insertAttr(attr, $3, "", 1);
@@ -683,9 +713,11 @@ relational_expression   //POTENTIAL ISSUE
 
 equality_expression
 	: relational_expression { 
+        DEBUG_PARSER("equality_expression -> relational_expression");
 		$$ = $1;
 	}
 	| equality_expression EQ_OP relational_expression {
+        DEBUG_PARSER("equality_expression -> equality_expression EQ_OP relational_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -705,6 +737,7 @@ equality_expression
 		}
 	}
 	| equality_expression NE_OP relational_expression {
+        DEBUG_PARSER("equality_expression -> equality_expression NE_OP relational_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -727,9 +760,11 @@ equality_expression
 
 and_expression
 	: shift_expression {	
+        DEBUG_PARSER("and_expression -> shift_expression");
 		$$ = $1; 
 	}
 	| and_expression '&' shift_expression{
+        DEBUG_PARSER("and_expression -> and_expression '&' shift_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -752,9 +787,11 @@ and_expression
 
 exclusive_or_expression
 	: and_expression {
+        DEBUG_PARSER("exclusive_or_expression -> and_expression");
 		$$ = $1;
 	}
 	| exclusive_or_expression '^' and_expression{
+        DEBUG_PARSER("exclusive_or_expression -> exclusive_or_expression '^' and_expression");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
@@ -776,8 +813,12 @@ exclusive_or_expression
 	;
 
 inclusive_or_expression
-	: exclusive_or_expression {$$ = $1;}
+	: exclusive_or_expression {
+        DEBUG_PARSER("inclusive_or_expression -> exclusive_or_expression");
+        $$ = $1;
+    }
 	| inclusive_or_expression '|' exclusive_or_expression{
+        DEBUG_PARSER("inclusive_or_expression -> inclusive_or_expression '|' exclusive_or_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -799,8 +840,12 @@ inclusive_or_expression
 	;
 
 logical_and_expression
-	: equality_expression {$$ = $1;}
+	: equality_expression {
+        DEBUG_PARSER("logical_and_expression -> equality_expression");
+        $$ = $1;
+    }
 	| logical_and_expression AND_OP equality_expression{
+        DEBUG_PARSER("logical_and_expression -> logical_and_expression AND_OP equality_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -814,8 +859,12 @@ logical_and_expression
 	;
 
 logical_or_expression
-	: logical_and_expression{$$ = $1;}
+	: logical_and_expression {
+        DEBUG_PARSER("logical_or_expression -> logical_and_expression");
+        $$ = $1;
+    }
 	| logical_or_expression OR_OP logical_and_expression{
+        DEBUG_PARSER("logical_or_expression -> logical_or_expression OR_OP logical_and_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -829,8 +878,12 @@ logical_or_expression
 	;
 
 conditional_expression
-	: logical_or_expression {$$ = $1;}
+	: logical_or_expression {
+        DEBUG_PARSER("conditional_expression -> logical_or_expression");
+        $$ = $1;
+    }
 	| logical_or_expression '?' expression ':' conditional_expression{
+        DEBUG_PARSER("conditional_expression -> logical_or_expression '?' expression ':' conditional_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -850,8 +903,12 @@ conditional_expression
 	;
 
 assignment_expression
-	: conditional_expression{$$ = $1;}
+	: conditional_expression {
+        DEBUG_PARSER("assignment_expression -> conditional_expression");
+        $$ = $1;
+    }
 	| unary_expression assignment_operator assignment_expression{
+        DEBUG_PARSER("assignment_expression -> unary_expression assignment_operator assignment_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -894,8 +951,12 @@ assignment_operator
 	;
 
 expression
-	: assignment_expression{$$ = $1;}
+	: assignment_expression {
+        DEBUG_PARSER("expression -> assignment_expression");
+        $$ = $1;
+    }
 	| expression ',' assignment_expression{
+        DEBUG_PARSER("expression -> expression ',' assignment_expression");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -906,14 +967,19 @@ expression
 	;
 
 constant_expression
-	: conditional_expression{$$ = $1;}
+	: conditional_expression {
+        DEBUG_PARSER("constant_expression -> conditional_expression");
+        $$ = $1;
+    }
 	;
 
 declaration //POTENTIAL ISSUE
     : declaration_specifiers ';' { 
+        DEBUG_PARSER("declaration -> declaration_specifiers ';'");
           $$ = $1; 
       }
     | declaration_specifiers init_declarator_list ';' {
+        DEBUG_PARSER("declaration -> declaration_specifiers init_declarator_list ';'");
           std::vector<Data> attr;
           insertAttr(attr, $1, "", 1);
           insertAttr(attr, $2, "", 1);
@@ -953,22 +1019,34 @@ declaration //POTENTIAL ISSUE
 
 
 declaration_specifiers
-	: storage_class_specifier { $$ = $1; }
+	: storage_class_specifier {
+        DEBUG_PARSER("declaration_specifiers -> storage_class_specifier");
+        $$ = $1;
+    }
 	| storage_class_specifier declaration_specifiers{
+        DEBUG_PARSER("declaration_specifiers -> storage_class_specifier declaration_specifiers");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
 		$$ = createASTNode("declaration_specifiers", &attr);
 	}
-	| type_specifier{ $$ = $1; }
+	| type_specifier {
+        DEBUG_PARSER("declaration_specifiers -> type_specifier");
+        $$ = $1;
+    }
 	| type_specifier declaration_specifiers{
+        DEBUG_PARSER("declaration_specifiers -> type_specifier declaration_specifiers");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
 		$$ = createASTNode("declaration_specifiers", &attr);
 	}
-	| type_qualifier{ $$ = $1; }
+	| type_qualifier {
+        DEBUG_PARSER("declaration_specifiers -> type_qualifier");
+        $$ = $1;
+    }
 	| type_qualifier declaration_specifiers{
+        DEBUG_PARSER("declaration_specifiers -> type_qualifier declaration_specifiers");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
@@ -977,8 +1055,12 @@ declaration_specifiers
 	;
 
 init_declarator_list
-	: init_declarator{$$ = $1;}
+	: init_declarator {
+        DEBUG_PARSER("init_declarator_list -> init_declarator");
+        $$ = $1;
+    }
 	| init_declarator_list ',' init_declarator{
+        DEBUG_PARSER("init_declarator_list -> init_declarator_list ',' init_declarator");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
@@ -988,6 +1070,7 @@ init_declarator_list
 
 init_declarator
 	: declarator {
+        DEBUG_PARSER("init_declarator -> declarator");
 		$$ = $1;
 		
 		// Semantics
@@ -1007,6 +1090,7 @@ init_declarator
 		}
 	}
 	| declarator '=' initializer{
+        DEBUG_PARSER("init_declarator -> declarator '=' initializer");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1024,15 +1108,31 @@ init_declarator
 	;
 
 storage_class_specifier
-	: TYPEDEF	{ $$ = createASTNode($1); flag=1;}
-	| EXTERN	{ $$ = createASTNode($1); currentDataType="extern "; flag2=1;}
-	| STATIC	{ $$ = createASTNode($1); currentDataType="static "; flag2=1;}
-	| AUTO		{ $$ = createASTNode($1); currentDataType="auto "; flag2=1;}
-	| REGISTER	{ $$ = createASTNode($1); currentDataType="register "; flag2=1;}
+	: TYPEDEF	{ 
+        DEBUG_PARSER("storage_class_specifier -> TYPEDEF");
+        $$ = createASTNode($1); flag=1;
+    }
+	| EXTERN	{ 
+        DEBUG_PARSER("storage_class_specifier -> EXTERN");
+        $$ = createASTNode($1); currentDataType="extern "; flag2=1;
+    }
+	| STATIC	{ 
+        DEBUG_PARSER("storage_class_specifier -> STATIC");
+        $$ = createASTNode($1); currentDataType="static "; flag2=1;
+    }
+	| AUTO		{ 
+        DEBUG_PARSER("storage_class_specifier -> AUTO");
+        $$ = createASTNode($1); currentDataType="auto "; flag2=1;
+    }
+	| REGISTER	{ 
+        DEBUG_PARSER("storage_class_specifier -> REGISTER");
+        $$ = createASTNode($1); currentDataType="register "; flag2=1;
+    }
 	;
 
 type_specifier
 	: VOID			{
+        DEBUG_PARSER("type_specifier -> VOID");
 		$$ = createASTNode($1); 
 		currentDataType="void";
 		
@@ -1041,6 +1141,7 @@ type_specifier
 		else type += " " + string($1);
 	}	
 	| CHAR			{
+        DEBUG_PARSER("type_specifier -> CHAR");
 		$$ = createASTNode($1); 
 		if(flag2){currentDataType+=" char";flag2=0;}else{currentDataType="char";}
 		
@@ -1049,6 +1150,7 @@ type_specifier
 		else type += " " + string($1);
 	}	
 	| SHORT			{
+        DEBUG_PARSER("type_specifier -> SHORT");
 		$$ = createASTNode($1); 
 		if(flag2){currentDataType+=" short";flag2=0;}else{currentDataType="short";}
 		
@@ -1057,6 +1159,7 @@ type_specifier
 		else type += " " + string($1);
 	}	
 	| INT			{
+        DEBUG_PARSER("type_specifier -> INT");
 		$$ = createASTNode($1); 
 		if(flag2){currentDataType+=" int";flag2=0;}else{currentDataType="int";}
 		
@@ -1065,6 +1168,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| LONG			{
+        DEBUG_PARSER("type_specifier -> LONG");
 		$$ = createASTNode($1); 
 		if(flag2){currentDataType+=" long";flag2=0;}else{currentDataType="long";}
 		
@@ -1073,6 +1177,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| FLOAT			{
+        DEBUG_PARSER("type_specifier -> FLOAT");
 		$$ = createASTNode($1); 
 		if(flag2){currentDataType+=" float";flag2=0;}else{currentDataType="float";}
 		
@@ -1081,6 +1186,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| DOUBLE		{
+        DEBUG_PARSER("type_specifier -> DOUBLE");
 		$$ = createASTNode($1); 
 		if(flag2){currentDataType+=" double";flag2=0;}else{currentDataType="double";}
 		
@@ -1089,6 +1195,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| SIGNED		{
+        DEBUG_PARSER("type_specifier -> SIGNED");
 		$$ = createASTNode($1); 
 		currentDataType="signed"; 
 		flag2=1;
@@ -1098,6 +1205,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| UNSIGNED		{
+        DEBUG_PARSER("type_specifier -> UNSIGNED");
 		$$ = createASTNode($1); 
 		currentDataType="unsigned"; 
 		flag2=1;
@@ -1107,6 +1215,7 @@ type_specifier
 		else type += " " + string($1);
 	}
 	| FILE_MAN      { 
+        DEBUG_PARSER("type_specifier -> FILE_MAN");
 		$$ = createASTNode($1); 
 		currentDataType="file";
 		
@@ -1114,10 +1223,20 @@ type_specifier
 		if(type == "") type = string($1);
 		else type += " " + string($1);
 	}
-	| struct_or_union_specifier	{$$ = $1;}	
-	| class_definition 			{$$ = $1;}
-	| enum_specifier			{$$ = $1;}
+	| struct_or_union_specifier {
+        DEBUG_PARSER("type_specifier -> struct_or_union_specifier");
+        $$ = $1;
+    }	
+	| class_definition {
+        DEBUG_PARSER("type_specifier -> class_definition");
+        $$ = $1;
+    }
+	| enum_specifier {
+        DEBUG_PARSER("type_specifier -> enum_specifier");
+        $$ = $1;
+    }
 	| TYPE_NAME		{
+        DEBUG_PARSER("type_specifier -> TYPE_NAME");
 		$$ = createASTNode($1);
 		
 		// Semantics
@@ -1128,6 +1247,7 @@ type_specifier
 
 inheritance_specifier
 	: access_specifier IDENTIFIER {
+        DEBUG_PARSER("inheritance_specifier -> access_specifier IDENTIFIER");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         /* Wrap IDENTIFIER into an AST node */
@@ -1137,8 +1257,12 @@ inheritance_specifier
 	;
 
 inheritance_specifier_list
-	: inheritance_specifier { $$ = $1; }
+	: inheritance_specifier {
+        DEBUG_PARSER("inheritance_specifier_list -> inheritance_specifier");
+        $$ = $1;
+    }
 	| inheritance_specifier_list ',' inheritance_specifier{
+        DEBUG_PARSER("inheritance_specifier_list -> inheritance_specifier_list ',' inheritance_specifier");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
@@ -1147,17 +1271,30 @@ inheritance_specifier_list
 	;
 
 access_specifier 
-	: PRIVATE { $$ = createASTNode($1); }
-	| PUBLIC { $$ = createASTNode($1); }
-	| PROTECTED { $$ = createASTNode($1); }
+	: PRIVATE {
+        DEBUG_PARSER("access_specifier -> PRIVATE");
+        $$ = createASTNode($1);
+    }
+	| PUBLIC {
+        DEBUG_PARSER("access_specifier -> PUBLIC");
+        $$ = createASTNode($1);
+    }
+	| PROTECTED {
+        DEBUG_PARSER("access_specifier -> PROTECTED");
+        $$ = createASTNode($1);
+    }
 	;
 
 class
-	: CLASS { $$ = createASTNode($1); }
+	: CLASS {
+        DEBUG_PARSER("class -> CLASS");
+        $$ = createASTNode($1);
+    }
 	;
 
 class_definition_head 
 	: class INHERITANCE_OP inheritance_specifier_list {
+        DEBUG_PARSER("class_definition_head -> class INHERITANCE_OP inheritance_specifier_list");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
@@ -1167,6 +1304,7 @@ class_definition_head
         $$->temp_name = "AnonymousClass";  
     }
 	| class IDENTIFIER {
+        DEBUG_PARSER("class_definition_head -> class IDENTIFIER");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, createASTNode($2), "", 1);
@@ -1177,6 +1315,7 @@ class_definition_head
         $$->type = currentDataType;
     }
 	| class IDENTIFIER INHERITANCE_OP inheritance_specifier_list {
+        DEBUG_PARSER("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, createASTNode($2), "", 1);
@@ -1190,6 +1329,7 @@ class_definition_head
 
 class_definition 
 	: class_definition_head '{' class_internal_definition_list '}' {
+        DEBUG_PARSER("class_definition -> class_definition_head '{' class_internal_definition_list '}'");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
@@ -1201,12 +1341,19 @@ class_definition
             insertSymbol(*curr_table, $1->temp_name, $1->type, 0, 0, NULL);
         }
     }
-	| class_definition_head { $$ = $1; }
+	| class_definition_head {
+        DEBUG_PARSER("class_definition -> class_definition_head");
+        $$ = $1;
+    }
 	;
 
 class_internal_definition_list
-	: class_internal_definition { $$ = $1; }
+	: class_internal_definition {
+        DEBUG_PARSER("class_internal_definition_list -> class_internal_definition");
+        $$ = $1;
+    }
 	| class_internal_definition_list class_internal_definition {
+        DEBUG_PARSER("class_internal_definition_list -> class_internal_definition_list class_internal_definition");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $2, "", 1);
@@ -1216,6 +1363,7 @@ class_internal_definition_list
 
 class_internal_definition	
 	: access_specifier '{' class_member_list '}' ';' {
+        DEBUG_PARSER("class_internal_definition -> access_specifier '{' class_member_list '}' ';'");
 		currentAccess = $1->strVal;
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
@@ -1227,8 +1375,12 @@ class_internal_definition
 	;
 
 class_member_list
-	: class_member { $$ = $1; }
+	: class_member {
+        DEBUG_PARSER("class_member_list -> class_member");
+        $$ = $1;
+    }
 	| class_member_list class_member {
+        DEBUG_PARSER("class_member_list -> class_member_list class_member");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $2, "", 1);
@@ -1238,15 +1390,18 @@ class_member_list
 
 class_member
 	: function_definition { 
+        DEBUG_PARSER("class_member -> function_definition");
 		 $1->strVal = currentAccess;
 		 $$ = $1; }
 	| declaration { 
+        DEBUG_PARSER("class_member -> declaration");
 		$1->strVal = currentAccess;
 		$$ = $1; }
 	;
 
 struct_or_union_specifier
 	: struct_or_union G S '{' struct_declaration_list '}'	{
+        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union G S '{' struct_declaration_list '}'");
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($2), "", 1);
 		insertAttr(v, $5, "", 1);
@@ -1263,6 +1418,7 @@ struct_or_union_specifier
 		}
 	}
 	| struct_or_union S '{' struct_declaration_list '}'		{
+        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union S '{' struct_declaration_list '}'");
 		std::vector<Data> v;
 		insertAttr(v, $4, "", 1);
 		$$ = createASTNode($1, &v);
@@ -1278,6 +1434,7 @@ struct_or_union_specifier
 		}
 	}
 	| struct_or_union IDENTIFIER 	{
+        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union IDENTIFIER");
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($2), "", 1);
 		std::string check=std::string($2);
@@ -1299,6 +1456,7 @@ struct_or_union_specifier
 		}
 	}
 	| struct_or_union IDENTIFIER '{' '}'	{
+        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union IDENTIFIER '{' '}'");
 		yyerror("syntax error, struct must be non-empty");
 		$$ = createASTNode("Invalid Struct", nullptr);
 	}
@@ -1306,6 +1464,7 @@ struct_or_union_specifier
 
 G 
 	: IDENTIFIER {
+        DEBUG_PARSER("G -> IDENTIFIER");
 		$$ = $1;
 		structName = $1;
 	}
@@ -1313,18 +1472,29 @@ G
 
 S 
 	: %empty {
+        DEBUG_PARSER("S -> %empty");
 		createStructTable();
 	}
 	;
 
 struct_or_union
-	: STRUCT	{$$ = $1; currentDataType="struct";}
-	| UNION		{$$ = $1; currentDataType="union";}
+	: STRUCT {
+        DEBUG_PARSER("struct_or_union -> STRUCT");
+        $$ = $1; currentDataType="struct";
+    }
+	| UNION {
+        DEBUG_PARSER("struct_or_union -> UNION");
+        $$ = $1; currentDataType="union";
+    }
 	;
 
 struct_declaration_list
-	: struct_declaration	{ $$ = $1 ;}
+	: struct_declaration {
+        DEBUG_PARSER("struct_declaration_list -> struct_declaration");
+        $$ = $1;
+    }
 	| struct_declaration_list struct_declaration 	{
+        DEBUG_PARSER("struct_declaration_list -> struct_declaration_list struct_declaration");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1334,6 +1504,7 @@ struct_declaration_list
 
 struct_declaration
 	: specifier_qualifier_list struct_declarator_list ';' 	{
+        DEBUG_PARSER("struct_declaration -> specifier_qualifier_list struct_declarator_list ';'");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1346,24 +1517,36 @@ struct_declaration
 
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list	{
+        DEBUG_PARSER("specifier_qualifier_list -> type_specifier specifier_qualifier_list");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("specifier_qualifier_list", &v);
 	}
-	| type_specifier	{ $$ = $1; }
+	| type_specifier {
+        DEBUG_PARSER("specifier_qualifier_list -> type_specifier");
+        $$ = $1;
+    }
 	| type_qualifier specifier_qualifier_list 	{
+        DEBUG_PARSER("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("specifier_qualifier_list", &v);
 	}
-	| type_qualifier	{ $$ = $1; }
+	| type_qualifier {
+        DEBUG_PARSER("specifier_qualifier_list -> type_qualifier");
+        $$ = $1;
+    }
 	;
 
 struct_declarator_list
-	: struct_declarator { $$ = $1; }
+	: struct_declarator {
+        DEBUG_PARSER("struct_declarator_list -> struct_declarator");
+        $$ = $1;
+    }
 	| struct_declarator_list ',' struct_declarator {
+        DEBUG_PARSER("struct_declarator_list -> struct_declarator_list ',' struct_declarator");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1373,6 +1556,7 @@ struct_declarator_list
 
 struct_declarator
 	: declarator	{ 
+        DEBUG_PARSER("struct_declarator -> declarator");
 		$$ = $1; 
 		
 		// Semantics
@@ -1380,8 +1564,12 @@ struct_declarator
 			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str());
 		}
 	}
-	| ':' constant_expression	{ $$ = $2; }
+	| ':' constant_expression {
+        DEBUG_PARSER("struct_declarator -> ':' constant_expression");
+        $$ = $2;
+    }
 	| declarator ':' constant_expression	{
+        DEBUG_PARSER("struct_declarator -> declarator ':' constant_expression");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1396,6 +1584,7 @@ struct_declarator
 
 enum_specifier
 	: ENUM '{' enumerator_list '}'		{
+        DEBUG_PARSER("enum_specifier -> ENUM '{' enumerator_list '}'");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		$$ = createASTNode($1, &v);
@@ -1403,12 +1592,14 @@ enum_specifier
 		// TODO: Add enum semantics
 	}
 	| ENUM IDENTIFIER '{' enumerator_list '}'	{
+        DEBUG_PARSER("enum_specifier -> ENUM IDENTIFIER '{' enumerator_list '}'");
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($2), "", 1);
 		insertAttr(v, $4, "", 1);
 		$$ = createASTNode($1, &v);
 	}
 	| ENUM IDENTIFIER {
+        DEBUG_PARSER("enum_specifier -> ENUM IDENTIFIER");
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($2), "", 1);
 		currentDataType="Enum ";
@@ -1419,8 +1610,12 @@ enum_specifier
 	;
 
 enumerator_list
-	: enumerator 	{ $$ = $1; }
+	: enumerator {
+        DEBUG_PARSER("enumerator_list -> enumerator");
+        $$ = $1;
+    }
 	| enumerator_list ',' enumerator 	{
+        DEBUG_PARSER("enumerator_list -> enumerator_list ',' enumerator");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1429,8 +1624,12 @@ enumerator_list
 	;
 
 enumerator
-	: IDENTIFIER	{ $$ = createASTNode($1); }
+	: IDENTIFIER {
+        DEBUG_PARSER("enumerator -> IDENTIFIER");
+        $$ = createASTNode($1);
+    }
 	| IDENTIFIER '=' constant_expression 	{
+        DEBUG_PARSER("enumerator -> IDENTIFIER '=' constant_expression");
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($1), "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1440,11 +1639,13 @@ enumerator
 
 type_qualifier
 	: CONST		{ 
+        DEBUG_PARSER("type_qualifier -> CONST");
 		$$ = createASTNode($1); 
 		currentDataType="const "; 
 		flag2=1;
 	}
 	| VOLATILE	{ 
+        DEBUG_PARSER("type_qualifier -> VOLATILE");
 		$$ = createASTNode($1); 
 		currentDataType="volatile "; 
 		flag2=1;
@@ -1454,6 +1655,7 @@ type_qualifier
 
 declarator
 	: pointer direct_declarator{
+        DEBUG_PARSER("declarator -> pointer direct_declarator");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1474,13 +1676,15 @@ declarator
 		}
 	}
 	| direct_declarator {
-		$$ = $1 ;
-	}
+        DEBUG_PARSER("declarator -> direct_declarator");
+        $$ = $1 ;
+    }
 	;
 
 
 direct_declarator
 	: IDENTIFIER {
+        DEBUG_PARSER("direct_declarator -> IDENTIFIER");
 		$$ = createASTNode($1);
 		std::string check=std::string($1);
 		if(flag){
@@ -1499,13 +1703,16 @@ direct_declarator
 		$$->size = getSize(type);
 	}
 	| CONSTANT IDENTIFIER {
+        DEBUG_PARSER("direct_declarator -> CONSTANT IDENTIFIER");
 		yyerror("syntax error, invalid identifier");
 		$$ = createASTNode("Invalid Identifier");
 	}
 	| '(' declarator ')'  {
-		$$ = $2 ;
-	}
+        DEBUG_PARSER("direct_declarator -> '(' declarator ')'");
+        $$ = $2 ;
+    }
 	| direct_declarator '[' constant_expression ']'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '[' constant_expression ']'");
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, "", 1);
 		Node* node = createASTNode("[ ]", &v2);
@@ -1526,6 +1733,7 @@ direct_declarator
 		}
 	}
 	| direct_declarator '[' ']'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '[' ']'");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "[ ]", 0);
@@ -1544,6 +1752,7 @@ direct_declarator
 		}
 	}
 	| direct_declarator '(' parameter_type_list ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' parameter_type_list ')'");
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, "", 1);
 		Node* node = createASTNode("( )", &v2);
@@ -1589,6 +1798,7 @@ direct_declarator
 		}
 	}
 	| direct_declarator '(' identifier_list ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' identifier_list ')'");
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, "", 1);
 		Node* node = createASTNode("( )", &v2);
@@ -1633,6 +1843,7 @@ direct_declarator
 		}
 	}
 	| direct_declarator '(' ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' ')'");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "( )", 0);
@@ -1670,6 +1881,7 @@ direct_declarator
 
 A  //can remove
 	: %empty	{
+        DEBUG_PARSER("A -> %empty");
 		type ="";
 		func_flag = 0;
 		funcArgs.clear();
@@ -1678,11 +1890,13 @@ A  //can remove
 
 pointer
 	: '*' {
+        DEBUG_PARSER("pointer -> '*'");
 		currentDataType+="*";
 		$$ = createASTNode("*(Pointer)");
 		$$->type = "*";
 	}
 	| '*' type_qualifier_list{
+        DEBUG_PARSER("pointer -> '*' type_qualifier_list");
 		currentDataType+="*";
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
@@ -1690,6 +1904,7 @@ pointer
 		$$->type = "*";
 	}
 	| '*' pointer{
+        DEBUG_PARSER("pointer -> '*' pointer");
 		currentDataType+="*";
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
@@ -1697,6 +1912,7 @@ pointer
 		$$->type = "*" + $2->type;
 	}
 	| '*' type_qualifier_list pointer{
+        DEBUG_PARSER("pointer -> '*' type_qualifier_list pointer");
 		currentDataType+="*";
 		std::vector<Data> v;
 		insertAttr(v,$2,"",1);
@@ -1708,9 +1924,11 @@ pointer
 
 type_qualifier_list
 	: type_qualifier {
-		$$ = $1 ;
-	}
+        DEBUG_PARSER("type_qualifier_list -> type_qualifier");
+        $$ = $1 ;
+    }
 	| type_qualifier_list type_qualifier{
+        DEBUG_PARSER("type_qualifier_list -> type_qualifier_list type_qualifier");
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
@@ -1721,9 +1939,11 @@ type_qualifier_list
 
 parameter_type_list
 	: parameter_list {
-		$$ = $1 ;
-	}
+        DEBUG_PARSER("parameter_type_list -> parameter_list");
+        $$ = $1 ;
+    }
 	| parameter_list ',' ELLIPSIS{
+        DEBUG_PARSER("parameter_type_list -> parameter_list ',' ELLIPSIS");
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v, createASTNode($3), "", 1);
@@ -1736,10 +1956,12 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration{
+        DEBUG_PARSER("parameter_list -> parameter_declaration");
 		noArgs++;
 		$$ = $1;
 	}
 	| parameter_list ',' parameter_declaration{
+        DEBUG_PARSER("parameter_list -> parameter_list ',' parameter_declaration");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1750,6 +1972,7 @@ parameter_list
 
 parameter_declaration
 	: declaration_specifiers declarator{
+        DEBUG_PARSER("parameter_declaration -> declaration_specifiers declarator");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1768,6 +1991,7 @@ parameter_declaration
 		}
 	}
 	| declaration_specifiers abstract_declarator{
+        DEBUG_PARSER("parameter_declaration -> declaration_specifiers abstract_declarator");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -1777,7 +2001,8 @@ parameter_declaration
 		type = "";
 	}
 	| declaration_specifiers {
-		$$ = $1;
+        DEBUG_PARSER("parameter_declaration -> declaration_specifiers");
+        $$ = $1;
 		
 		// Semantics
 		funcArgs.push_back(type);
@@ -1787,12 +2012,14 @@ parameter_declaration
 
 identifier_list
 	: IDENTIFIER {
+        DEBUG_PARSER("identifier_list -> IDENTIFIER");
 		$$ = createASTNode($1);
 		
 		// Semantics - add identifier to list for old-style function declarations
 		idList.push_back($1);
 	}
 	| identifier_list ',' IDENTIFIER{
+        DEBUG_PARSER("identifier_list -> identifier_list ',' IDENTIFIER");
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,createASTNode($3),"",1);
@@ -1805,9 +2032,11 @@ identifier_list
 
 type_name
 	: specifier_qualifier_list{
-		$$ = $1;
-	}
+        DEBUG_PARSER("type_name -> specifier_qualifier_list");
+        $$ = $1;
+    }
 	| specifier_qualifier_list abstract_declarator{
+        DEBUG_PARSER("type_name -> specifier_qualifier_list abstract_declarator");
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
@@ -1817,12 +2046,15 @@ type_name
 
 abstract_declarator
 	: pointer {
-		$$ = $1;
-	}
+        DEBUG_PARSER("abstract_declarator -> pointer");
+        $$ = $1;
+    }
 	| direct_abstract_declarator{
-		$$ = $1;
-	}
+        DEBUG_PARSER("abstract_declarator -> direct_abstract_declarator");
+        $$ = $1;
+    }
 	| pointer direct_abstract_declarator{
+        DEBUG_PARSER("abstract_declarator -> pointer direct_abstract_declarator");
 		std::vector<Data> v;
 		insertAttr(v,$1,"",1);
 		insertAttr(v,$2,"",1);
@@ -1832,9 +2064,11 @@ abstract_declarator
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')' {
-		$$ = $2;
-	}
+        DEBUG_PARSER("direct_abstract_declarator -> '(' abstract_declarator ')'");
+        $$ = $2;
+    }
 	| '[' ']'{
+        DEBUG_PARSER("direct_abstract_declarator -> '[' ']'");
 		$$ = createASTNode("[ ]");
 		
 		// Semantics
@@ -1842,6 +2076,7 @@ direct_abstract_declarator
 		$$->size = 8; // Default size for a pointer
 	}
 	| '[' constant_expression ']' {
+        DEBUG_PARSER("direct_abstract_declarator -> '[' constant_expression ']'");
 		std::vector<Data> v;
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("[ ]", &v);
@@ -1851,6 +2086,7 @@ direct_abstract_declarator
 		$$->size = getSize(type) * $2->intVal;
 	}
 	| direct_abstract_declarator '[' ']' {
+        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '[' ']'");
 		std::vector<Data> v;
 		insertAttr(v, NULL, "[ ]", 0);
 		insertAttr(v, $1, "", 1);
@@ -1861,6 +2097,7 @@ direct_abstract_declarator
 		$$->size = 8;
 	}
 	| direct_abstract_declarator '[' constant_expression ']'{
+        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '[' constant_expression ']'");
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, NULL, 1);
 		Node* node = createASTNode("[ ]", &v2);
@@ -1873,6 +2110,7 @@ direct_abstract_declarator
 		$$->size = $1->size * $3->intVal;
 	}
 	| '(' ')'{
+        DEBUG_PARSER("direct_abstract_declarator -> '(' ')'");
 		$$ = createASTNode("( )");
 		
 		// Semantics - function type with no parameters
@@ -1880,23 +2118,26 @@ direct_abstract_declarator
 		$$->size = 0;
 	}
 	| '(' parameter_type_list ')'{
-		$$ = $2;
+        DEBUG_PARSER("direct_abstract_declarator -> '(' parameter_type_list ')'");
+        $$ = $2;
 		
 		// Semantics - function type with parameters
 		$$->type = "FUNC_" + type;
 		$$->size = 0;
 	}
 	| direct_abstract_declarator '(' ')'{
+        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '(' ')'");
 		std::vector<Data> v;
 		insertAttr(v, NULL, "( )", 0);
 		insertAttr(v, $1, "", 1);
 		$$ = createASTNode("direct_abstract_declarator", &v);
 		
-		// Semantics
+			// Semantics
 		$$->type = "FUNC_" + $1->type;
 		$$->size = 0;
 	}
 	| direct_abstract_declarator '(' parameter_type_list ')'{
+        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '(' parameter_type_list ')'");
 		std::vector<Data> v, v2;
 		insertAttr(v2, $3, "", 1);
 		Node* node = createASTNode("( )", &v2);
@@ -1912,16 +2153,19 @@ direct_abstract_declarator
 
 initializer
 	: assignment_expression{
-		$$ = $1;
-	}
+        DEBUG_PARSER("initializer -> assignment_expression");
+        $$ = $1;
+    }
 	| '{' initializer_list '}' {
-		$$ = $2;
+        DEBUG_PARSER("initializer -> '{' initializer_list '}'");
+        $$ = $2;
 		
 		// Semantics for array initialization
 		$$->isInit = 1;
 	}
 	| '{' initializer_list ',' '}'{
-		$$ = $2;
+        DEBUG_PARSER("initializer -> '{' initializer_list ',' '}'");
+        $$ = $2;
 		
 		// Semantics
 		$$->isInit = 1;
@@ -1931,9 +2175,11 @@ initializer
 
 initializer_list
 	: initializer	{
-		$$ = $1;
-	}
+        DEBUG_PARSER("initializer_list -> initializer");
+        $$ = $1;
+    }
 	| initializer_list ',' initializer	{
+        DEBUG_PARSER("initializer_list -> initializer_list ',' initializer");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -1945,28 +2191,49 @@ initializer_list
 	;
 
 statement
-	: labeled_statement	{$$ = $1;}
-	| compound_statement	{$$ = $1;}
-	| expression_statement	{$$ = $1;}
-	| selection_statement	{$$ = $1;}
-	| iteration_statement	{$$ = $1;}
-	| jump_statement	{$$ = $1;}
+	: labeled_statement {
+        DEBUG_PARSER("statement -> labeled_statement");
+        $$ = $1;
+    }
+	| compound_statement {
+        DEBUG_PARSER("statement -> compound_statement");
+        $$ = $1;
+    }
+	| expression_statement {
+        DEBUG_PARSER("statement -> expression_statement");
+        $$ = $1;
+    }
+	| selection_statement {
+        DEBUG_PARSER("statement -> selection_statement");
+        $$ = $1;
+    }
+	| iteration_statement {
+        DEBUG_PARSER("statement -> iteration_statement");
+        $$ = $1;
+    }
+	| jump_statement {
+        DEBUG_PARSER("statement -> jump_statement");
+        $$ = $1;
+    }
 	;
 
 labeled_statement
 	: IDENTIFIER ':' statement	{
+        DEBUG_PARSER("labeled_statement -> IDENTIFIER ':' statement");
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($1), "", 1);
 		insertAttr(v, $3, "", 1);
 		$$ = createASTNode("labeled_statement", &v);
 	}
 	| CASE constant_expression ':' statement	{
+        DEBUG_PARSER("labeled_statement -> CASE constant_expression ':' statement");
 		std::vector<Data> v;
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $4, "", 1);
 		$$ = createASTNode("case", &v);
 	}
 	| DEFAULT ':' statement	{
+        DEBUG_PARSER("labeled_statement -> DEFAULT ':' statement");
 		std::vector<Data> v;
 		insertAttr(v, NULL, "default", 0);
 		insertAttr(v, $3, "", 1);
@@ -1976,9 +2243,11 @@ labeled_statement
 
 compound_statement
 	: '{' '}'	{
+        DEBUG_PARSER("compound_statement -> '{' '}'");
 		$$ = createASTNode("{ }");
 	}
 	| '{' CHANGE_TABLE statement_list '}'	{
+        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE statement_list '}'");
 		$$ = $3;
 		
 		// Semantics - clean up block scope
@@ -1993,6 +2262,7 @@ compound_statement
 		}
 	}
 	| '{' CHANGE_TABLE declaration_list '}'	{
+        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE declaration_list '}'");
 		$$ = $3;
 		
 		// Semantics - clean up block scope
@@ -2007,6 +2277,7 @@ compound_statement
 		}
 	}
 	| '{' CHANGE_TABLE declaration_list statement_list '}'	{
+        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
@@ -2027,6 +2298,7 @@ compound_statement
 
 CHANGE_TABLE
 	: %empty {
+        DEBUG_PARSER("CHANGE_TABLE -> %empty");
 		if(func_flag){
 			string str = "Block" + to_string(block_count);
 			block_stack.push(block_count);
@@ -2041,8 +2313,12 @@ CHANGE_TABLE
 	;
 
 declaration_list
-	: declaration	{$$ = $1;}
+	: declaration {
+        DEBUG_PARSER("declaration_list -> declaration");
+        $$ = $1;
+    }
 	| declaration_list declaration	{
+        DEBUG_PARSER("declaration_list -> declaration_list declaration");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -2051,8 +2327,12 @@ declaration_list
 	;
 
 statement_list
-	: statement	{$$ = $1;}
+	: statement {
+        DEBUG_PARSER("statement_list -> statement");
+        $$ = $1;
+    }
 	| statement_list statement	{
+        DEBUG_PARSER("statement_list -> statement_list statement");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -2061,18 +2341,26 @@ statement_list
 	;
 
 expression_statement
-	: ';'	{$$ = createASTNode(";");}
-	| expression ';'	{$$ = $1;}
+	: ';' {
+        DEBUG_PARSER("expression_statement -> ';'");
+        $$ = createASTNode(";");
+    }
+	| expression ';' {
+        DEBUG_PARSER("expression_statement -> expression ';'");
+        $$ = $1;
+    }
 	;
 
 selection_statement
 	: IF '(' expression ')' statement	{
+        DEBUG_PARSER("selection_statement -> IF '(' expression ')' statement");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = createASTNode("if", &v);
 	}
 	| IF '(' expression ')' statement ELSE statement	{
+        DEBUG_PARSER("selection_statement -> IF '(' expression ')' statement ELSE statement");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
@@ -2080,16 +2368,19 @@ selection_statement
 		$$ = createASTNode("if-else", &v);
 	}
 	| SWITCH '(' expression ')' statement	{
+        DEBUG_PARSER("selection_statement -> SWITCH '(' expression ')' statement");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = createASTNode("switch", &v);
 	}
 	| IF '(' ')' statement {
+        DEBUG_PARSER("selection_statement -> IF '(' ')' statement");
         yyerror("syntax error, missing condition in 'if' statement.");
         $$ = createASTNode("error-node");
     }
 	| SWITCH '(' ')' statement {
+        DEBUG_PARSER("selection_statement -> SWITCH '(' ')' statement");
         yyerror("syntax error, missing condition in 'switch' statement.");
         $$ = createASTNode("error-node");
     }
@@ -2097,18 +2388,21 @@ selection_statement
 
 iteration_statement
 	: WHILE '(' expression ')' statement	{
+        DEBUG_PARSER("iteration_statement -> WHILE '(' expression ')' statement");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = createASTNode("while-loop", &v);
 	}
 	| DO statement WHILE '(' expression ')' ';'	{
+        DEBUG_PARSER("iteration_statement -> DO statement WHILE '(' expression ')' ';'");
 		std::vector<Data> v;
 		insertAttr(v, $2, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = createASTNode("do-while-loop", &v);
 	}
 	| FOR '(' expression_statement expression_statement ')' statement	{
+        DEBUG_PARSER("iteration_statement -> FOR '(' expression_statement expression_statement ')' statement");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
@@ -2116,6 +2410,7 @@ iteration_statement
 		$$ = createASTNode("for-loop(w/o update stmt)", &v);
 	}
 	| FOR '(' expression_statement expression_statement expression ')' statement	{
+        DEBUG_PARSER("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
@@ -2124,20 +2419,24 @@ iteration_statement
 		$$ = createASTNode("for-loop", &v);
 	}
     | UNTIL '(' expression ')' statement { /*** Added UNTIL grammar ***/
+        DEBUG_PARSER("iteration_statement -> UNTIL '(' expression ')' statement");
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = createASTNode("until-loop", &v);
 	}
 	| WHILE '[' expression ']' statement {
+        DEBUG_PARSER("iteration_statement -> WHILE '[' expression ']' statement");
         yyerror("syntax error, incorrect parentheses in while-loop.");
 		$$ = createASTNode("Invalid While-loop", nullptr);
     }
     | UNTIL '[' expression ']' statement {
+        DEBUG_PARSER("iteration_statement -> UNTIL '[' expression ']' statement");
         yyerror("syntax error, incorrect parentheses in until-loop.");
 		$$ = createASTNode("Invalid Until-loop", nullptr);
     }
     | FOR '(' expression ',' expression ',' expression ')' statement {
+        DEBUG_PARSER("iteration_statement -> FOR '(' expression ',' expression ',' expression ')' statement");
         yyerror("syntax error, comma used instead of semicolons.");
         $$ = createASTNode("Invalid for-loop", nullptr);
     }
@@ -2145,14 +2444,25 @@ iteration_statement
 
 jump_statement
 	: GOTO IDENTIFIER ';'	{
+        DEBUG_PARSER("jump_statement -> GOTO IDENTIFIER ';'");
 		std::string s;
 		s = (std::string)$1 + " : " + (std::string)$2;
         $$ = createASTNode(s);
 	}
-	| CONTINUE ';'	{$$ = createASTNode($1);}
-	| BREAK ';'		{$$ = createASTNode($1);}
-	| RETURN ';'	{$$ = createASTNode($1);}
+	| CONTINUE ';' {
+        DEBUG_PARSER("jump_statement -> CONTINUE ';'");
+        $$ = createASTNode($1);
+    }
+	| BREAK ';' {
+        DEBUG_PARSER("jump_statement -> BREAK ';'");
+        $$ = createASTNode($1);
+    }
+	| RETURN ';' {
+        DEBUG_PARSER("jump_statement -> RETURN ';'");
+        $$ = createASTNode($1);
+    }
 	| RETURN expression ';'	{
+        DEBUG_PARSER("jump_statement -> RETURN expression ';'");
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($1), "", 1);
 		insertAttr(v, $2, "", 1);
@@ -2162,32 +2472,44 @@ jump_statement
 
 translation_unit
 	: external_declaration	{
+        DEBUG_PARSER("translation_unit -> external_declaration");
 		$$ = $1;
 	}
 	| translation_unit external_declaration	{
+        DEBUG_PARSER("translation_unit -> translation_unit external_declaration");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("program", &v);
 	}
 	| error ';' {
+        DEBUG_PARSER("translation_unit -> error ';'");
 		$$ = new Node; yyerrok;
 	}
 	| error ','{
+        DEBUG_PARSER("translation_unit -> error ','");
 		$$ = new Node; yyerrok;
 	}
 	| error{
+        DEBUG_PARSER("translation_unit -> error");
 		$$ = new Node; yyerrok;
 	}
 	;
 
 external_declaration
-	: function_definition	{ $$ = $1;}
-	| declaration	{ $$ = $1;}
+	: function_definition {
+        DEBUG_PARSER("external_declaration -> function_definition");
+        $$ = $1;
+    }
+	| declaration {
+        DEBUG_PARSER("external_declaration -> declaration");
+        $$ = $1;
+    }
 	;
 
 function_definition
 	: declaration_specifiers declarator F declaration_list compound_statement	{
+        DEBUG_PARSER("function_definition -> declaration_specifiers declarator F declaration_list compound_statement");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -2202,6 +2524,7 @@ function_definition
 		updSymbolTable(fName);
 	}
 	| declaration_specifiers declarator F compound_statement	{
+        DEBUG_PARSER("function_definition -> declaration_specifiers declarator F compound_statement");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
@@ -2215,6 +2538,7 @@ function_definition
 		updSymbolTable(fName);
 	}
 	| declarator F declaration_list compound_statement	{
+        DEBUG_PARSER("function_definition -> declarator F declaration_list compound_statement");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -2228,6 +2552,7 @@ function_definition
 		updSymbolTable(fName);
 	}
 	| declarator F compound_statement	{
+        DEBUG_PARSER("function_definition -> declarator F compound_statement");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $3, "", 1);
@@ -2243,6 +2568,7 @@ function_definition
 
 F 
 	: %empty {
+        DEBUG_PARSER("F -> %empty");
 		if (gst.find(funcName) != gst.end()){
 			yyerror(("Redefinition of function " + funcName).c_str());
 		}
