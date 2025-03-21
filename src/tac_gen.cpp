@@ -32,6 +32,16 @@ void print_tac_code(const std::string &inputFile) {
     }
 }
 
+int getCurrentSize(){
+    return tac_code.size();
+}
+
+std::vector<int> mergeList(std::vector<int>&list1, std::vector<int>&list2){
+    std::vector<int> mrgList = list1;
+    for(auto &it : list2) mrgList.push_back(it);
+    return mrgList;
+}
+
 int emit(qid op, qid arg1, qid arg2, qid result, int gotoLabel) {
     tac_code.emplace_back(tac_code.size() ,op, arg1, arg2, result, gotoLabel);
     return (int)tac_code.size() - 1;

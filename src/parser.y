@@ -23,6 +23,9 @@ extern bool has_error;
 
 int yyerror(const char*);
 int yylex();
+
+int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
+int previous_if_found = 0; // TODO: May need later
 %}
 
 %define parse.error detailed
@@ -30,7 +33,7 @@ int yylex();
 
 %union{
 	char* str;
-	int number;
+	int Int;
 	Node* ptr;
 }
 
@@ -50,14 +53,18 @@ int yylex();
 
 %start translation_unit
 
+%type<Int> NEXT_QUAD 
+//NODEONE
+
 %type<ptr> primary_expression postfix_expression argument_expression_list unary_expression unary_operator cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression
 %type<str> assignment_operator 
 %type<ptr> and_expression exclusive_or_expression inclusive_or_expression logical_and_expression logical_or_expression conditional_expression 
+%type<ptr> GOTO_AND GOTO_OR
 %type<ptr> assignment_expression expression constant_expression declaration declaration_specifiers init_declarator_list
 %type<ptr> declarator direct_declarator pointer type_qualifier_list parameter_type_list parameter_list parameter_declaration identifier_list type_name abstract_declarator direct_abstract_declarator initializer
 %type<ptr> init_declarator type_specifier struct_or_union_specifier	struct_declaration_list struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enum_specifier enumerator_list enumerator type_qualifier
 %type<ptr> statement labeled_statement compound_statement declaration_list statement_list expression_statement selection_statement iteration_statement jump_statement translation_unit external_declaration function_definition initializer_list
-%type<ptr> storage_class_specifier
+%type<ptr> storage_class_specifier 
 %type<str> struct_or_union
 %type<ptr> class_definition inheritance_specifier inheritance_specifier_list access_specifier class class_definition_head class_internal_definition_list class_internal_definition	class_member_list class_member
 
@@ -482,60 +489,59 @@ shift_expression
     }
 ;
 
-
 relational_expression
-    : inclusive_or_expression {
-        $$ = $1;
+    : shift_expression {
+        $$ = $1; 
     }
-    | relational_expression '<' inclusive_or_expression {
+    | relational_expression '<' shift_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("<", &attr);
-
-        //-- 3AC Generation
+		// TODO : Can do constant folding if both $1 and $2 are constant
+        // 3AC 
         qid q = getTempVariable("int");
         emit(qid("<", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression '>' inclusive_or_expression {
+    | relational_expression '>' shift_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode(">", &attr);
 
-        //-- 3AC Generation
+        // 3AC
         qid q = getTempVariable("int");
         emit(qid(">", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression LE_OP inclusive_or_expression {
+    | relational_expression LE_OP shift_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
-        $$ = createASTNode($2, &attr);
+        $$ = createASTNode("<=", &attr);
 
-        //-- 3AC Generation
+        // 3AC
         qid q = getTempVariable("int");
         emit(qid("<=", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression GE_OP inclusive_or_expression {
+    | relational_expression GE_OP shift_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
-        $$ = createASTNode($2, &attr);
+        $$ = createASTNode(">=", &attr);
 
-        //-- 3AC Generation
+        // 3AC
         qid q = getTempVariable("int");
         emit(qid(">=", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-;
+    ;
 
 
 equality_expression
@@ -549,6 +555,8 @@ equality_expression
         $$ = createASTNode($2, &attr);
 
         //-- 3AC Generation
+		//TODO : No need to emit if $1 and $3 are constant. Directly store value
+
         qid q = getTempVariable("int");
         emit(qid("==", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
@@ -569,22 +577,23 @@ equality_expression
 ;
 
 and_expression
-    : shift_expression {	
-        $$ = $1; 
+    : equality_expression {
+        $$ = $1;
     }
-    | and_expression '&' shift_expression {
+    | and_expression '&' equality_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("&", &attr);
 
-        // --- 3AC Generation ---
-		qid temp = getTempVariable("int");  
-		emit(qid("&", NULL), $1->place, $3->place, temp, -1);
-		$$->place = temp;
-        $$->nextlist.clear();
+        // 3AC
+		//TODO : No need to emit if $1 and $3 are constant
+        qid q = getTempVariable("int");
+        emit(qid("&", NULL), $1->place, $3->place, q, -1);
+        $$->place = q;
     }
-;
+    ;
+
 
 
 exclusive_or_expression
@@ -626,26 +635,102 @@ inclusive_or_expression
     }
 ;
 
-
+//TODO : Define token also
 logical_and_expression
-	: equality_expression {$$ = $1;}
-	| logical_and_expression AND_OP equality_expression{
+	: inclusive_or_expression { $$ = $1; }
+	| GOTO_AND NEXT_QUAD inclusive_or_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode("&&", &attr);
+
+		// 3AC
+		//if($3->truelist.empty() && if_found);
+		if(if_found){//TODO : TEST When if is implemented
+			backpatch($3->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+			$3->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$3->falselist.push_back(label);
+		}else{
+			qid q = getTempVariable("int");
+			emit(qid("&&", NULL), $1->place, $3->place, q, -1);
+			$$->place = q;
+		}
+
+		backpatch($1->truelist, $2);
+		$$->truelist = $3->truelist;
+		// $$->falselist = $1->falselist;
+		// $$->falselist.insert($$->falselist.end(), 
+		// 	$3->falselist.begin(), $3->falselist.end());
+
+		$$->falselist = mergeList($1->falselist, $3->falselist);
+	}
+	;
+
+
+GOTO_AND
+	: logical_and_expression AND_OP {
+		$$ = $1;
+
+		// if ($1->truelist.empty() && if_found) {
+		if(if_found){ // TODO : TEST When if is implemented
+			backpatch($1->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+			$1->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$1->falselist.push_back(label);
+		}
 	}
 	;
 
 logical_or_expression
-	: logical_and_expression{$$ = $1;}
-	| logical_or_expression OR_OP logical_and_expression{
+	: logical_and_expression { $$ = $1; }
+	| GOTO_OR NEXT_QUAD logical_and_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode("||", &attr);
+
+		// 3AC
+		if(if_found) {
+			backpatch($3->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+			$3->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$3->falselist.push_back(label);
+		} else {
+			qid q = getTempVariable("int");
+			emit(qid("||", NULL), $1->place, $3->place, q, -1);
+			$$->place = q;
+		}
+
+		backpatch($1->falselist, $2);
+		$$->truelist = mergeList($1->truelist, $3->truelist);
+		$$->falselist = $3->falselist;
 	}
 	;
+
+GOTO_OR
+	: logical_or_expression OR_OP {
+		$$ = $1;
+
+		if(if_found) {
+			backpatch($1->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+			$1->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$1->falselist.push_back(label);
+		}
+	}
+	;
+
+NEXT_QUAD
+	: %empty {
+		$$ = getCurrentSize();
+	}
+	;
+
 
 conditional_expression
 	: logical_or_expression {$$ = $1;}

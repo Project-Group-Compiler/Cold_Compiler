@@ -26,6 +26,8 @@ void run_optimisations();
 
 qid getTempVariable(std::string );
 void print_tac_code(const std::string &inputFile);
+int getCurrentSize();
+std::vector<int> mergeList(std::vector<int>&list1, std::vector<int>&list2);
 int emit(qid , qid , qid , qid , int);
 void backpatch(std::vector<int>& , int);
 void casepatch(std::vector<int>& bplist, qid target);
