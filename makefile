@@ -88,3 +88,8 @@ clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
 .PHONY: all clean
+# Clean up generated CSV files
+csv_clean:
+	rm -f *.csv
+
+.PHONY: all clean csv_clean

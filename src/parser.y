@@ -37,7 +37,7 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 1; // Flag to enable or disable debugging
+bool debug_enabled = 0; // Flag to enable or disable debugging
 #define DEBUG_PARSER(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char*);
@@ -1769,10 +1769,10 @@ direct_declarator
 			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str());
 		}
 	}
-	| direct_declarator '(' parameter_type_list ')'{
-        DEBUG_PARSER("direct_declarator -> direct_declarator '(' parameter_type_list ')'");
+	| direct_declarator '(' A parameter_type_list ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A parameter_type_list ')'");
 		std::vector<Data> v, v2;
-		insertAttr(v2, $3, "", 1);
+		insertAttr(v2, $4, "", 1);
 		Node* node = createASTNode("( )", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
@@ -1815,10 +1815,10 @@ direct_declarator
 			}
 		}
 	}
-	| direct_declarator '(' identifier_list ')'{
-        DEBUG_PARSER("direct_declarator -> direct_declarator '(' identifier_list ')'");
+	| direct_declarator '(' A identifier_list ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A identifier_list ')'");
 		std::vector<Data> v, v2;
-		insertAttr(v2, $3, "", 1);
+		insertAttr(v2, $4, "", 1);
 		Node* node = createASTNode("( )", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
@@ -1860,8 +1860,8 @@ direct_declarator
 			idList.clear();
 		}
 	}
-	| direct_declarator '(' ')'{
-        DEBUG_PARSER("direct_declarator -> direct_declarator '(' ')'");
+	| direct_declarator '(' A ')'{
+        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A ')'");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "( )", 0);

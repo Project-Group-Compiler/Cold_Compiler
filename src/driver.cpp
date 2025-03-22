@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     inputFilename = argv[1];
-    symTable_init();//mohitmo's function
+
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
     bool lexPrint = false;
     bool print_symtab = false;
@@ -96,6 +96,7 @@ int main(int argc, char *argv[])
 
     if (!has_error || force)
     {
+        symTable_init();//mohitmo's function
         performParsing(inputFileString);
         if (print_symtab){
             std::cout << "Printing symbol table\n";
