@@ -33,4 +33,7 @@ void backpatch(std::vector<int>& , int);
 void casepatch(std::vector<int>& bplist, qid target);
 void remainingBackpatch();
 
+void setArg1(int ind, qid value);
+void setResult(int ind, qid value);
+int assign_exp(std::string op, std::string type, std::string type1, std::string type2, qid arg1, qid arg2);
 #endif
