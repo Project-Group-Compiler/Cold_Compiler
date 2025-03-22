@@ -13,7 +13,7 @@ extern int yyleng;
 std::string currentDataType="";
 std::string currentAccess = "";//for classes
 int noArgs=0;
-bool flag=0,flag2=0;;
+bool flag=0,flag2=0;
 
 extern char* yytext;
 extern int column;
