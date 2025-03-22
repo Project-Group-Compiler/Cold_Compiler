@@ -5,7 +5,7 @@
 #include <vector>
 #include <iomanip>
 #include "data_structures.hpp"
-typedef std::pair<std::string, SymbolTableEntry*> qid;
+typedef std::pair<std::string, SymbolTableEntry *> qid;
 
 class quad
 {
@@ -24,17 +24,23 @@ public:
 
 void run_optimisations();
 
-qid getTempVariable(std::string );
+qid getTempVariable(std::string);
 void print_tac_code(const std::string &inputFile);
 int getCurrentSize();
-std::vector<int> mergeList(std::vector<int>&list1, std::vector<int>&list2);
-int emit(qid , qid , qid , qid , int);
-void backpatch(std::vector<int>& , int);
-void casepatch(std::vector<int>& bplist, qid target);
+std::vector<int> mergeList(std::vector<int> &list1, std::vector<int> &list2);
+int emit(qid, qid, qid, qid, int);
+void backpatch(std::vector<int> &, int);
+void casepatch(std::vector<int> &bplist, qid target);
 void remainingBackpatch();
+
+void setArg1(int ind, qid value);
+void setResult(int ind, qid value);
+int assign_exp(std::string op, std::string type, std::string type1, std::string type2, qid arg1, qid arg2);
 
 extern std::vector<quad> tac_code;
 extern std::vector<std::vector<quad>> basic_blocks;
+
+void generate_ir();
 
 void compute_basic_blocks();
 void print_basic_blocks();
@@ -45,9 +51,9 @@ inline std::string stringify(const quad &instr)
     const std::string &curr_op = instr.op.first;
     const char fi = curr_op[0];
 
-    if (curr_op.back() == ':')
+    if (curr_op.back() == ':' || curr_op.substr(0, 5) == "FUNC_")
         s += curr_op;
-    else if (curr_op.substr(0, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op == "!" || curr_op == "~" || curr_op == "unary-" || curr_op == "unary+" || curr_op == "unary&" || curr_op == "unary*" || curr_op == "SIZEOF")
+    else if (curr_op.substr(0, 2) == "++" || curr_op.substr(1, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op.substr(1, 2) == "--" || curr_op == "!" || curr_op == "~" || curr_op == "unary-" || curr_op == "unary+" || curr_op == "unary&" || curr_op == "unary*" || curr_op == "SIZEOF")
         s += instr.result.first + " = " + curr_op + " " + instr.arg1.first;
     else if (curr_op == "=")
         s += instr.result.first + " = " + instr.arg1.first;
@@ -71,7 +77,4 @@ inline std::string stringify(const quad &instr)
     return s;
 }
 
-void setArg1(int ind, qid value);
-void setResult(int ind, qid value);
-int assign_exp(std::string op, std::string type, std::string type1, std::string type2, qid arg1, qid arg2);
 #endif

@@ -2,10 +2,9 @@
 #include <unordered_map>
 #include <stack>
 
-std::vector<std::vector<quad>> func_tac_code;
 std::vector<std::vector<quad>> basic_blocks;
 std::unordered_map<int, int> leader_block_map;
-
+std::vector<std::vector<int>> adj, rev_adj;
 
 bool is_int_constant(const std::string &s)
 {
@@ -34,7 +33,7 @@ void compute_basic_blocks()
         const std::string &curr_op = instr.op.first;
         if (curr_op.back() == ':')
         {
-            if ((curr_op.substr(0, 5) == "FUNC_" && curr_op.substr(curr_op.length() - 5) == "end :"))
+            if ((curr_op.substr(0, 5) == "FUNC_" && curr_op.substr(curr_op.length() - 3) == "end"))
             {
                 block.push_back(instr);
                 basic_blocks.push_back(block);
@@ -81,7 +80,7 @@ void print_basic_blocks()
 
 void blocks_to_code()
 {
-    if(basic_blocks.empty())
+    if (basic_blocks.empty())
         return;
     std::vector<quad> new_tac_code;
     std::unordered_map<int, int> id_map;
@@ -105,8 +104,6 @@ void blocks_to_code()
     }
     tac_code = std::move(new_tac_code);
 }
-
-std::vector<std::vector<int>> adj, rev_adj;
 
 void build_cfg()
 {
@@ -410,8 +407,6 @@ void run_optimisations()
     constant_folding();
     dead_code_elimination();
     for (auto &instr : tac_code)
-    {
-        std::cout << stringify(instr) << std::endl;
-    }
+        std::cout << stringify(instr) << "\n";
     std::cout << "\n-------------------------\n\n";
 }

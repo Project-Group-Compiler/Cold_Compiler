@@ -1,6 +1,5 @@
 #include <iostream>
 #include <filesystem>
-// #include "data_structures.hpp"
 #include "tac.hpp"
 
 extern FILE *yyin;
@@ -62,7 +61,7 @@ int main(int argc, char *argv[])
         std::string arg = argv[i];
         if (arg == "-O0")
             optimize_ir = false;
-        if (arg == "-l" || arg == "--lex")
+        else if (arg == "-l" || arg == "--lex")
             lexPrint = true;
         else if (arg == "-a" || arg == "--ast")
             print_ast = true;
@@ -108,6 +107,8 @@ int main(int argc, char *argv[])
             printTables(inputFileString);
         if (!has_error || force)
         {
+            generate_ir();
+
             if (optimize_ir)
                 run_optimisations();
 

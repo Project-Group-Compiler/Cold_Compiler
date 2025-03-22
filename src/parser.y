@@ -1272,7 +1272,7 @@ direct_declarator
 		$$->temp_name = $1->temp_name;
         $$->place =qid($$->temp_name, NULL);
 		backpatch($4->nextlist,$6);
-        emit(qid("FUNC_" + $$->temp_name + " start:", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+        emit(qid("FUNC_" + $$->temp_name + " start :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
 
 	}
 	| direct_declarator '(' A identifier_list ')'{
@@ -1286,7 +1286,7 @@ direct_declarator
 		//3 AC
 		$$->temp_name = $1->temp_name;
         $$->place =qid($$->temp_name, NULL);
-        emit(qid("FUNC_" + $$->temp_name + " start:", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+        emit(qid("FUNC_" + $$->temp_name + " start :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
 
 	}
 	| direct_declarator '(' A ')'{
@@ -1299,7 +1299,7 @@ direct_declarator
 		//3 AC
 		$$->temp_name = $1->temp_name;
         $$->place =qid($$->temp_name, NULL);
-        emit(qid("FUNC_" + $$->temp_name + " start:", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+        emit(qid("FUNC_" + $$->temp_name + " start :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
 
 	}
 	;
