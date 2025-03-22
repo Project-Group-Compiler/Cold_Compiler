@@ -1473,11 +1473,6 @@ struct_or_union_specifier
 			yyerror(("Struct " + string($2) + " is not defined").c_str());
 		}
 	}
-	| struct_or_union IDENTIFIER '{' '}'	{
-        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union IDENTIFIER '{' '}'");
-		yyerror("syntax error, struct must be non-empty");
-		$$ = createASTNode("Invalid Struct", nullptr);
-	}
 	;
 
 G 
