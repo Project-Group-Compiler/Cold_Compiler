@@ -155,7 +155,7 @@ void set_int_type(int t){
 	yylval.num->type = string("long long");
 	switch(t){
 		case 0 : {
-			sscanf(yytext, "%d", &(yylval.num->intVal));
+			sscanf(yytext, "%lld", &(yylval.num->intVal));
 			break;
 		}
 		case 1 : {
@@ -177,7 +177,7 @@ void set_real_type(){
 	yylval.num = new constants ;
 	yylval.num->str = strdup(yytext);
 	yylval.num->type = string("long double");
-	sscanf(yytext, "%lf", &(yylval.num->realVal));
+	sscanf(yytext, "%Lf", &(yylval.num->realVal));
 }
 void reportError() 
 {
