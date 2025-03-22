@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <cstring>
 #include "AST.hpp"
 #include "tac.hpp"
@@ -23,6 +24,11 @@ extern bool has_error;
 
 int yyerror(const char*);
 int yylex();
+
+int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
+int previous_if_found = 0; // TODO: May need later
+std::map<std::string, std::vector<int>> gotolablelist;
+std::map<std::string, int> gotolabel;
 %}
 
 %define parse.error detailed
@@ -30,7 +36,7 @@ int yylex();
 
 %union{
 	char* str;
-	int number;
+	int Int;
 	Node* ptr;
 }
 
@@ -50,16 +56,26 @@ int yylex();
 
 %start translation_unit
 
+//TODO: Temporary
+// %type<str> G 
+// %type<str> CHANGE_TABLE 
+%type<Int> NEXT_QUAD WRITE_GOTO
+%type<ptr> GOTO_AND GOTO_OR GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
+%type<ptr> N
+//S F
+
 %type<ptr> primary_expression postfix_expression argument_expression_list unary_expression unary_operator cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression
 %type<str> assignment_operator 
 %type<ptr> and_expression exclusive_or_expression inclusive_or_expression logical_and_expression logical_or_expression conditional_expression 
+
 %type<ptr> assignment_expression expression constant_expression declaration declaration_specifiers init_declarator_list
 %type<ptr> declarator direct_declarator pointer type_qualifier_list parameter_type_list parameter_list parameter_declaration identifier_list type_name abstract_declarator direct_abstract_declarator initializer
 %type<ptr> init_declarator type_specifier struct_or_union_specifier	struct_declaration_list struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enum_specifier enumerator_list enumerator type_qualifier
 %type<ptr> statement labeled_statement compound_statement declaration_list statement_list expression_statement selection_statement iteration_statement jump_statement translation_unit external_declaration function_definition initializer_list
-%type<ptr> storage_class_specifier
+%type<ptr> storage_class_specifier 
 %type<str> struct_or_union
 %type<ptr> class_definition inheritance_specifier inheritance_specifier_list access_specifier class class_definition_head class_internal_definition_list class_internal_definition	class_member_list class_member
+
 
 %left ';'
 %%
@@ -482,60 +498,59 @@ shift_expression
     }
 ;
 
-
 relational_expression
-    : inclusive_or_expression {
-        $$ = $1;
+    : shift_expression {
+        $$ = $1; 
     }
-    | relational_expression '<' inclusive_or_expression {
+    | relational_expression '<' shift_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("<", &attr);
-
-        //-- 3AC Generation
+		// TODO : Can do constant folding if both $1 and $2 are constant
+        // 3AC 
         qid q = getTempVariable("int");
         emit(qid("<", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression '>' inclusive_or_expression {
+    | relational_expression '>' shift_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode(">", &attr);
 
-        //-- 3AC Generation
+        // 3AC
         qid q = getTempVariable("int");
         emit(qid(">", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression LE_OP inclusive_or_expression {
+    | relational_expression LE_OP shift_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
-        $$ = createASTNode($2, &attr);
+        $$ = createASTNode("<=", &attr);
 
-        //-- 3AC Generation
+        // 3AC
         qid q = getTempVariable("int");
         emit(qid("<=", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression GE_OP inclusive_or_expression {
+    | relational_expression GE_OP shift_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
-        $$ = createASTNode($2, &attr);
+        $$ = createASTNode(">=", &attr);
 
-        //-- 3AC Generation
+        // 3AC
         qid q = getTempVariable("int");
         emit(qid(">=", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-;
+    ;
 
 
 equality_expression
@@ -549,6 +564,8 @@ equality_expression
         $$ = createASTNode($2, &attr);
 
         //-- 3AC Generation
+		//TODO : No need to emit if $1 and $3 are constant. Directly store value
+
         qid q = getTempVariable("int");
         emit(qid("==", NULL), $1->place, $3->place, q, -1);
         $$->place = q;
@@ -569,22 +586,23 @@ equality_expression
 ;
 
 and_expression
-    : shift_expression {	
-        $$ = $1; 
+    : equality_expression {
+        $$ = $1;
     }
-    | and_expression '&' shift_expression {
+    | and_expression '&' equality_expression {
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("&", &attr);
 
-        // --- 3AC Generation ---
-		qid temp = getTempVariable("int");  
-		emit(qid("&", NULL), $1->place, $3->place, temp, -1);
-		$$->place = temp;
-        $$->nextlist.clear();
+        // 3AC
+		//TODO : No need to emit if $1 and $3 are constant
+        qid q = getTempVariable("int");
+        emit(qid("&", NULL), $1->place, $3->place, q, -1);
+        $$->place = q;
     }
-;
+    ;
+
 
 
 exclusive_or_expression
@@ -626,47 +644,178 @@ inclusive_or_expression
     }
 ;
 
-
+//TODO : Define token also
 logical_and_expression
-	: equality_expression {$$ = $1;}
-	| logical_and_expression AND_OP equality_expression{
+	: inclusive_or_expression { $$ = $1; }
+	| GOTO_AND NEXT_QUAD inclusive_or_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode("&&", &attr);
+
+		// 3AC
+		//if($3->truelist.empty() && if_found);
+		if(if_found){//TODO : TEST When if is implemented
+			backpatch($3->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+			$3->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$3->falselist.push_back(label);
+		}else{
+			qid q = getTempVariable("int");
+			emit(qid("&&", NULL), $1->place, $3->place, q, -1);
+			$$->place = q;
+		}
+
+		backpatch($1->truelist, $2);
+		$$->truelist = $3->truelist;
+		// $$->falselist = $1->falselist;
+		// $$->falselist.insert($$->falselist.end(), 
+		// 	$3->falselist.begin(), $3->falselist.end());
+
+		$$->falselist = mergeList($1->falselist, $3->falselist);
+	}
+	;
+
+
+GOTO_AND
+	: logical_and_expression AND_OP {
+		$$ = $1;
+
+		// if ($1->truelist.empty() && if_found) {
+		if(if_found){ // TODO : TEST When if is implemented
+			backpatch($1->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+			$1->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$1->falselist.push_back(label);
+		}
 	}
 	;
 
 logical_or_expression
-	: logical_and_expression{$$ = $1;}
-	| logical_or_expression OR_OP logical_and_expression{
+	: logical_and_expression { $$ = $1; }
+	| GOTO_OR NEXT_QUAD logical_and_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
 		$$ = createASTNode("||", &attr);
+
+		// 3AC
+		if(if_found) {
+			backpatch($3->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+			$3->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$3->falselist.push_back(label);
+		} else {
+			qid q = getTempVariable("int");
+			emit(qid("||", NULL), $1->place, $3->place, q, -1);
+			$$->place = q;
+		}
+
+		backpatch($1->falselist, $2);
+		$$->truelist = mergeList($1->truelist, $3->truelist);
+		$$->falselist = $3->falselist;
 	}
 	;
+
+GOTO_OR
+	: logical_or_expression OR_OP {
+		$$ = $1;
+
+		if(if_found) {
+			backpatch($1->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+			$1->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$1->falselist.push_back(label);
+		}
+	}
+	;
+
+NEXT_QUAD
+	: %empty {
+		$$ = getCurrentSize();
+	}
+	;
+
 
 conditional_expression
-	: logical_or_expression {$$ = $1;}
-	| logical_or_expression '?' expression ':' conditional_expression{
+	: logical_or_expression { $$ = $1; }
+	| GOTO_COND NEXT_QUAD expression WRITE_GOTO ':' NEXT_QUAD conditional_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $3, "", 1);
-		insertAttr(attr, $5, "", 1);
+		insertAttr(attr, $7, "", 1);
 		$$ = createASTNode("ternary operator", &attr);
+
+		// 3AC
+		qid temp1 = getTempVariable("int");
+
+		backpatch($1->truelist, $2);
+		backpatch($1->falselist, $6);
+		backpatch($3->nextlist, $4-1);
+		backpatch($3->truelist, $4-1);
+		backpatch($3->falselist, $4-1);
+
+		setArg1($4-1,$3->place);
+		setResult($4-1,temp1);
+
+		backpatch($7->nextlist, getCurrentSize());
+		backpatch($7->falselist, getCurrentSize());
+		backpatch($7->truelist, getCurrentSize());
+
+		emit(qid("=", NULL), $7->place, qid("", NULL), temp1, -1);
+		$$->nextlist.push_back($4);
+		$$->place = temp1;
 	}
 	;
 
-assignment_expression
-	: conditional_expression{$$ = $1;}
-	| unary_expression assignment_operator assignment_expression{
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
+GOTO_COND
+	: logical_or_expression '?' {
+		previous_if_found = if_found;
+		if_found = 0;
+		$$ = $1;
+
+		// 3AC
+		if ($1->truelist.empty()) {
+			backpatch($1->nextlist, getCurrentSize());
+			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+			$1->truelist.push_back(label);
+			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			$1->falselist.push_back(label);
+		}
 	}
 	;
+
+WRITE_GOTO
+	: %empty {
+		// 3AC
+		emit(qid("=", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+		int label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+		$$ = label;
+	}
+	;
+
+
+assignment_expression
+    : conditional_expression { $$ = $1; }
+    | unary_expression assignment_operator { if_found = 0; } assignment_expression {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $4, "", 1);
+        $$ = createASTNode($2, &attr);
+
+        // 3AC
+		$$->type = $1->type;
+		int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
+        // int num = emit(qid($2, NULL), $1->place, $4->place, qid("", NULL), -1);
+        $$->place = $1->place;
+        backpatch($4->nextlist, num);
+    }
+    ;
+
 
 assignment_operator
 	: '='	{
@@ -686,11 +835,17 @@ assignment_operator
 
 expression
 	: assignment_expression{$$ = $1;}
-	| expression ',' assignment_expression{
+	| expression ',' NEXT_QUAD assignment_expression {
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
+		insertAttr(attr, $4, "", 1);
 		$$ = createASTNode("expression", &attr);
+
+		backpatch($1->nextlist, $3);
+        backpatch($1->truelist, $3);
+        backpatch($1->falselist, $3);
+        $$->nextlist = $4->nextlist;
+        $$->place = $4->place;
 	}
 	;
 
@@ -705,6 +860,9 @@ declaration
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, $2, "", 1);
 		$$ = createASTNode("declaration", &attr);
+
+		// 3AC
+		$$->nextlist = $2->nextlist;
 	}
 	;
 
@@ -733,24 +891,42 @@ declaration_specifiers
 	;
 
 init_declarator_list
-	: init_declarator{$$ = $1;}
-	| init_declarator_list ',' init_declarator{
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("init_declarator_list", &attr);
-	}
-	;
+    : init_declarator { $$ = $1; }
+    | init_declarator_list ',' NEXT_QUAD init_declarator {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $4, "", 1);
+        $$ = createASTNode("init_declarator_list", &attr);
+
+        // 3AC
+        backpatch($1->nextlist, $3);
+        $$->nextlist = $4->nextlist;
+    }
+    ;
 
 init_declarator
-	: declarator {$$ = $1;}
-	| declarator '=' initializer{
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("=", &v);
-	}
-	;
+    : declarator {
+        $$ = $1;
+        $$->place = getTempVariable($1->type);
+    }
+    | declarator '=' NEXT_QUAD initializer {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $4, "", 1);
+        $$ = createASTNode("=", &attr);
+
+        // 3AC
+		//TODO: Handle other things like arrays...etc .(void case also)
+		// TODO: Can use assign_exp function here 
+        $$->place = getTempVariable($1->type); //Think ...
+		
+		assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
+		// emit(qid("=", NULL), $4->place, qid("", NULL), $1->place, -1);
+        $$->nextlist = $4->nextlist;
+        backpatch($1->nextlist, $3);
+    }
+    ;
+
 
 storage_class_specifier
 	: TYPEDEF	{ $$ = createASTNode($1); flag=1;}
@@ -1019,9 +1195,13 @@ declarator
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("declarator", &v);
+
+		$$->place = qid($$->temp_name, NULL);
 	}
 	| direct_declarator {
 		$$ = $1 ;
+
+		$$->place = qid($$->temp_name, NULL);
 	}
 	;
 
@@ -1038,6 +1218,10 @@ direct_declarator
 		std::string check=std::string($1);
 		addToSymbolTable(check,currentDataType);
 		}
+
+		//3AC
+		$$->temp_name = $1;
+		$$->place = qid($$->temp_name, NULL);
 	}
 	| CONSTANT IDENTIFIER {
 		yyerror("syntax error, invalid identifier");
@@ -1045,6 +1229,10 @@ direct_declarator
 	}
 	| '(' declarator ')'  {
 		$$ = $2 ;
+
+		//3AC
+		$$->place = qid($$->temp_name, NULL);
+		
 	}
 	| direct_declarator '[' constant_expression ']'{
 		std::vector<Data> v, v2;
@@ -1054,6 +1242,10 @@ direct_declarator
 		insertAttr(v, node, "", 1);
 		$$ = createASTNode("direct_declarator", &v);
 		updateLastSymbolEntry();
+
+		//3AC
+		$$->temp_name = $1->temp_name;
+		$$->place = qid($$->temp_name, NULL);
 	}
 	| direct_declarator '[' ']'{
 		std::vector<Data> v;
@@ -1061,33 +1253,62 @@ direct_declarator
 		insertAttr(v, NULL, "[ ]", 0);
 		updateLastSymbolEntry();
 		$$ = createASTNode("direct_declarator", &v);
+
+		//3AC
+		$$->temp_name = $1->temp_name;
+		$$->place = qid($$->temp_name, NULL);
 	}
-	| direct_declarator '(' parameter_type_list ')'{
+	| direct_declarator '(' A parameter_type_list ')' NEXT_QUAD {
 		std::vector<Data> v, v2;
-		insertAttr(v2, $3, "", 1);
+		insertAttr(v2, $4, "", 1);
 		Node* node = createASTNode("( )", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
 		$$ = createASTNode("direct_declarator", &v);
 		updateFuncSymbolEntry(noArgs);
 		noArgs=0;
+
+		//3 AC
+		$$->temp_name = $1->temp_name;
+        $$->place =qid($$->temp_name, NULL);
+		backpatch($4->nextlist,$6);
+        emit(qid("FUNC_" + $$->temp_name + " start:", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+
 	}
-	| direct_declarator '(' identifier_list ')'{
+	| direct_declarator '(' A identifier_list ')'{
 		std::vector<Data> v, v2;
-		insertAttr(v2, $3, "", 1);
+		insertAttr(v2, $4, "", 1);
 		Node* node = createASTNode("( )", &v2);
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, node, "", 1);
 		$$ = createASTNode("direct_declarator", &v);
+
+		//3 AC
+		$$->temp_name = $1->temp_name;
+        $$->place =qid($$->temp_name, NULL);
+        emit(qid("FUNC_" + $$->temp_name + " start:", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+
 	}
-	| direct_declarator '(' ')'{
+	| direct_declarator '(' A ')'{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
 		insertAttr(v, NULL, "( )", 0);
 		$$ = createASTNode("direct_declarator", &v);
 		updateFuncSymbolEntry(0);
+
+		//3 AC
+		$$->temp_name = $1->temp_name;
+        $$->place =qid($$->temp_name, NULL);
+        emit(qid("FUNC_" + $$->temp_name + " start:", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+
 	}
 	;
+
+A
+	: %empty	{
+		gotolablelist.clear();
+		gotolabel.clear();
+	}
 
 pointer
 	: '*' {
@@ -1137,6 +1358,8 @@ parameter_type_list
 		insertAttr(v,$1,"",1);
 		insertAttr(v, createASTNode($3), "", 1);
 		$$ = createASTNode("parameter_type_list",&v);
+
+		$$->nextlist = $1->nextlist;
 	}
 	;
 
@@ -1145,12 +1368,15 @@ parameter_list
 		noArgs++;
 		$$ = $1;
 	}
-	| parameter_list ',' parameter_declaration{
+	| parameter_list ',' NEXT_QUAD parameter_declaration{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
+		insertAttr(v, $4, "", 1);
 		noArgs++;
 		$$ = createASTNode("parameter_list",&v);
+
+		backpatch($1->nextlist, $3);
+		$$->nextlist = $4->nextlist;
 	}
 	;
 
@@ -1266,6 +1492,9 @@ initializer
 	}
 	| '{' initializer_list ',' '}'{
 		$$ = $2;
+
+		$$->place = $2->place;
+		$$->nextlist = $2->nextlist;
 	}
 	;
 
@@ -1274,11 +1503,14 @@ initializer_list
 	: initializer	{
 		$$ = $1;
 	}
-	| initializer_list ',' initializer	{
+	| initializer_list ',' NEXT_QUAD initializer	{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
+		insertAttr(v, $4, "", 1);
 		$$ = createASTNode("initializer_list", &v);
+
+		backpatch($1->nextlist, $3);
+		$$->nextlist = $4->nextlist;
 	}
 	;
 
@@ -1292,55 +1524,110 @@ statement
 	;
 
 labeled_statement
-	: IDENTIFIER ':' statement	{
-		std::vector<Data> v;
-		insertAttr(v, createASTNode($1), "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("labeled_statement", &v);
-	}
-	| CASE constant_expression ':' statement	{
-		std::vector<Data> v;
-		insertAttr(v, $2, "", 1);
-		insertAttr(v, $4, "", 1);
-		$$ = createASTNode("case", &v);
-	}
-	| DEFAULT ':' statement	{
-		std::vector<Data> v;
-		insertAttr(v, NULL, "default", 0);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("case", &v);
+    : IDENTIFIER ':' NEXT_QUAD statement {
+        std::vector<Data> attr;
+        insertAttr(attr, createASTNode($1), "", 1);
+        insertAttr(attr, $4, "", 1);
+        $$ = createASTNode("labeled_statement", &attr);
+
+        gotolabel[$1] = $3;
+
+        $$->nextlist = $4->nextlist;
+        $$->caselist = $4->caselist;
+        $$->continuelist = $4->continuelist;
+        $$->breaklist = $4->breaklist;
+    }
+    | CASE_CODE NEXT_QUAD statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("case", &attr);
+
+        backpatch($1->truelist, $2);
+        $3->nextlist.insert($3->nextlist.end(), $1->falselist.begin(), $1->falselist.end());
+
+        $$->breaklist = $3->breaklist;
+        $$->nextlist = $3->nextlist;
+        $$->caselist = $1->caselist;
+        $$->continuelist = $3->continuelist;
+    }
+    | DEFAULT ':' statement {
+        std::vector<Data> attr;
+        insertAttr(attr, NULL, "default", 0);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("case", &attr);
+
+        $$->breaklist = $3->breaklist;
+        $$->nextlist = $3->nextlist;
+        $$->continuelist = $3->continuelist;
+    }
+    ;
+
+CASE_CODE
+	: CASE constant_expression ':' {
+        $$ = $2;
+		qid t = getTempVariable($$->type);
+		int a = getCurrentSize();
+		emit(qid("==", NULL), qid("", NULL), $2->place, t, -1);
+		int b = getCurrentSize();
+		emit(qid("GOTO", NULL), qid("IF", lookup("if")), t, qid("", NULL), 0);
+		int c = getCurrentSize();
+		emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+		$$->caselist.push_back(a);
+		$$->truelist.push_back(b);
+		$$->falselist.push_back(c);
 	}
 	;
+
 
 compound_statement
 	: '{' '}'	{$$ = createASTNode("{ }");}
 	| '{' statement_list '}'	{$$ = $2;}
 	| '{' declaration_list '}'	{$$ = $2;}
-	| '{' declaration_list statement_list '}'	{
+	| '{' declaration_list NEXT_QUAD statement_list '}'	{
 		std::vector<Data> v;
 		insertAttr(v, $2, "", 1);
-		insertAttr(v, $3, "", 1);
+		insertAttr(v, $4, "", 1);
 		$$ = createASTNode("compound_statement", &v);
+
+		//TODO : Testing 
+		backpatch($2->nextlist, $3);
+        $$->nextlist = $4->nextlist;
+        $$->caselist = $4->caselist;
+        $$->continuelist = $4->continuelist;
+        $$->breaklist = $4->breaklist;
 	}
 	;
 
 declaration_list
 	: declaration	{$$ = $1;}
-	| declaration_list declaration	{
+	| declaration_list NEXT_QUAD declaration	{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
+		insertAttr(v, $3, "", 1);
 		$$ = createASTNode("declaration_list", &v);
+
+		backpatch($1->nextlist, $2);
+        $$->nextlist = $3->nextlist;
 	}
 	;
 
 statement_list
 	: statement	{$$ = $1;}
-	| statement_list statement	{
+	| statement_list NEXT_QUAD statement	{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
+		insertAttr(v, $3, "", 1);
 		$$ = createASTNode("statement_list", &v);
+
+		backpatch($1->nextlist, $2);
+        $$->nextlist = $3->nextlist;
+		$1->caselist.insert($1->caselist.end(), $3->caselist.begin(), $3->caselist.end());
+        $$->caselist = $1->caselist;
+		$1->continuelist.insert($1->continuelist.end(), $3->continuelist.begin(), $3->continuelist.end());
+		$1->breaklist.insert($1->breaklist.end(), $3->breaklist.begin(), $3->breaklist.end());
+        $$->continuelist = $1->continuelist;
+        $$->breaklist = $1->breaklist;
 	}
 	;
 
@@ -1349,98 +1636,225 @@ expression_statement
 	| expression ';'	{$$ = $1;}
 	;
 
-selection_statement
-	: IF '(' expression ')' statement	{
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("if", &v);
-	}
-	| IF '(' expression ')' statement ELSE statement	{
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		insertAttr(v, $7, "", 1);
-		$$ = createASTNode("if-else", &v);
-	}
-	| SWITCH '(' expression ')' statement	{
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("switch", &v);
-	}
-	| IF '(' ')' statement {
-        yyerror("syntax error, missing condition in 'if' statement.");
-        $$ = createASTNode("error-node");
-    }
-	| SWITCH '(' ')' statement {
-        yyerror("syntax error, missing condition in 'switch' statement.");
-        $$ = createASTNode("error-node");
+IF_CODE
+    : IF {if_found = 1;} '(' expression ')' {
+        if($4->truelist.empty() && $4->falselist.empty()) {
+            int a = getCurrentSize();
+			backpatch($4->nextlist, a);
+            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $4->place, qid("", NULL ),0);
+            int b = getCurrentSize();
+            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            $4->truelist.push_back(a);
+            $4->falselist.push_back(b);
+        }
+        $$ = $4;
+		if_found = 0;
     }
 	;
 
+N
+    : %empty {
+        int a = getCurrentSize();
+		$$ = createASTNode("Empty");
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        $$->nextlist.push_back(a);
+    }
+    ;
+
+
+selection_statement
+    : IF_CODE NEXT_QUAD statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("if", &attr);
+
+        backpatch($1->truelist, $2);
+        $3->nextlist.insert($3->nextlist.end(), $1->falselist.begin(), $1->falselist.end());
+
+        $$->nextlist = $3->nextlist;
+        $$->continuelist = $3->continuelist;
+        $$->breaklist = $3->breaklist;
+    }
+    | IF_CODE NEXT_QUAD statement N ELSE NEXT_QUAD statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $3, "", 1);
+        insertAttr(attr, $7, "", 1);
+        $$ = createASTNode("if-else", &attr);
+
+        backpatch($1->truelist, $2);
+        backpatch($1->falselist, $6);
+
+        $3->nextlist.insert($3->nextlist.end(), $4->nextlist.begin(), $4->nextlist.end());
+        $3->nextlist.insert($3->nextlist.end(), $7->nextlist.begin(), $7->nextlist.end());
+        $$->nextlist = $3->nextlist;
+
+        $3->breaklist.insert($3->breaklist.end(), $7->breaklist.begin(), $7->breaklist.end());
+        $$->breaklist = $3->breaklist;
+        $3->continuelist.insert($3->continuelist.end(), $7->continuelist.begin(), $7->continuelist.end());
+        $$->continuelist = $3->continuelist;
+    }
+    | SWITCH '(' expression ')' statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $3, "", 1);
+        insertAttr(attr, $5, "", 1);
+        $$ = createASTNode("switch", &attr);
+
+        casepatch($5->caselist, $3->place);
+
+        $5->nextlist.insert($5->nextlist.end(), $5->breaklist.begin(), $5->breaklist.end());
+        $$->nextlist = $5->nextlist;
+        $$->continuelist = $5->continuelist;
+    }
+    ;
+
+EXPR_CODE
+    : {if_found = 1;} expression {
+        if($2->truelist.empty() && $2->falselist.empty()) {
+            int a = getCurrentSize();
+			backpatch($2->nextlist, a);
+            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
+            int b = getCurrentSize();
+            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            $2->truelist.push_back(a);
+            $2->falselist.push_back(b);
+        }
+        $$ = $2;
+		if_found = 0;
+    }
+    ;
+
+EXPR_STMT_CODE
+    : {if_found = 1;} expression_statement { 
+		if($2->truelist.empty() && $2->falselist.empty()) {
+            int a = getCurrentSize();
+			backpatch($2->nextlist, a);
+            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
+            int b = getCurrentSize();
+            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            $2->truelist.push_back(a);
+            $2->falselist.push_back(b);
+        }
+        $$ = $2;
+		if_found = 0;
+	}
+    ;
+
 iteration_statement
-	: WHILE '(' expression ')' statement	{
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("while-loop", &v);
-	}
-	| DO statement WHILE '(' expression ')' ';'	{
-		std::vector<Data> v;
-		insertAttr(v, $2, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("do-while-loop", &v);
-	}
-	| FOR '(' expression_statement expression_statement ')' statement	{
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $4, "", 1);
-		insertAttr(v, $6, "", 1);
-		$$ = createASTNode("for-loop(w/o update stmt)", &v);
-	}
-	| FOR '(' expression_statement expression_statement expression ')' statement	{
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $4, "", 1);
-		insertAttr(v, $5, "", 1);
-		insertAttr(v, $7, "", 1);
-		$$ = createASTNode("for-loop", &v);
-	}
-    | UNTIL '(' expression ')' statement { /*** Added UNTIL grammar ***/
+    : WHILE '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $4, "", 1);
+        insertAttr(attr, $7, "", 1);
+        $$ = createASTNode("while-loop", &attr);
+
+        backpatch($4->truelist, $6);
+        $7->nextlist.insert($7->nextlist.end(), $7->continuelist.begin(), $7->continuelist.end());
+        backpatch($7->nextlist, $3);
+        
+        $$->nextlist = $4->falselist;
+        $$->nextlist.insert($$->nextlist.end(), $7->breaklist.begin(), $7->breaklist.end());
+
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $3);
+    }
+	| UNTIL '(' expression ')' statement { /*** Added UNTIL grammar ***/
 		std::vector<Data> v;
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $5, "", 1);
 		$$ = createASTNode("until-loop", &v);
 	}
-	| WHILE '[' expression ']' statement {
-        yyerror("syntax error, incorrect parentheses in while-loop.");
-		$$ = createASTNode("Invalid While-loop", nullptr);
+    | DO NEXT_QUAD statement WHILE '(' NEXT_QUAD EXPR_CODE ')' ';' {
+        std::vector<Data> attr;
+        insertAttr(attr, $3, "", 1);
+        insertAttr(attr, $7, "", 1);
+        $$ = createASTNode("do-while-loop", &attr);
+
+        backpatch($7->truelist, $2);
+        $3->nextlist.insert($3->nextlist.end(), $3->continuelist.begin(), $3->continuelist.end());
+        backpatch($3->nextlist, $6);
+
+        $$->nextlist = $7->falselist;
+        $$->nextlist.insert($$->nextlist.end(), $3->breaklist.begin(), $3->breaklist.end());
     }
-    | UNTIL '[' expression ']' statement {
-        yyerror("syntax error, incorrect parentheses in until-loop.");
-		$$ = createASTNode("Invalid Until-loop", nullptr);
+    | FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE ')' NEXT_QUAD statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $3, "", 1);
+        insertAttr(attr, $5, "", 1);
+        insertAttr(attr, $8, "", 1);
+        $$ = createASTNode("for-loop(w/o update stmt)", &attr);
+
+        backpatch($3->nextlist, $4);
+        backpatch($5->truelist, $7);
+
+        $$->nextlist = $5->falselist;
+        $$->nextlist.insert($$->nextlist.end(), $8->breaklist.begin(), $8->breaklist.end());
+
+        $8->nextlist.insert($8->nextlist.end(), $8->continuelist.begin(), $8->continuelist.end());
+        backpatch($8->nextlist, $4);
+
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $4);
     }
-    | FOR '(' expression ',' expression ',' expression ')' statement {
-        yyerror("syntax error, comma used instead of semicolons.");
-        $$ = createASTNode("Invalid for-loop", nullptr);
+    | FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $3, "", 1);
+        insertAttr(attr, $5, "", 1);
+        insertAttr(attr, $7, "", 1);
+        insertAttr(attr, $11, "", 1);
+        $$ = createASTNode("for-loop", &attr);
+
+        backpatch($3->nextlist, $4);
+        backpatch($5->truelist, $10);
+
+        $$->nextlist = $5->falselist;
+        $$->nextlist.insert($$->nextlist.end(), $11->breaklist.begin(), $11->breaklist.end());
+
+        $11->nextlist.insert($11->nextlist.end(), $11->continuelist.begin(), $11->continuelist.end());
+        backpatch($11->nextlist, $6);
+
+        $7->nextlist.insert($7->nextlist.end(), $8->nextlist.begin(), $8->nextlist.end());
+        backpatch($7->nextlist, $4);
+
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $6);
     }
-	;
+    ;
 
 jump_statement
 	: GOTO IDENTIFIER ';'	{
 		std::string s;
 		s = (std::string)$1 + " : " + (std::string)$2;
         $$ = createASTNode(s);
+
+		int a = getCurrentSize();
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        gotolablelist[$2].push_back(a);
 	}
-	| CONTINUE ';'	{$$ = createASTNode($1);}
-	| BREAK ';'		{$$ = createASTNode($1);}
-	| RETURN ';'	{$$ = createASTNode($1);}
+	| CONTINUE ';'	{
+		$$ = createASTNode($1);
+
+		int a = getCurrentSize();
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        $$->continuelist.push_back(a);
+	}
+	| BREAK ';'		{
+		$$ = createASTNode($1);
+
+		int a = getCurrentSize();
+        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        $$->breaklist.push_back(a);
+	}
+	| RETURN ';'	{
+		$$ = createASTNode($1);
+
+		emit(qid("RETURN", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+	}
 	| RETURN expression ';'	{
 		std::vector<Data> v;
 		insertAttr(v, createASTNode($1), "", 1);
 		insertAttr(v, $2, "", 1);
 		$$ = createASTNode("jump_stmt", &v);
+
+		backpatch($2->nextlist,getCurrentSize());
+        emit(qid("RETURN", NULL), $2->place, qid("", NULL), qid("", NULL), -1);
 	}
 	;
 
@@ -1448,11 +1862,20 @@ translation_unit
 	: external_declaration	{
 		$$ = $1;
 	}
-	| translation_unit external_declaration	{
+	| translation_unit NEXT_QUAD external_declaration	{
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
+		insertAttr(v, $3, "", 1);
 		$$ = createASTNode("program", &v);
+
+		backpatch($1->nextlist, $2);
+        $$->nextlist = $3->nextlist;
+		$1->caselist.insert($1->caselist.end(), $3->caselist.begin(), $3->caselist.end());
+        $$->caselist = $1->caselist;
+		$1->continuelist.insert($1->continuelist.end(), $3->continuelist.begin(), $3->continuelist.end());
+        $1->breaklist.insert($1->breaklist.end(), $3->breaklist.begin(), $3->breaklist.end());
+        $$->continuelist = $1->continuelist;
+        $$->breaklist = $1->breaklist;
 	}
 	| error ';' {
 		$$ = new Node; yyerrok;
@@ -1471,36 +1894,74 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers declarator declaration_list compound_statement	{
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $4, "", 1);
-		$$ = createASTNode("function", &v);
-	}
-	| declaration_specifiers declarator compound_statement	{
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("function (w/o decl_list)", &v);
-	}
-	| declarator declaration_list compound_statement	{
-		std::vector<Data> v;
-                insertAttr(v, $1, "", 1);
-                insertAttr(v, $2, "", 1);
-                insertAttr(v, $3, "", 1);
-                $$ = createASTNode("function (w/o decl_specifiers)", &v);
-	}
-	| declarator compound_statement	{
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("function (w/o specifiers and decl_list)", &v);
-	}
-	;
+    : declaration_specifiers declarator declaration_list compound_statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $2, "", 1);
+        insertAttr(attr, $3, "", 1);
+        insertAttr(attr, $4, "", 1);
+        $$ = createASTNode("function", &attr);
 
+
+        std::string fName = $2->temp_name;  // Moved from F
+
+		for(auto i: gotolablelist){
+			backpatch(i.second, gotolabel[i.first]);
+		}
+
+        emit(qid("FUNC_" + fName + " end", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        remainingBackpatch();
+    }
+
+    | declaration_specifiers declarator compound_statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $2, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("function (w/o decl_list)", &attr);
+
+        std::string fName = $2->temp_name;
+
+		for(auto i: gotolablelist){
+			backpatch(i.second, gotolabel[i.first]);
+		}
+
+        emit(qid("FUNC_" + fName + " end", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        remainingBackpatch();
+    }
+
+    | declarator declaration_list compound_statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $2, "", 1);
+        insertAttr(attr, $3, "", 1);
+        $$ = createASTNode("function (w/o decl_specifiers)", &attr);
+
+        
+		std::string fName = $1->temp_name; 
+
+		for(auto i: gotolablelist){
+			backpatch(i.second, gotolabel[i.first]);
+		}
+
+        emit(qid("FUNC_" + fName + " end", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        remainingBackpatch();
+    }
+
+    | declarator compound_statement {
+        std::vector<Data> attr;
+        insertAttr(attr, $1, "", 1);
+        insertAttr(attr, $2, "", 1);
+        $$ = createASTNode("function (w/o specifiers and decl_list)", &attr);
+
+        for (auto &i : gotolablelist) {
+			backpatch(i.second, gotolabel[i.first]);
+        }
+
+        std::string fName = $1->temp_name;
+        emit(qid("FUNC_" + fName + " end", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        remainingBackpatch();
+    };
 %%
 
 void performParsing(const std::string &inputFile)
