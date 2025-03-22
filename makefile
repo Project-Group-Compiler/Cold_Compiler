@@ -32,44 +32,44 @@ all: $(OUTPUT)
 
 # Ensure build directory exists before running Flex
 $(LEXER_CPP): $(LEXER) | $(BUILD_DIR)
-	$(FLEX) -o $(LEXER_CPP) $(LEXER)
+	@$(FLEX) -o $(LEXER_CPP) $(LEXER)
 
 # Ensure build directory exists before running Bison
 $(PARSER_CPP) $(PARSER_HPP): $(PARSER) | $(BUILD_DIR)
-	$(BISON) -d -o $(PARSER_CPP) $(PARSER) -Wno-conflicts-rr -Wno-conflicts-sr
+	@$(BISON) -d -o $(PARSER_CPP) $(PARSER) -Wno-conflicts-rr -Wno-conflicts-sr
 
 # Compile the lexer object file
 $(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP)
-	$(CXX) $(CXXFLAGS) -c -o $@ $(LEXER_CPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(LEXER_CPP)
 
 # Compile the parser object file
 $(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP)
-	$(CXX) $(CXXFLAGS) -c -o $@ $(PARSER_CPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(PARSER_CPP)
 
 # Compile the AST object file
 $(BUILD_DIR)/AST.o: $(AST_CPP) $(AST_HPP)
-	$(CXX) $(CXXFLAGS) -c -o $@ $(AST_CPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(AST_CPP)
 
 # Compile the data_structures object file
 $(BUILD_DIR)/data_structures.o: $(DS_CPP) $(DS_HPP)
-	$(CXX) $(CXXFLAGS) -c -o $@ $(DS_CPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(DS_CPP)
 
 # Compile the TAC generator object file
 $(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP)
-	$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_GEN_CPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_GEN_CPP)
 
 # Compile the TAC optimizer object file
 $(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP) $(DS_HPP)
-	$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
 
 # Compile the driver object file
 $(BUILD_DIR)/driver.o: $(DRIVER) $(TAC_HPP) $(DS_HPP) 
-	$(CXX) $(CXXFLAGS) -c -o $@ $(DRIVER)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(DRIVER)
 
 # Link the final binary
 $(OUTPUT): $(OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	@$(CXX) $(CXXFLAGS) -o $@ $^
 
 # Create the build directory
 $(BUILD_DIR):

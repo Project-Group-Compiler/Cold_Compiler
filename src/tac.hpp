@@ -31,4 +31,42 @@ void backpatch(std::vector<int>& , int);
 void casepatch(std::vector<int>& bplist, qid target);
 void remainingBackpatch();
 
+extern std::vector<quad> tac_code;
+extern std::vector<std::vector<quad>> basic_blocks;
+
+void compute_basic_blocks();
+void print_basic_blocks();
+
+inline std::string stringify(const quad &instr)
+{
+    std::string s = std::to_string(instr.Label) + ":  ";
+    const std::string &curr_op = instr.op.first;
+    const char fi = curr_op[0];
+
+    if (curr_op.back() == ':')
+        s += curr_op;
+    else if (curr_op.substr(0, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op == "!" || curr_op == "~" || curr_op == "unary-" || curr_op == "unary+" || curr_op == "unary&" || curr_op == "unary*" || curr_op == "SIZEOF")
+        s += instr.result.first + " = " + curr_op + " " + instr.arg1.first;
+    else if (curr_op == "=")
+        s += instr.result.first + " = " + instr.arg1.first;
+    else if (fi == '+' || fi == '-' || fi == '*' || fi == '/' || fi == '%')
+        s += instr.result.first + " = " + instr.arg1.first + " " + fi + " " + instr.arg2.first + "\t(" + curr_op.substr(1) + ")";
+    else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "PTR_OP" || curr_op == "member_access")
+        s += instr.result.first + " = " + instr.arg1.first + " " + curr_op + " " + instr.arg2.first;
+    else if (curr_op == "RETURN" || curr_op == "param")
+        s += curr_op + " " + instr.arg1.first;
+    else if (curr_op == "CALL")
+        s += instr.result.first + " = " + curr_op + " " + instr.arg1.first + " " + instr.arg2.first;
+    else if (curr_op == "[ ]")
+        s += instr.result.first + " = " + instr.arg1.first + "[" + instr.arg2.first + "]";
+    else if (curr_op == "GOTO")
+    {
+        if (instr.arg1.first == "IF")
+            s += "IF " + instr.arg2.first + " GOTO " + std::to_string(instr.gotoLabel);
+        else
+            s += "GOTO " + std::to_string(instr.gotoLabel);
+    }
+    return s;
+}
+
 #endif

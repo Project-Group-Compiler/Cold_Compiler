@@ -69,3 +69,44 @@ void remainingBackpatch(){
         i--;
     }
 }
+
+#include <map>
+void addgotoLabels()
+{
+    std::map<int, std::vector<int>> gotoTargets;
+    for (auto &q : tac_code)
+    {
+        if (q.op.first == "GOTO" && q.gotoLabel != -1)
+            gotoTargets[q.gotoLabel].push_back(q.Label);
+    }
+    int labelcnt = 0;
+    std::vector<int> id_map(tac_code.size(), -1);
+    std::vector<quad> labelled_tac_code;
+    for (auto &q : tac_code)
+    {
+        int newid = labelled_tac_code.size();
+        if (gotoTargets.find(q.Label) != gotoTargets.end())
+        {
+            labelled_tac_code.push_back(quad(newid, qid("L" + std::to_string(labelcnt) + " :", NULL), qid("", nullptr), qid("", nullptr), qid("", nullptr), -1));
+            newid++;
+            labelcnt++;
+        }
+        id_map[q.Label] = newid;
+        q.Label = newid;
+        labelled_tac_code.push_back(std::move(q));
+    }
+    for (auto &[a, v] : gotoTargets)
+        for (auto &x : v)
+            labelled_tac_code[id_map[x]].gotoLabel = id_map[a] - 1;
+    tac_code = std::move(labelled_tac_code);
+}
+
+void print_tac_code(const std::string &inputFile)
+{
+    for (auto &instr : tac_code)
+    {
+        std::cout << stringify(instr) << std::endl;
+    }
+    std::cout << "\n-------------------------\n\n";
+    addgotoLabels();
+}
