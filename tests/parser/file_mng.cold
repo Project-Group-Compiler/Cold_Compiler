@@ -1,0 +1,8 @@
+void test_file_manipulation() {
+    FILE *file = fopen("test.txt", "w");
+    if (file) {
+        fprintf(file, "Hello, File!");
+        fclose(file);
+        // Test Passed
+    }
+}

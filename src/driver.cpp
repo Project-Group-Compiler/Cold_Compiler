@@ -1,10 +1,12 @@
 #include <iostream>
 #include <filesystem>
+#include "tac.hpp"
 
 extern FILE *yyin;
 bool print_ast = false;
 std::string inputFilename;
 std::string outputDir = std::filesystem::current_path().string() + "/";
+std::string astDir = std::filesystem::current_path().string() + "/";
 
 bool has_error = false;
 void print_error(const std::string &message)
@@ -31,9 +33,12 @@ int main(int argc, char *argv[])
             std::cout << "Usage: driver <input_file> [options]\n"
                       << "Options:\n"
                       << "  -h, --help       Show this help message and exit\n"
+                      << "  -O0              Generate unoptimized IR\n"
                       << "  -l, --lex        Print lexical analysis table\n"
                       << "  -a, --ast        Print abstract syntax tree\n"
-                      << "  -f, --force      Force parsing even if lexical errors are present\n";
+                      << "  -s, --symtab     Print symbol tables\n"
+                      // << "  -t, --tac        Print three address code\n"
+                      << "  -f, --force      Forcefully continue even if errors are present\n";
             return 0;
         }
     }
@@ -46,15 +51,24 @@ int main(int argc, char *argv[])
     }
     inputFilename = argv[1];
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
+    bool optimize_ir = true;
     bool lexPrint = false;
+    bool print_symtab = false;
+    bool print_ir = true; // TODO : make it false in next phase
     bool force = false;
     for (int i = 2; i < argc; i++)
     {
         std::string arg = argv[i];
-        if (arg == "-l" || arg == "--lex")
+        if (arg == "-O0")
+            optimize_ir = false;
+        else if (arg == "-l" || arg == "--lex")
             lexPrint = true;
         else if (arg == "-a" || arg == "--ast")
             print_ast = true;
+        else if (arg == "-s" || arg == "--symtab")
+            print_symtab = true;
+        else if (arg == "-t" || arg == "--tac")
+            print_ir = true;
         else if (arg == "-f" || arg == "--force")
             force = true;
         else if (arg == "-o" || arg == "--output")
@@ -64,6 +78,16 @@ int main(int argc, char *argv[])
             else
             {
                 print_error("no output directory provided.");
+                return -1;
+            }
+        }
+        else if (arg == "--astdir")
+        {
+            if (i + 1 < argc)
+                astDir = argv[++i];
+            else
+            {
+                print_error("no ast directory provided.");
                 return -1;
             }
         }
@@ -77,10 +101,30 @@ int main(int argc, char *argv[])
     performLexing(inputFileString, lexPrint);
 
     if (!has_error || force)
+    {
         performParsing(inputFileString);
-    else if (has_error)
-        print_error("lexical errors present, use -f to force parsing");
+        if (print_symtab)
+            printTables(inputFileString);
+        if (!has_error || force)
+        {
+            generate_ir();
+
+            if (optimize_ir)
+                run_optimisations();
+
+            if (print_ir)
+                print_tac_code(inputFileString);
+
+            // generate asm code fn comes here
+        }
+        else
+            print_error("\nsyntax or semantic errors present, use -f to forcefully continue");
+    }
+    else
+        print_error("\nlexical errors present, use -f to forcefully continue");
 
     fclose(yyin);
+    if (has_error)
+        return 1;
     return 0;
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-EXECUTABLE="bin/parser"
-TEST_DIR="tests/parser"
+EXECUTABLE="bin/ir_gen"
+TEST_DIR="tests/ir_gen"
 OUTPUT_DIR="outputs"
 
 # Ensure test directory exists
@@ -20,16 +20,13 @@ for test_case in "$TEST_DIR"/*.cold; do
     test_name=$(basename "$test_case" .cold)
     echo "Running test case: $test_name"
 
-    "$EXECUTABLE" "$test_case" "-o" "$OUTPUT_DIR/" "-a" "-f"
+    "$EXECUTABLE" "$test_case" "-o" "$OUTPUT_DIR/" "-f"
 
     if [ $? -eq 0 ]; then
-      echo "Test $test_name passed. Output saved in $OUTPUT_DIR/."
-      dot -Tpng "$OUTPUT_DIR/$test_name""_AST.dot" -o "$OUTPUT_DIR/$test_name""_ast.png"
-      rm "$OUTPUT_DIR/$test_name""_AST.dot"
+      echo "Test $test_name passed. TAC saved in $OUTPUT_DIR/."
     else
       echo "Test $test_name failed."
     fi
-  
   else
     echo "No test cases found in '$TEST_DIR'."
   fi
