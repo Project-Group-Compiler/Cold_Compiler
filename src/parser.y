@@ -558,7 +558,6 @@ inclusive_or_expression
         $$->nextlist.clear();
     }
 ;
-
 //TODO : Define token also
 logical_and_expression
 	: inclusive_or_expression { $$ = $1; }
@@ -742,7 +741,6 @@ init_declarator
         // 3AC
 		//TODO: Handle other things like arrays...etc .(void case also)
 		$$->place = $1->temp_name;
-		
 		assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
         $$->nextlist = $4->nextlist;
         backpatch($1->nextlist, $3);
@@ -957,6 +955,7 @@ type_qualifier
 declarator
 	: pointer direct_declarator {
 		$$ = getNode("declarator", mergeAttrs($1, $2));
+		$$->temp_name = $2->temp_name;
 		$$->place = $$->temp_name;
 	}
 	| direct_declarator {

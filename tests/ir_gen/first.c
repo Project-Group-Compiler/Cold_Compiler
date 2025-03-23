@@ -68,19 +68,19 @@
 //     }
 // }
 
-void Test5(){
-    int a,b,x,y,z,c=10,f = 5;;
-    if ((x && y) && (a && b)) { 
-        x = 1;
-    }
-    if ((x && y) || (a && b)) { 
-        x = 1;
-    }
+// void Test5(){
+//     int a,b,x,y,z,c=10,f = 5;;
+//     if ((x && y) && (a && b)) { 
+//         x = 1;
+//     }
+//     if ((x && y) || (a && b)) { 
+//         x = 1;
+//     }
 
 
-    x = y + z;
-    a = 5, b = 10, c = a + b;
-}
+//     x = y + z;
+//     a = 5, b = 10, c = a + b;
+// }
 
 // void Test5(){
 //     int x = 5;
@@ -128,6 +128,10 @@ void Test5(){
 
 //     return i;
 // }
+void Test7(){
+    int y = 10;
+    int *x = &y;
+}
 
 int x;
 int arr[10];
@@ -135,6 +139,7 @@ int func(int a, int b);
 int *ptr;
 int matrix[5][5];
 void foo();
+
 
 // int add(int a, int b) {
 //     return a + b;
