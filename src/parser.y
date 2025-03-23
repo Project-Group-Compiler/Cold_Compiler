@@ -40,7 +40,7 @@ vector<string> currArgs;
 bool debug_enabled = 0; // Flag to enable or disable debugging
 #define DEBUG_PARSER(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
-int yyerror(const char*);
+int yyerror(const char* s, const std::string &errorType = "syntax error");
 int yylex();
 int warning(const char*);
 %}
@@ -96,7 +96,7 @@ primary_expression
 		// Semantics
 		string temp = primaryExpression(string($1));
 		if(temp == ""){
-			yyerror(("Undeclared Identifier " + string($1)).c_str());
+			yyerror(("Undeclared Identifier " + string($1)).c_str(), "scope error");
 		}
 		else{
 			if(temp.substr(0, 5) == "FUNC_"){
@@ -115,12 +115,12 @@ primary_expression
     }
 	| CONSTANT IDENTIFIER {
         DEBUG_PARSER("primary_expression -> CONSTANT IDENTIFIER");
-		yyerror("syntax error, invalid identifier");
+		yyerror("invalid identifier", "syntax error");
 		$$ = createASTNode($1->str);
 	}
 	| CONSTANT CONSTANT {
         DEBUG_PARSER("primary_expression -> CONSTANT CONSTANT");
-		yyerror("syntax error, invalid constant");
+		yyerror("invalid constant", "syntax error");
 		$$ = createASTNode($1->str);
 	}
 	| CONSTANT {
@@ -171,7 +171,7 @@ postfix_expression
 			$$->type = temp;
 		}
 		else{
-			yyerror(("Array " + $1->temp_name +  " Index out of bound").c_str());
+			yyerror(("Array " + $1->temp_name +  " Index out of bound").c_str(), "semantic error");
 		}
 	}
 	| postfix_expression '(' ')' {
@@ -186,12 +186,12 @@ postfix_expression
 			if($1->expType == 3){
 				vector<string> funcArg = getFuncArgs($1->temp_name);
 				if(!funcArg.empty()){
-					yyerror(("Too few Arguments to Function " + $1->temp_name).c_str());
+					yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
 			}
 		}
 		else{
-			yyerror(("Function " + $1->temp_name + " not declared in this scope").c_str());
+			yyerror(("Function " + $1->temp_name + " not declared in this scope").c_str(), "scope error");
 		}
 		currArgs.clear(); 
 	}
@@ -214,7 +214,7 @@ postfix_expression
 				for(int i=0; i<funcArgs.size(); i++){
 					if(funcArgs[i]=="...")break;
 					if(currArgs.size()==i){
-						yyerror(("Too few Arguments to Function " + $1->temp_name).c_str());
+						yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
 					string msg = checkType(funcArgs[i],currArgs[i]);
@@ -223,18 +223,18 @@ postfix_expression
 						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
 					}
 					else if(msg.empty()){
-						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str());
+						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
 					if(i==funcArgs.size()-1 && i<currArgs.size()-1){
-						yyerror(("Too many Arguments to Function " + $1->temp_name).c_str());
+						yyerror(("Too many Arguments to Function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
 				}
 			}
 		}
 		else{
-			yyerror("Invalid function call");
+			yyerror("Invalid function call", "semantic error");
 		}
 		currArgs.clear();
 	}
@@ -249,10 +249,10 @@ postfix_expression
 		string temp = string($3);
 		int ret = lookupStruct($1->type, temp);
 		if(ret == -1){
-			yyerror(("Struct " + $1->node_name + " not defined").c_str());
+			yyerror(("Struct " + $1->node_name + " not defined").c_str(), "scope error");
 		}
 		else if (ret == 0){
-			yyerror("Attribute of Struct not defined");
+			yyerror("Attribute of Struct not defined", "scope error");
 		}
 		else{
 			$$->type = StructAttrType($1->type, temp);
@@ -270,16 +270,16 @@ postfix_expression
 		string temp = string($3);
 		string temp1 = ($1->type);
 		if(temp1.back() != '*'){
-			yyerror(($1->node_name + " is not a pointer, did you mean to use '.' ").c_str());
+			yyerror(($1->node_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
 		}
 		else temp1.pop_back();
 		
 		int ret = lookupStruct(temp1, temp);
 		if(ret == -1){
-			yyerror("Struct not defined");
+			yyerror("Struct not defined", "scope error");
 		}
 		else if (ret == 0){
-			yyerror("Attribute of Struct not defined");
+			yyerror("Attribute of Struct not defined", "scope error");
 		}
 		else{
 			$$->type = StructAttrType(temp1, temp);
@@ -300,7 +300,7 @@ postfix_expression
 			$$->intVal = $1->intVal + 1;
 		}
 		else{
-			yyerror("Increment not defined for this type");
+			yyerror("Increment not defined for this type", "type error");
 		}
 	}
 	| postfix_expression DEC_OP {
@@ -317,7 +317,7 @@ postfix_expression
 			$$->intVal = $1->intVal - 1;
 		}
 		else{
-			yyerror("Decrement not defined for this type");
+			yyerror("Decrement not defined for this type", "type error");
 		}
 	}
 	;
@@ -367,7 +367,7 @@ unary_expression
 			$$->intVal = $2->intVal + 1;
 		}
 		else{
-			yyerror("Increment not defined for this type");
+			yyerror("Increment not defined for this type", "type error");
 		}
 	}
 	| DEC_OP unary_expression {
@@ -384,7 +384,7 @@ unary_expression
 			$$->intVal = $2->intVal - 1;
 		}
 		else{
-			yyerror("Decrement not defined for this type");
+			yyerror("Decrement not defined for this type", "type error");
 		}
 	}
 	| unary_operator cast_expression {
@@ -402,7 +402,7 @@ unary_expression
 			$$->intVal = $2->intVal;
 		}
 		else{
-			yyerror("Type inconsistent with operator");
+			yyerror("Type inconsistent with operator", "type error");
 		}
 	}
 	| SIZEOF unary_expression {
@@ -501,7 +501,7 @@ multiplicative_expression
 			}
 		}
 		else{
-			yyerror("Incompatible type for * operator");
+			yyerror("Incompatible type for * operator", "type error");
 		}
 	}
 	| multiplicative_expression '/' cast_expression {
@@ -524,7 +524,7 @@ multiplicative_expression
 			}
 		}
 		else{
-			yyerror("Incompatible type for / operator");
+			yyerror("Incompatible type for / operator", "type error");
 		}
 	}
 	| multiplicative_expression '%' cast_expression {
@@ -542,7 +542,7 @@ multiplicative_expression
 			$$->type = "long long";
 		}
 		else{
-			yyerror("Incompatible type for % operator");
+			yyerror("Incompatible type for % operator", "type error");
 		}
 	}
 	;
@@ -569,7 +569,7 @@ additive_expression
 			else $$->type = temp;
 		}
 		else{
-			yyerror("Incompatible type for + operator");
+			yyerror("Incompatible type for + operator", "type error");
 		}
 	}
 	| additive_expression '-' multiplicative_expression {
@@ -589,7 +589,7 @@ additive_expression
 			else $$->type = temp;
 		}
 		else{
-			yyerror("Incompatible type for - operator");
+			yyerror("Incompatible type for - operator", "type error");
 		}
 	}
 	;
@@ -612,7 +612,7 @@ shift_expression
 			$$->type = $1->type;
 		}
 		else{
-			yyerror("Invalid operands to binary <<");
+			yyerror("Invalid operands to binary <<", "type error");
 		}
 	}
 	| shift_expression RIGHT_OP additive_expression {
@@ -628,7 +628,7 @@ shift_expression
 			$$->type = $1->type;
 		}
 		else{
-			yyerror("Invalid operands to binary >>");
+			yyerror("Invalid operands to binary >>", "type error");
 		}
 	}
 	; 
@@ -657,7 +657,7 @@ relational_expression   //POTENTIAL ISSUE
 				 warning("Comparison between pointer and integer");
 			}
           } else {
-			yyerror("Invalid operands to binary <");
+			yyerror("Invalid operands to binary <", "type error");
 		}
 	}
     | relational_expression '>' inclusive_or_expression {
@@ -679,7 +679,7 @@ relational_expression   //POTENTIAL ISSUE
 				 warning("Comparison between pointer and integer");
 			}
           } else {
-			yyerror("Invalid operands to binary >");
+			yyerror("Invalid operands to binary >", "type error");
 		}
 	}
     | relational_expression LE_OP inclusive_or_expression {
@@ -701,7 +701,7 @@ relational_expression   //POTENTIAL ISSUE
 				 warning("Comparison between pointer and integer");
 			}
           } else {
-			yyerror("Invalid operands to binary <=");
+			yyerror("Invalid operands to binary <=", "type error");
 		}
 	}
     | relational_expression GE_OP inclusive_or_expression {
@@ -723,7 +723,7 @@ relational_expression   //POTENTIAL ISSUE
 				 warning("Comparison between pointer and integer");
 			}
           } else {
-			yyerror("Invalid operands to binary >=");
+			yyerror("Invalid operands to binary >=", "type error");
 		}
 	}
 	;
@@ -746,12 +746,12 @@ equality_expression
 		string temp = eqExp($1->type, $3->type);
 		if(!temp.empty()){
 			if(temp == "ok"){
-				yyerror("Comparison between pointer and integer");
+				yyerror("Comparison between pointer and integer", "type error");
 			}
 			$$->type = "bool";
 		}
 		else{
-			yyerror("Invalid operands to binary ==");
+			yyerror("Invalid operands to binary ==", "type error");
 		}
 	}
 	| equality_expression NE_OP relational_expression {
@@ -766,12 +766,12 @@ equality_expression
 		string temp = eqExp($1->type, $3->type);
 		if(!temp.empty()){
 			if(temp == "ok"){
-				yyerror("Comparison between pointer and integer");
+				yyerror("Comparison between pointer and integer", "type error");
 			}
 			$$->type = "bool";
 		}
 		else{
-			yyerror("Invalid operands to binary !=");
+			yyerror("Invalid operands to binary !=", "type error");
 		}
 	}
 	;
@@ -798,7 +798,7 @@ and_expression
 			else $$->type = "long long";
 		}
 		else{
-			yyerror("Invalid operands to binary &");
+			yyerror("Invalid operands to binary &", "type error");
 		}
 	}
 	;
@@ -825,7 +825,7 @@ exclusive_or_expression
 			else $$->type = "long long";
 		}
 		else{
-			yyerror("Invalid operands to binary ^");
+			yyerror("Invalid operands to binary ^", "type error");
 		}
     }
 	;
@@ -852,7 +852,7 @@ inclusive_or_expression
 			else $$->type = "long long";
 		}
 		else{
-			yyerror("Invalid operands to binary |");
+			yyerror("Invalid operands to binary |", "type error");
 		}
 	}
 	;
@@ -914,7 +914,7 @@ conditional_expression
 			$$->type = "int";
 		}
 		else {
-			yyerror("Type mismatch in Conditional Expression");
+			yyerror("Type mismatch in Conditional Expression", "type error");
 		}
 		if($1->isInit == 1 && $3->isInit == 1 && $5->isInit == 1) $$->isInit = 1;
 	}
@@ -944,7 +944,7 @@ assignment_expression
 			}
 		}
 		else{
-			yyerror("Incompatible types when assigning type");
+			yyerror("Incompatible types when assigning type", "type error");
 		}
 		if($1->expType == 3 && $3->isInit){
 			updInit($1->temp_name);
@@ -1015,12 +1015,12 @@ declaration //POTENTIAL ISSUE
               if(!prevArgs.empty() && prevArgs[0] != "#NO_FUNC") {
                   if(prevArgs.size() != funcArgs.size()) {
                       yyerror(("Function " + std::string($2->temp_name) + 
-                               " declared with a different number of arguments").c_str());
+                               " declared with a different number of arguments").c_str(), "semantic error");
                   } else {
                       for (size_t i = 0; i < prevArgs.size(); ++i) {
                           if(prevArgs[i] != funcArgs[i]) {
                               yyerror(("Argument type mismatch in function " + 
-                                       std::string($2->temp_name)).c_str());
+                                       std::string($2->temp_name)).c_str(), "semantic error");
                               break;
                           }
                       }
@@ -1094,11 +1094,11 @@ init_declarator
 		// Semantics
 		if(currLookup($1->temp_name)){
 			string errstr = $1->temp_name + " is already declared";
-			yyerror(errstr.c_str());
+			yyerror(errstr.c_str(), "scope error");
 		}
 		else if($1->expType == 3){
 			if(fn_decl){
-				yyerror("A parameter list without types is only allowed in a function definition");
+				yyerror("A parameter list without types is only allowed in a function definition", "syntax error");
 				fn_decl = 0;
 			}
 			removeFuncProto();
@@ -1117,7 +1117,7 @@ init_declarator
 		// Semantics
 		if(currLookup($1->temp_name)){
 			string errstr = $1->temp_name + " is already declared";
-			yyerror(errstr.c_str());
+			yyerror(errstr.c_str(), "scope error");
 		}
 		else{
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
@@ -1354,7 +1354,7 @@ class_definition
         $$ = createASTNode("class_definition", &attr);
         // Semantics: Insert the class into the symbol table after ensuring no duplicate exists.
         if (currLookup($1->temp_name)) {
-            yyerror(("Class " + std::string($1->temp_name) + " is already declared").c_str());
+            yyerror(("Class " + std::string($1->temp_name) + " is already declared").c_str(), "scope error");
         } else {
             insertSymbol(*curr_table, $1->temp_name, $1->type, 0, 0, NULL);
         }
@@ -1431,8 +1431,8 @@ struct_or_union_specifier
 			if(type == "") type = "STRUCT_" + string($2);
 			else type += " STRUCT_" + string($2);
 		}
-		else {
-			yyerror(("Struct " + string($2) + " is already defined").c_str());
+		else{
+			yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
 		}
 	}
 	| struct_or_union S '{' struct_declaration_list '}'		{
@@ -1447,8 +1447,8 @@ struct_or_union_specifier
 			if(type == "") type = "STRUCT_" + to_string(Anon_StructCounter);
 			else type += " STRUCT_" + to_string(Anon_StructCounter);
 		}
-		else {
-			yyerror("Struct is already defined");
+		else{
+			yyerror("Struct is already defined", "scope error");
 		}
 	}
 	| struct_or_union IDENTIFIER 	{
@@ -1469,8 +1469,8 @@ struct_or_union_specifier
 			// We are inside a struct
 			type = "#INSIDE";
 		}
-		else {
-			yyerror(("Struct " + string($2) + " is not defined").c_str());
+		else{
+			yyerror(("Struct " + string($2) + " is not defined").c_str(), "scope error");
 		}
 	}
 	;
@@ -1574,7 +1574,7 @@ struct_declarator
 		
 		// Semantics
 		if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1){
-			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str());
+			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
 		}
 	}
 	| ':' constant_expression {
@@ -1590,7 +1590,7 @@ struct_declarator
 		
 		// Semantics
 		if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1){
-			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str());
+			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
 		}
 	}
 	;
@@ -1717,7 +1717,7 @@ direct_declarator
 	}
 	| CONSTANT IDENTIFIER {
         DEBUG_PARSER("direct_declarator -> CONSTANT IDENTIFIER");
-		yyerror("syntax error, invalid identifier");
+		yyerror("invalid identifier", "syntax error");
 		$$ = createASTNode("Invalid Identifier");
 	}
 	| '(' declarator ')'  {
@@ -1741,8 +1741,8 @@ direct_declarator
 			$$->temp_name = $1->temp_name;
 			$$->size = $1->size * $3->intVal;
 		}
-		else {
-			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str());
+		else{
+			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
 	| direct_declarator '[' ']'{
@@ -1760,8 +1760,8 @@ direct_declarator
 			$$->temp_name = $1->temp_name;
 			$$->size = 8;
 		}
-		else {
-			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str());
+		else{
+			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
 	| direct_declarator '(' A parameter_type_list ')'{
@@ -1796,17 +1796,17 @@ direct_declarator
 					funcName = string($1->temp_name);
 					funcType = $1->type;
 				}
-				else {
-					yyerror(("Conflicting types for " + $1->temp_name).c_str());
+				else{
+					yyerror(("Conflicting types for " + $1->temp_name).c_str(), "type error");
 				}
 			}
 		}
-		else {
+		else{
 			if($1->expType == 2){
-				yyerror( ($1->temp_name + "declared as array of function").c_str());
+				yyerror( ($1->temp_name + "declared as array of function").c_str(), "type error");
 			}
 			else{
-				yyerror( ($1->temp_name + "declared as function of function").c_str());
+				yyerror( ($1->temp_name + "declared as function of function").c_str(), "type error");
 			}
 		}
 	}
@@ -1843,15 +1843,15 @@ direct_declarator
 		if(args.size() == idList.size()) {
 			for(int i = 0; i < args.size(); i++) {
 				if(args[i] == "..."){
-					yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+					yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 					break;
 				}
 				insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
 			}
 			idList.clear();
 		}
-		else {
-			yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+		else{
+			yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 			idList.clear();
 		}
 	}
@@ -1878,15 +1878,15 @@ direct_declarator
 				funcType = $1->type;
 			}
 			else{
-				yyerror(("Conflicting types for function " + $1->temp_name).c_str());
+				yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 			}
 		}
-		else {
+		else{
 			if($1->expType == 2){
-				yyerror( ($1->temp_name + "declared as array of function").c_str());
+				yyerror( ($1->temp_name + "declared as array of function").c_str(), "type error");
 			}
 			else{
-				yyerror( ($1->temp_name + "declared as function of function").c_str());
+				yyerror( ($1->temp_name + "declared as function of function").c_str(), "type error");
 			}
 		}
 	}
@@ -1995,7 +1995,7 @@ parameter_declaration
 		type = "";
 		if($2->expType == 1 || $2->expType == 2) {
 			if(currLookup($2->temp_name)) {
-				yyerror(("Redeclaration of Parameter " + $2->temp_name).c_str());
+				yyerror(("Redeclaration of Parameter " + $2->temp_name).c_str(), "scope error");
 			}
 			else {
 				insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
@@ -2389,12 +2389,12 @@ selection_statement
 	}
 	| IF '(' ')' statement {
         DEBUG_PARSER("selection_statement -> IF '(' ')' statement");
-        yyerror("syntax error, missing condition in 'if' statement.");
+        yyerror("missing condition in 'if' statement.", "syntax error");
         $$ = createASTNode("error-node");
     }
 	| SWITCH '(' ')' statement {
         DEBUG_PARSER("selection_statement -> SWITCH '(' ')' statement");
-        yyerror("syntax error, missing condition in 'switch' statement.");
+        yyerror("missing condition in 'switch' statement.", "syntax error");
         $$ = createASTNode("error-node");
     }
 	;
@@ -2440,17 +2440,17 @@ iteration_statement
 	}
 	| WHILE '[' expression ']' statement {
         DEBUG_PARSER("iteration_statement -> WHILE '[' expression ']' statement");
-        yyerror("syntax error, incorrect parentheses in while-loop.");
+        yyerror("incorrect parentheses in while-loop.", "syntax error");
 		$$ = createASTNode("Invalid While-loop", nullptr);
     }
     | UNTIL '[' expression ']' statement {
         DEBUG_PARSER("iteration_statement -> UNTIL '[' expression ']' statement");
-        yyerror("syntax error, incorrect parentheses in until-loop.");
+        yyerror("incorrect parentheses in until-loop.", "syntax error");
 		$$ = createASTNode("Invalid Until-loop", nullptr);
     }
     | FOR '(' expression ',' expression ',' expression ')' statement {
         DEBUG_PARSER("iteration_statement -> FOR '(' expression ',' expression ',' expression ')' statement");
-        yyerror("syntax error, comma used instead of semicolons.");
+        yyerror("comma used instead of semicolons.", "syntax error");
         $$ = createASTNode("Invalid for-loop", nullptr);
     }
 	;
@@ -2583,7 +2583,7 @@ F
 	: %empty {
         DEBUG_PARSER("F -> %empty");
 		if (gst.find(funcName) != gst.end()){
-			yyerror(("Redefinition of function " + funcName).c_str());
+			yyerror(("Redefinition of function " + funcName).c_str(), "scope error");
 		}
 		else{
 			makeSymbolTable(funcName, funcType);
@@ -2604,23 +2604,21 @@ void performParsing(const std::string &inputFile)
     endAST();
 }
 
-int yyerror(const char* s) 
-{
-	yyclearin;
-	has_error = true;
-    std::ifstream file(inputFilename);  
+int yyerror(const char* s, const std::string &errorType) {
+    yyclearin;  // clear the input token stream (if applicable)
+    has_error = true;
+    std::ifstream file(inputFilename);
     std::string curr_line;
     int count = 1;
-	std::string heading("syntax error");
-	std::string error_line(s);
-	int pos = error_line.find_first_of(heading);
-	if (pos != std::string::npos)
-		error_line.erase(pos, heading.length() + 2);
-
-    while (std::getline(file, curr_line)) 
-	{
+    std::string error_line(s);
+    // Read through the file to find the line where the error occurred.
+    while (std::getline(file, curr_line)) {
         if (count == line) {
-            std::cerr << "\033[1;31merror: \033[0m" << heading << "::" << line << ":" << column - yyleng << ": " << error_line << "\n\n";
+            // Print error in a C/C++ style error message format.
+            std::cerr << "\033[1;31merror: \033[0m" 
+                      << errorType << "::" 
+                      << line << ":" << (column - yyleng) 
+                      << ": " << error_line << "\n\n";
             std::cerr << line << " | " << curr_line << "\n";
             std::cerr << std::string(column - yyleng + 4, ' ') << "^\n";
             break;
