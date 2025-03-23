@@ -43,6 +43,7 @@ struct Data
 void beginAST(const std::string &inputFile);
 void endAST();
 void insertAttr(std::vector<Data> &v, Node *node, const std::string &str, bool isNode);
-Node *createASTNode(const std::string &str, std::vector<Data> *v = nullptr);
+std::vector<Data> *mergeAttrs(Node *node1, Node *node2=nullptr, Node *node3 = nullptr, Node *node4 = nullptr);
+Node *getNode(const std::string &str, std::vector<Data> *v = nullptr);
 
 #endif
