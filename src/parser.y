@@ -1412,7 +1412,7 @@ IF_CODE
 N
     : %empty {
         int a = getCurrentSize();
-		$$ = getNode("Empty");
+		$$ = new Node;
         emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
         $$->nextlist.push_back(a);
     }
