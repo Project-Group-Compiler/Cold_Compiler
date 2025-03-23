@@ -88,14 +88,14 @@ primary_expression
 			$$->temp_name = entry->token;
 			$$->nextlist.clear();
             if(entry->data_type == "Procedure") {
-                $$->place = qid("CALL " + std::string($1), entry);
+                $$->place = "CALL " + std::string($1);
             } 
             else {
-                $$->place = qid(std::string($1), entry);
+                $$->place = std::string($1);
             }
         } 
         else {
-            $$->place = qid("UNKNOWN", nullptr);
+            $$->place = "UNKNOWN";
         }
     }
     | CONSTANT {
@@ -107,9 +107,9 @@ primary_expression
 			$$->type = entry->data_type;
 			$$->temp_name = entry->token;
 			$$->nextlist.clear();
-			$$->place = qid(entry->token, entry);
+			$$->place = entry->token;
 		}else {
-            $$->place = qid("UNKNOWN", nullptr);
+            $$->place = "UNKNOWN";
         }
     }
     | STRING_LITERAL {
@@ -122,9 +122,9 @@ primary_expression
 			$$->type = entry->data_type;
 			$$->temp_name = entry->token;
 			$$->nextlist.clear();
-			$$->place = qid(entry->token, entry);
+			$$->place = entry->token;
 		}else {
-            $$->place = qid("UNKNOWN", nullptr);
+            $$->place = "UNKNOWN";
         }
     }
     | '(' expression ')' {
@@ -142,71 +142,71 @@ postfix_expression
         //3AC
 		$$->type = $1->type;
 		$$->temp_name = $1->temp_name;
-		qid temp_var = getTempVariable($$->type);
+		std::string temp_var = getTempVariable($$->type);
 		$$->place = temp_var;
 		$$->nextlist.clear();
-		emit(qid("[ ]", NULL), $1->place, $3->place, temp_var, -1);
+		emit("[ ]", $1->place, $3->place, temp_var, -1);
     }
     | postfix_expression '(' ')' {
         $$ = $1;
 
         //3AC
 		// Todo -> $$->type
-		qid q = getTempVariable($1->type);
+		std::string q = getTempVariable($1->type);
 		$$->place = q;
 		$$->temp_name = $1->temp_name;
 		$$->nextlist.clear();
-		emit(qid("CALL", NULL), qid($$->temp_name, NULL), qid("0", NULL), q, -1);
+		emit("CALL", $$->temp_name, "0", q, -1);
     }
     | postfix_expression '(' argument_expression_list ')' {
 		$$ = getNode("postfix_expression", mergeAttrs($1, $3));
 
         //3AC
 		// Todo -> $$->type
-		qid q = getTempVariable($1->type);
+		std::string q = getTempVariable($1->type);
 		$$->place = q;
 		$$->temp_name = $1->temp_name;
 		$$->nextlist.clear();
-		emit(qid("CALL", NULL), qid($$->temp_name, NULL), qid(std::to_string($3->argCount), NULL), q, -1);
+		emit("CALL", $$->temp_name, std::to_string($3->argCount), q, -1);
     }
     | postfix_expression '.' IDENTIFIER { //p.x
         $$ = getNode("expression.id", mergeAttrs($1, getNode($3)));
 
         //3AC
 		// Todo -> $$->type
-        qid temp_var = getTempVariable($$->type);
+        std::string temp_var = getTempVariable($$->type);
         $$->place = temp_var;
 		// $$->nextlist.clear();
-        emit(qid("member_access", NULL), $1->place, qid(std::string($3), lookup($3)), temp_var, -1);
+        emit("member_access", $1->place, std::string($3), temp_var, -1);
     }
     | postfix_expression PTR_OP IDENTIFIER {
         $$ = getNode($2, mergeAttrs($1, getNode($3)));
 
         //3AC
 		// Todo $$ -> type
-		qid temp_var = getTempVariable($$->type);
-		emit(qid("PTR_OP", NULL), $1->place, qid(std::string($3), lookup($3)), temp_var, -1);
+		std::string temp_var = getTempVariable($$->type);
+		emit("PTR_OP", $1->place, std::string($3), temp_var, -1);
 		$$->place = temp_var;
     }
     | postfix_expression INC_OP {
         $$ = getNode($2, mergeAttrs($1, nullptr));
 
         //3AC
-        qid q = getTempVariable($1->type);
+        std::string q = getTempVariable($1->type);
         $$->place = q;
 		$$->type = $1->type;
 		$$->nextlist.clear();
-        emit(qid("S++", NULL), $1->place, qid("", NULL), q, -1);
+        emit("S++", $1->place, "", q, -1);
     }
     | postfix_expression DEC_OP {
         $$ = getNode($2, mergeAttrs($1, nullptr));
 
         //3AC
-        qid q = getTempVariable($1->type);
+        std::string q = getTempVariable($1->type);
         $$->place = q;
 		$$->type = $1->type;
 		$$->nextlist.clear();
-        emit(qid("S--", NULL), $1->place, qid("", NULL), q, -1);
+        emit("S--", $1->place, "", q, -1);
     }
 ;
 
@@ -218,7 +218,7 @@ argument_expression_list
         //3AC
         $$->argCount = 1;
 		$$->nextlist.clear();
-        emit(qid("param", NULL), $$->place, qid("", NULL), qid("", NULL), -1);
+        emit("param", $$->place, "", "", -1);
     }
     | argument_expression_list ',' assignment_expression {
         $$ = getNode("argument_list", mergeAttrs($1, $3));
@@ -226,7 +226,7 @@ argument_expression_list
         //3AC
 		$$->nextlist.clear();
         $$->argCount = $1->argCount + 1;
-        int Label = emit(qid("param", NULL), $3->place, qid("", NULL), qid("", NULL), -1);
+        int Label = emit("param", $3->place, "", "", -1);
 		backpatch($1->nextlist, Label);
     }
 ;
@@ -239,54 +239,54 @@ unary_expression
         $$ = getNode($1, mergeAttrs($2, nullptr));
 
         //3AC
-        qid q = getTempVariable($2->type);
+        std::string q = getTempVariable($2->type);
         $$->place = q;
 		$$->type = $2->type;
         $$->nextlist.clear();
-        emit(qid("++P", NULL), $2->place, qid("", NULL), q, -1);
+        emit("++P", $2->place, "", q, -1);
     }
     | DEC_OP unary_expression {
         $$ = getNode($1, mergeAttrs($2, nullptr));
 
         //3AC
-        qid q = getTempVariable($2->type);
+        std::string q = getTempVariable($2->type);
         $$->place = q;
 		$$->type = $2->type;
         $$->nextlist.clear();
-        emit(qid("--P", NULL), $2->place, qid("", NULL), q, -1);
+        emit("--P", $2->place, "", q, -1);
     }
     | unary_operator cast_expression {
         $$ = getNode("unary_exp", mergeAttrs($1, $2));
 
         //3AC
-        qid q = getTempVariable($2->type);
+        std::string q = getTempVariable($2->type);
 		$$->place = q;
 		$$->type = $2->type; //Todo not always
 		$$->temp_name = $2->temp_name;
         $$->place = q;
         $$->nextlist.clear();
-        emit($1->place, $2->place, qid("", NULL), q, -1);
+        emit($1->place, $2->place, "", q, -1);
     }
     | SIZEOF unary_expression {
         $$ = getNode($1, mergeAttrs($2, nullptr));
 
         //3AC
-        qid q = getTempVariable("int");
+        std::string q = getTempVariable("int");
 		$$->type = "int";
         $$->place = q;
         $$->nextlist.clear();
-        emit(qid("SIZEOF", NULL), $2->place, qid("", NULL), q, -1);
+        emit("SIZEOF", $2->place, "", q, -1);
     }
     | SIZEOF '(' type_name ')' {
         $$ = getNode($1, mergeAttrs($3, nullptr));
 
         //3AC
-        qid q = getTempVariable("int");
+        std::string q = getTempVariable("int");
         $$->place = q;
 		$$->type = "int";
         $$->nextlist.clear();
 
-        emit(qid("SIZEOF", NULL), $3->place, qid("", NULL), q, -1);
+        emit("SIZEOF", $3->place, "", q, -1);
     }
 ;
 
@@ -295,37 +295,37 @@ unary_operator
         $$ = getNode("&");
 
         //3AC
-        $$->place = qid("unary&", lookup("&"));
+        $$->place = "unary&";
     }
     | '*' {
         $$ = getNode("*");
 
         //3AC
-        $$->place = qid("unary*", lookup("*"));
+        $$->place = "unary*";
     }
     | '+' {
         $$ = getNode("+");
 
         //3AC
-        $$->place = qid("unary+", lookup("+"));
+        $$->place = "unary+";
     }
     | '-' {
         $$ = getNode("-");
 
         //3AC
-        $$->place = qid("unary-", lookup("-"));
+        $$->place = "unary-";
     }
     | '~' {
         $$ = getNode("~");
 
         //3AC
-        $$->place = qid("~", lookup("~"));
+        $$->place = "~";
     }
     | '!' {
         $$ = getNode("!");
 
         //3AC
-        $$->place = qid("!", lookup("!"));
+        $$->place = "!";
     }
 ;
 
@@ -337,12 +337,12 @@ cast_expression
         $$ = getNode("cast_expression", mergeAttrs($2, $4));
 
         //3AC
-        qid q = getTempVariable($2->type);
+        std::string q = getTempVariable($2->type);
         $$->place = q;
 		$$->type = $2->type;
 		$4->nextlist.clear();
 		//TODO: Try to do CAST_typename
-        emit(qid("CAST", NULL), $4->place, qid("", NULL), q, -1);
+        emit("CAST", $4->place, "", q, -1);
     }
 ;
 
@@ -354,31 +354,31 @@ multiplicative_expression
         $$ = getNode("*", mergeAttrs($1, $3));
 
         //3AC
-        qid q = getTempVariable("int"); //TODO not always int
+        std::string q = getTempVariable("int"); //TODO not always int
 		$$->type = "int"; //TODO not always int
         $$->place = q;
         $$->nextlist.clear();
-        emit(qid("*", NULL), $1->place, $3->place, q, -1);
+        emit("*", $1->place, $3->place, q, -1);
     }
     | multiplicative_expression '/' cast_expression {
         $$ = getNode("/", mergeAttrs($1, $3));
 
         //3AC
-        qid q = getTempVariable("int"); //TODO not always int
+        std::string q = getTempVariable("int"); //TODO not always int
 		$$->type = "int"; //TODO not always int
         $$->place = q;
         $$->nextlist.clear();
-        emit(qid("/", NULL), $1->place, $3->place, q, -1);
+        emit("/", $1->place, $3->place, q, -1);
     }
     | multiplicative_expression '%' cast_expression {
         $$ = getNode("%", mergeAttrs($1, $3));
 
         //3AC
-        qid q = getTempVariable("int"); //TODO not always int
+        std::string q = getTempVariable("int"); //TODO not always int
 		$$->type = "int"; //TODO not always int
         $$->place = q;
         $$->nextlist.clear();
-        emit(qid("%", NULL), $1->place, $3->place, q, -1);
+        emit("%", $1->place, $3->place, q, -1);
     }
 ;
 
@@ -391,23 +391,23 @@ additive_expression
         $$ = getNode("+", mergeAttrs($1, $3));
 
         //3AC
-        qid q = getTempVariable("int");//TODO not always int
+        std::string q = getTempVariable("int");//TODO not always int
 		$$->type = "int"; // TODO not always int
         $$->place = q;
         $$->nextlist.clear();
 
-        emit(qid("+", NULL), $1->place, $3->place, q, -1);
+        emit("+", $1->place, $3->place, q, -1);
     }
     | additive_expression '-' multiplicative_expression {
         $$ = getNode("-", mergeAttrs($1, $3));
 
         //3AC
-        qid q = getTempVariable("int");//TODO not always int
+        std::string q = getTempVariable("int");//TODO not always int
 		$$->type = "int"; // TODO not always int
         $$->place = q;
         $$->nextlist.clear();
 
-        emit(qid("-", NULL), $1->place, $3->place, q, -1);
+        emit("-", $1->place, $3->place, q, -1);
     }
 ;
 
@@ -420,23 +420,23 @@ shift_expression
         $$ = getNode($2, mergeAttrs($1, $3));
 
         //3AC
-        qid q = getTempVariable("int");//TODO not always int
+        std::string q = getTempVariable("int");//TODO not always int
 		$$->type = "int"; 
         $$->place = q;
         $$->nextlist.clear();
 
-        emit(qid("<<", NULL), $1->place, $3->place, q, -1);
+        emit("<<", $1->place, $3->place, q, -1);
     }
     | shift_expression RIGHT_OP additive_expression {
         $$ = getNode($2, mergeAttrs($1, $3));
 
         //3AC
-        qid q = getTempVariable("int");//TODO not always int
+        std::string q = getTempVariable("int");//TODO not always int
 		$$->type = "int"; 
         $$->place = q;
         $$->nextlist.clear();
 
-        emit(qid(">>", NULL), $1->place, $3->place, q, -1);
+        emit(">>", $1->place, $3->place, q, -1);
     }
 ;
 
@@ -448,8 +448,8 @@ relational_expression
         $$ = getNode("<", mergeAttrs($1, $3));
 		// TODO : Can do constant folding if both $1 and $2 are constant
         // 3AC 
-        qid q = getTempVariable("int");
-        emit(qid("<", NULL), $1->place, $3->place, q, -1);
+        std::string q = getTempVariable("int");
+        emit("<", $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
@@ -457,8 +457,8 @@ relational_expression
         $$ = getNode(">", mergeAttrs($1, $3));
 
         // 3AC
-        qid q = getTempVariable("int");
-        emit(qid(">", NULL), $1->place, $3->place, q, -1);
+        std::string q = getTempVariable("int");
+        emit(">", $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
@@ -466,8 +466,8 @@ relational_expression
         $$ = getNode("<=", mergeAttrs($1, $3));
 
         // 3AC
-        qid q = getTempVariable("int");
-        emit(qid("<=", NULL), $1->place, $3->place, q, -1);
+        std::string q = getTempVariable("int");
+        emit("<=", $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
@@ -475,8 +475,8 @@ relational_expression
         $$ = getNode(">=", mergeAttrs($1, $3));
 
         // 3AC
-        qid q = getTempVariable("int");
-        emit(qid(">=", NULL), $1->place, $3->place, q, -1);
+        std::string q = getTempVariable("int");
+        emit(">=", $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
@@ -493,8 +493,8 @@ equality_expression
         //3AC
 		//TODO : No need to emit if $1 and $3 are constant. Directly store value
 
-        qid q = getTempVariable("int");
-        emit(qid("==", NULL), $1->place, $3->place, q, -1);
+        std::string q = getTempVariable("int");
+        emit("==", $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
@@ -502,8 +502,8 @@ equality_expression
         $$ = getNode($2, mergeAttrs($1, $3));
 
         //3AC
-        qid q = getTempVariable("int");
-        emit(qid("!=", NULL), $1->place, $3->place, q, -1);
+        std::string q = getTempVariable("int");
+        emit("!=", $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
@@ -518,8 +518,8 @@ and_expression
 
         // 3AC
 		//TODO : No need to emit if $1 and $3 are constant
-        qid q = getTempVariable("int");
-        emit(qid("&", NULL), $1->place, $3->place, q, -1);
+        std::string q = getTempVariable("int");
+        emit("&", $1->place, $3->place, q, -1);
         $$->place = q;
     }
     ;
@@ -534,8 +534,8 @@ exclusive_or_expression
         $$ = getNode("^", mergeAttrs($1, $3));
 
         // -3AC ---
-        qid temp = getTempVariable("int");  
-        emit(qid("^", NULL), $1->place, $3->place, temp, -1);
+        std::string temp = getTempVariable("int");  
+        emit("^", $1->place, $3->place, temp, -1);
         $$->place = temp;
 
         $$->nextlist.clear();
@@ -551,8 +551,8 @@ inclusive_or_expression
         $$ = getNode("|", mergeAttrs($1, $3));
 
         // -3AC ---
-        qid temp = getTempVariable("int"); 
-        emit(qid("|", NULL), $1->place, $3->place, temp, -1);
+        std::string temp = getTempVariable("int"); 
+        emit("|", $1->place, $3->place, temp, -1);
         $$->place = temp;
 
         $$->nextlist.clear();
@@ -569,13 +569,13 @@ logical_and_expression
 		//if($3->truelist.empty() && if_found);
 		if(if_found){//TODO : TEST When if is implemented
 			backpatch($3->nextlist, getCurrentSize());
-			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+			int label = emit("GOTO", "IF", $3->place, "", 0);
 			$3->truelist.push_back(label);
-			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			label = emit("GOTO", "", "", "", 0);
 			$3->falselist.push_back(label);
 		}else{
-			qid q = getTempVariable("int");
-			emit(qid("&&", NULL), $1->place, $3->place, q, -1);
+			std::string q = getTempVariable("int");
+			emit("&&", $1->place, $3->place, q, -1);
 			$$->place = q;
 		}
 
@@ -597,9 +597,9 @@ GOTO_AND
 		// if ($1->truelist.empty() && if_found) {
 		if(if_found){ // TODO : TEST When if is implemented
 			backpatch($1->nextlist, getCurrentSize());
-			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+			int label = emit("GOTO", "IF", $1->place, "", 0);
 			$1->truelist.push_back(label);
-			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			label = emit("GOTO", "", "", "", 0);
 			$1->falselist.push_back(label);
 		}
 	}
@@ -613,13 +613,13 @@ logical_or_expression
 		// 3AC
 		if(if_found) {
 			backpatch($3->nextlist, getCurrentSize());
-			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $3->place, qid("", NULL), 0);
+			int label = emit("GOTO", "IF", $3->place, "", 0);
 			$3->truelist.push_back(label);
-			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			label = emit("GOTO", "", "", "", 0);
 			$3->falselist.push_back(label);
 		} else {
-			qid q = getTempVariable("int");
-			emit(qid("||", NULL), $1->place, $3->place, q, -1);
+			std::string q = getTempVariable("int");
+			emit("||", $1->place, $3->place, q, -1);
 			$$->place = q;
 		}
 
@@ -635,9 +635,9 @@ GOTO_OR
 
 		if(if_found) {
 			backpatch($1->nextlist, getCurrentSize());
-			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+			int label = emit("GOTO", "IF", $1->place, "", 0);
 			$1->truelist.push_back(label);
-			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			label = emit("GOTO", "", "", "", 0);
 			$1->falselist.push_back(label);
 		}
 	}
@@ -656,7 +656,7 @@ conditional_expression
 		$$ = getNode("ternary operator", mergeAttrs($1, $3, $7));
 
 		// 3AC
-		qid temp1 = getTempVariable("int");
+		std::string temp1 = getTempVariable("int");
 
 		backpatch($1->truelist, $2);
 		backpatch($1->falselist, $6);
@@ -671,7 +671,7 @@ conditional_expression
 		backpatch($7->falselist, getCurrentSize());
 		backpatch($7->truelist, getCurrentSize());
 
-		emit(qid("=", NULL), $7->place, qid("", NULL), temp1, -1);
+		emit("=", $7->place, "", temp1, -1);
 		$$->nextlist.push_back($4);
 		$$->place = temp1;
 	}
@@ -686,9 +686,9 @@ GOTO_COND
 		// 3AC
 		if ($1->truelist.empty()) {
 			backpatch($1->nextlist, getCurrentSize());
-			int label = emit(qid("GOTO", NULL), qid("IF", lookup("if")), $1->place, qid("", NULL), 0);
+			int label = emit("GOTO", "IF", $1->place, "", 0);
 			$1->truelist.push_back(label);
-			label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+			label = emit("GOTO", "", "", "", 0);
 			$1->falselist.push_back(label);
 		}
 	}
@@ -697,8 +697,8 @@ GOTO_COND
 WRITE_GOTO
 	: %empty {
 		// 3AC
-		emit(qid("=", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
-		int label = emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+		emit("=", "", "", "", -1);
+		int label = emit("GOTO", "", "", "", 0);
 		$$ = label;
 	}
 	;
@@ -1016,11 +1016,11 @@ type_qualifier
 declarator
 	: pointer direct_declarator {
 		$$ = getNode("declarator", mergeAttrs($1, $2));
-		$$->place = qid($$->temp_name, NULL);
+		$$->place = $$->temp_name;
 	}
 	| direct_declarator {
 		$$ = $1;
-		$$->place = qid($$->temp_name, NULL);
+		$$->place = $$->temp_name;
 	}
 	;
 
@@ -1040,7 +1040,7 @@ direct_declarator
 
 		//3AC
 		$$->temp_name = $1;
-		$$->place = qid($$->temp_name, NULL);
+		$$->place = $$->temp_name;
 	}
 	| CONSTANT IDENTIFIER {
 		yyerror("syntax error, invalid identifier");
@@ -1050,7 +1050,7 @@ direct_declarator
 		$$ = $2 ;
 
 		//3AC
-		$$->place = qid($$->temp_name, NULL);
+		$$->place = $$->temp_name;
 		
 	}
 	| direct_declarator '[' constant_expression ']'{
@@ -1061,7 +1061,7 @@ direct_declarator
 
 		//3AC
 		$$->temp_name = $1->temp_name;
-		$$->place = qid($$->temp_name, NULL);
+		$$->place = $$->temp_name;
 	}
 	| direct_declarator '[' ']'{
 		std::vector<Data> attr;
@@ -1072,7 +1072,7 @@ direct_declarator
 		updateLastSymbolEntry();
 		//3AC
 		$$->temp_name = $1->temp_name;
-		$$->place = qid($$->temp_name, NULL);
+		$$->place = $$->temp_name;
 	}
 	| direct_declarator '(' A parameter_type_list ')' NEXT_QUAD {
 		Node *node = getNode("( )", mergeAttrs($4));
@@ -1082,9 +1082,9 @@ direct_declarator
 		noArgs=0;
 		//3 AC
 		$$->temp_name = $1->temp_name;
-        $$->place =qid($$->temp_name, NULL);
+        $$->place =$$->temp_name;
 		backpatch($4->nextlist,$6);
-        emit(qid("FUNC_" + $$->temp_name + " start :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+        emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
 
 	}
 	| direct_declarator '(' A identifier_list ')'{
@@ -1093,8 +1093,8 @@ direct_declarator
 
 		//3 AC
 		$$->temp_name = $1->temp_name;
-        $$->place =qid($$->temp_name, NULL);
-        emit(qid("FUNC_" + $$->temp_name + " start :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+        $$->place =$$->temp_name;
+        emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
 
 	}
 	| direct_declarator '(' A ')'{
@@ -1106,8 +1106,8 @@ direct_declarator
 
 		//3 AC
 		$$->temp_name = $1->temp_name;
-        $$->place =qid($$->temp_name, NULL);
-        emit(qid("FUNC_" + $$->temp_name + " start :", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -2);
+        $$->place =$$->temp_name;
+        emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
 
 	}
 	;
@@ -1322,13 +1322,13 @@ labeled_statement
 CASE_CODE
 	: CASE constant_expression ':' {
         $$ = $2;
-		qid t = getTempVariable($$->type);
+		std::string t = getTempVariable($$->type);
 		int a = getCurrentSize();
-		emit(qid("==", NULL), qid("", NULL), $2->place, t, -1);
+		emit("==", "", $2->place, t, -1);
 		int b = getCurrentSize();
-		emit(qid("GOTO", NULL), qid("IF", lookup("if")), t, qid("", NULL), 0);
+		emit("GOTO", "IF", t, "", 0);
 		int c = getCurrentSize();
-		emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+		emit("GOTO", "", "", "", 0);
 		$$->caselist.push_back(a);
 		$$->truelist.push_back(b);
 		$$->falselist.push_back(c);
@@ -1398,9 +1398,9 @@ IF_CODE
         if($4->truelist.empty() && $4->falselist.empty()) {
             int a = getCurrentSize();
 			backpatch($4->nextlist, a);
-            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $4->place, qid("", NULL ),0);
+            emit("GOTO","IF", $4->place, "",0);
             int b = getCurrentSize();
-            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            emit("GOTO","", "", "",0);
             $4->truelist.push_back(a);
             $4->falselist.push_back(b);
         }
@@ -1413,7 +1413,7 @@ N
     : %empty {
         int a = getCurrentSize();
 		$$ = new Node;
-        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        emit("GOTO", "", "", "", 0);
         $$->nextlist.push_back(a);
     }
     ;
@@ -1461,9 +1461,9 @@ EXPR_CODE
         if($2->truelist.empty() && $2->falselist.empty()) {
             int a = getCurrentSize();
 			backpatch($2->nextlist, a);
-            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
+            emit("GOTO","IF", $2->place, "",0);
             int b = getCurrentSize();
-            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            emit("GOTO","", "", "",0);
             $2->truelist.push_back(a);
             $2->falselist.push_back(b);
         }
@@ -1477,9 +1477,9 @@ EXPR_STMT_CODE
 		if($2->truelist.empty() && $2->falselist.empty()) {
             int a = getCurrentSize();
 			backpatch($2->nextlist, a);
-            emit(qid("GOTO", NULL),qid("IF", lookup("if")), $2->place, qid("", NULL ),0);
+            emit("GOTO","IF", $2->place, "",0);
             int b = getCurrentSize();
-            emit(qid("GOTO", NULL),qid("", NULL), qid("", NULL), qid("", NULL ),0);
+            emit("GOTO","", "", "",0);
             $2->truelist.push_back(a);
             $2->falselist.push_back(b);
         }
@@ -1499,7 +1499,7 @@ iteration_statement
         $$->nextlist = $4->falselist;
         $$->nextlist.insert($$->nextlist.end(), $7->breaklist.begin(), $7->breaklist.end());
 
-        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $3);
+        emit("GOTO", "", "", "", $3);
     }
 	| UNTIL '(' expression ')' statement { /*** Added UNTIL grammar ***/
 		$$ = getNode("until-loop", mergeAttrs($3, $5));
@@ -1526,7 +1526,7 @@ iteration_statement
         $8->nextlist.insert($8->nextlist.end(), $8->continuelist.begin(), $8->continuelist.end());
         backpatch($8->nextlist, $4);
 
-        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $4);
+        emit("GOTO", "", "", "", $4);
     }
     | FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement {
         $$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
@@ -1543,7 +1543,7 @@ iteration_statement
         $7->nextlist.insert($7->nextlist.end(), $8->nextlist.begin(), $8->nextlist.end());
         backpatch($7->nextlist, $4);
 
-        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), $6);
+        emit("GOTO", "", "", "", $6);
     }
     ;
 
@@ -1552,33 +1552,33 @@ jump_statement
 		$$ = getNode(std::string($1) + " : " + std::string($2));
 
 		int a = getCurrentSize();
-        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        emit("GOTO", "", "", "", 0);
         gotolablelist[$2].push_back(a);
 	}
 	| CONTINUE ';'	{
 		$$ = getNode($1);
 
 		int a = getCurrentSize();
-        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        emit("GOTO", "", "", "", 0);
         $$->continuelist.push_back(a);
 	}
 	| BREAK ';'		{
 		$$ = getNode($1);
 
 		int a = getCurrentSize();
-        emit(qid("GOTO", NULL), qid("", NULL), qid("", NULL), qid("", NULL), 0);
+        emit("GOTO", "", "", "", 0);
         $$->breaklist.push_back(a);
 	}
 	| RETURN ';'	{
 		$$ = getNode($1);
 
-		emit(qid("RETURN", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+		emit("RETURN", "", "", "", -1);
 	}
 	| RETURN expression ';'	{
 		$$ = getNode("jump_stmt", mergeAttrs(getNode($1), $2));
 
 		backpatch($2->nextlist,getCurrentSize());
-        emit(qid("RETURN", NULL), $2->place, qid("", NULL), qid("", NULL), -1);
+        emit("RETURN", $2->place, "", "", -1);
 	}
 	;
 
@@ -1624,7 +1624,7 @@ function_definition
 			backpatch(i.second, gotolabel[i.first]);
 		}
 
-        emit(qid("FUNC_" + fName + " end", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        emit("FUNC_" + fName + " end", "", "", "", -1);
         remainingBackpatch();
     }
 
@@ -1637,7 +1637,7 @@ function_definition
 			backpatch(i.second, gotolabel[i.first]);
 		}
 
-        emit(qid("FUNC_" + fName + " end", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        emit("FUNC_" + fName + " end", "", "", "", -1);
         remainingBackpatch();
     }
 
@@ -1650,7 +1650,7 @@ function_definition
 			backpatch(i.second, gotolabel[i.first]);
 		}
 
-        emit(qid("FUNC_" + fName + " end", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        emit("FUNC_" + fName + " end", "", "", "", -1);
         remainingBackpatch();
     }
 
@@ -1662,7 +1662,7 @@ function_definition
         }
 
         std::string fName = $1->temp_name;
-        emit(qid("FUNC_" + fName + " end", NULL), qid("", NULL), qid("", NULL), qid("", NULL), -1);
+        emit("FUNC_" + fName + " end", "", "", "", -1);
         remainingBackpatch();
     };
 %%

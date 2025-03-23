@@ -30,7 +30,7 @@ void compute_basic_blocks()
     std::vector<quad> block;
     for (auto &instr : tac_code)
     {
-        const std::string &curr_op = instr.op.first;
+        const std::string &curr_op = instr.op;
         if (curr_op.back() == ':')
         {
             if ((curr_op.substr(0, 5) == "FUNC_" && curr_op.substr(curr_op.length() - 3) == "end"))
@@ -118,13 +118,13 @@ void build_cfg()
         const auto &block = basic_blocks[i];
         if (block.empty())
             continue;
-        const std::string &last_op = block.back().op.first;
+        const std::string &last_op = block.back().op;
         if (last_op == "GOTO")
         {
             int target_block = leader_block_map[block.back().gotoLabel];
             adj[i].push_back(target_block);
             rev_adj[target_block].push_back(i);
-            if (block.back().arg1.first == "IF")
+            if (block.back().arg1 == "IF")
             {
                 if (i + 1 < basic_blocks.size() && i + 1 != target_block)
                 {
@@ -201,14 +201,14 @@ void constant_folding()
     for (quad &instr : tac_code)
     {
         bool add_instr = true;
-        std::string &curr_op = instr.op.first;
+        std::string &curr_op = instr.op;
         // if (curr_op.length() > 3 && curr_op.substr(1) == "int")
         if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
         {
-            if (is_int_constant(instr.arg1.first) && is_int_constant(instr.arg2.first))
+            if (is_int_constant(instr.arg1) && is_int_constant(instr.arg2))
             {
-                int arg1 = std::stoi(instr.arg1.first);
-                int arg2 = std::stoi(instr.arg2.first);
+                int arg1 = std::stoi(instr.arg1);
+                int arg2 = std::stoi(instr.arg2);
                 if (curr_op[0] == '+')
                     arg1 = arg1 + arg2;
                 else if (curr_op[0] == '-')
@@ -220,15 +220,15 @@ void constant_folding()
                 else if (curr_op[0] == '%')
                     arg1 = arg1 % arg2;
                 curr_op = "=";
-                instr.arg1.first = std::to_string(arg1);
-                instr.arg2.first = "";
+                instr.arg1 = std::to_string(arg1);
+                instr.arg2 = "";
             }
         }
         else if (curr_op.substr(0, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op == "!" || curr_op == "~" || curr_op == "unary-" || curr_op == "unary+")
         {
-            if (is_int_constant(instr.arg1.first))
+            if (is_int_constant(instr.arg1))
             {
-                int arg1 = std::stoi(instr.arg1.first);
+                int arg1 = std::stoi(instr.arg1);
                 if (curr_op.substr(0, 2) == "++")
                     arg1++;
                 else if (curr_op.substr(0, 2) == "--")
@@ -242,15 +242,15 @@ void constant_folding()
                 else if (curr_op == "unary+")
                     arg1 = +arg1;
                 curr_op = "=";
-                instr.arg1.first = std::to_string(arg1);
+                instr.arg1 = std::to_string(arg1);
             }
         }
         else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^")
         {
-            if (is_int_constant(instr.arg1.first) && is_int_constant(instr.arg2.first))
+            if (is_int_constant(instr.arg1) && is_int_constant(instr.arg2))
             {
-                int arg1 = std::stoi(instr.arg1.first);
-                int arg2 = std::stoi(instr.arg2.first);
+                int arg1 = std::stoi(instr.arg1);
+                int arg2 = std::stoi(instr.arg2);
                 if (curr_op == "==")
                     arg1 = arg1 == arg2;
                 else if (curr_op == "!=")
@@ -278,21 +278,21 @@ void constant_folding()
                 else if (curr_op == "^")
                     arg1 = arg1 ^ arg2;
                 curr_op = "=";
-                instr.arg1.first = std::to_string(arg1);
-                instr.arg2.first = "";
+                instr.arg1 = std::to_string(arg1);
+                instr.arg2 = "";
             }
         }
         // computing conditional jumps
-        else if (curr_op == "GOTO" && instr.arg1.first == "IF")
+        else if (curr_op == "GOTO" && instr.arg1 == "IF")
         {
-            if (is_int_constant(instr.arg2.first))
+            if (is_int_constant(instr.arg2))
             {
-                if (std::stoi(instr.arg2.first) == 0)
+                if (std::stoi(instr.arg2) == 0)
                     add_instr = false;
                 else
                 {
-                    instr.arg1.first = "";
-                    instr.arg2.first = "";
+                    instr.arg1 = "";
+                    instr.arg2 = "";
                 }
             }
         }
@@ -352,7 +352,7 @@ void dead_code_elimination()
     for (auto i = 0; i < basic_blocks.size() - 1; i++)
     {
         auto &block = basic_blocks[i];
-        const std::string &last_op = block.back().op.first;
+        const std::string &last_op = block.back().op;
         if (last_op == "GOTO")
         {
             bool keep_jump = false;
@@ -376,7 +376,7 @@ void dead_code_elimination()
     for (auto i = 1; i < basic_blocks.size(); i++)
     {
         const auto &block = basic_blocks[i];
-        if (block[0].op.first.back() == ':' && block[0].op.first.substr(0, 5) != "FUNC_")
+        if (block[0].op.back() == ':' && block[0].op.substr(0, 5) != "FUNC_")
         {
             bool keep_label = false;
             for (auto &x : rev_adj[i])

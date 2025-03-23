@@ -6,7 +6,6 @@
 #include <string>
 #include <cstdio>
 #include "data_structures.hpp"
-typedef std::pair<std::string, SymbolTableEntry*> qid;
 
 struct Node
 {
@@ -21,7 +20,7 @@ struct Node
 	std::string type;
 	int expType = 0;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  
     bool is_error = false;
-    qid place;
+    std::string place;
     std::string temp_name;
     std::vector<int> truelist;
     std::vector<int> falselist;
