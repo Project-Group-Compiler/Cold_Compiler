@@ -32,10 +32,6 @@ int main()
         default:
             printf("Not a valid operator\n");
     }
-<<<<<<< HEAD:tests/parser/test1.cold
     
-=======
-
->>>>>>> roopam:tests/parser/basic2.cold
     return 0;
 }

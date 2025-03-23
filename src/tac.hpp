@@ -26,7 +26,7 @@ void run_optimisations();
 std::string getTempVariable(std::string);
 void print_tac_code(const std::string &inputFile);
 int getCurrentSize();
-std::vector<int> mergeList(std::vector<int> &list1, std::vector<int> &list2);
+void extendList(std::vector<int> &list1, std::vector<int> &list2);
 int emit(std::string, std::string, std::string, std::string, int);
 void backpatch(std::vector<int> &, int);
 void casepatch(std::vector<int> &bplist, std::string target);
@@ -57,7 +57,7 @@ inline std::string stringify(const quad &instr)
     else if (curr_op == "=")
         s += instr.result + " = " + instr.arg1;
     else if (fi == '+' || fi == '-' || fi == '*' || fi == '/' || fi == '%')
-        s += instr.result + " = " + instr.arg1 + " " + fi + " " + instr.arg2 + "\t(" + curr_op.substr(1) + ")";
+        s += instr.result + " = " + instr.arg1 + " " + fi + " " + instr.arg2;
     else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "PTR_OP" || curr_op == "member_access")
         s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
     else if (curr_op == "RETURN" || curr_op == "param")

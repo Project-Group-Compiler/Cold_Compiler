@@ -566,49 +566,12 @@ logical_and_expression
 		$$ = getNode("&&", mergeAttrs($1, $3));
 
 		// 3AC
-		//if($3->truelist.empty() && if_found);
-		// if(if_found){//TODO : TEST When if is implemented
-		// 	backpatch($3->nextlist, getCurrentSize());
-		// 	int label = emit("GOTO", "IF", $3->place, "", 0);
-		// 	$3->truelist.push_back(label);
-		// 	label = emit("GOTO", "", "", "", 0);
-		// 	$3->falselist.push_back(label);
-		// }else{
-		// 	std::string q = getTempVariable("int");
-		// 	emit("&&", $1->place, $3->place, q, -1);
-		// 	$$->place = q;
-		// }
-
 		std::string q = getTempVariable("int");
 		emit("&&", $1->place, $3->place, q, -1);
 		$$->place = q;
-
-		// backpatch($1->truelist, $2);
-		// $$->truelist = $3->truelist;
-		// $$->falselist = mergeList($1->falselist, $3->falselist);
-
-		// $$->falselist = $1->falselist;
-		// $$->falselist.insert($$->falselist.end(), 
-		// 	$3->falselist.begin(), $3->falselist.end());
-
+		$$->nextlist.clear();
 	}
 	;
-
-
-// GOTO_AND
-// 	: logical_and_expression AND_OP {
-// 		$$ = $1;
-
-// 		// if ($1->truelist.empty() && if_found) {
-// 		if(if_found){ // TODO : TEST When if is implemented
-// 			backpatch($1->nextlist, getCurrentSize());
-// 			int label = emit("GOTO", "IF", $1->place, "", 0);
-// 			$1->truelist.push_back(label);
-// 			label = emit("GOTO", "", "", "", 0);
-// 			$1->falselist.push_back(label);
-// 		}
-// 	}
-// 	;
 
 logical_or_expression
 	: logical_and_expression { $$ = $1; }
@@ -616,40 +579,12 @@ logical_or_expression
 		$$ = getNode("||", mergeAttrs($1, $3));
 
 		// 3AC
-		// if(if_found) {
-		// 	backpatch($3->nextlist, getCurrentSize());
-		// 	int label = emit("GOTO", "IF", $3->place, "", 0);
-		// 	$3->truelist.push_back(label);
-		// 	label = emit("GOTO", "", "", "", 0);
-		// 	$3->falselist.push_back(label);
-		// } else {
-		// 	std::string q = getTempVariable("int");
-		// 	emit("||", $1->place, $3->place, q, -1);
-		// 	$$->place = q;
-		// }
 		std::string q = getTempVariable("int");
 		emit("||", $1->place, $3->place, q, -1);
 		$$->place = q;
-
-		// backpatch($1->falselist, $2);
-		// $$->truelist = mergeList($1->truelist, $3->truelist);
-		// $$->falselist = $3->falselist;
+		$$->nextlist.clear();
 	}
 	;
-
-// GOTO_OR
-// 	: logical_or_expression OR_OP {
-// 		$$ = $1;
-
-// 		if(if_found) {
-// 			backpatch($1->nextlist, getCurrentSize());
-// 			int label = emit("GOTO", "IF", $1->place, "", 0);
-// 			$1->truelist.push_back(label);
-// 			label = emit("GOTO", "", "", "", 0);
-// 			$1->falselist.push_back(label);
-// 		}
-// 	}
-// 	;
 
 NEXT_QUAD
 	: %empty {
@@ -1306,8 +1241,7 @@ labeled_statement
         $$ = getNode("case", mergeAttrs($1, $3));
 
         backpatch($1->truelist, $2);
-        $3->nextlist.insert($3->nextlist.end(), $1->falselist.begin(), $1->falselist.end());
-
+		extendList($3->nextlist, $1->falselist);
         $$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
         $$->caselist = $1->caselist;
@@ -1378,19 +1312,19 @@ declaration_list
 
 statement_list
 	: statement {
-        $$ = $1;
-    }
+		$$ = $1;
+	}
 	| statement_list NEXT_QUAD statement {
-        $$ = getNode("statement_list", mergeAttrs($1, $3));
+		$$ = getNode("statement_list", mergeAttrs($1, $3));
 
 		backpatch($1->nextlist, $2);
-        $$->nextlist = $3->nextlist;
-		$1->caselist.insert($1->caselist.end(), $3->caselist.begin(), $3->caselist.end());
-        $$->caselist = $1->caselist;
-		$1->continuelist.insert($1->continuelist.end(), $3->continuelist.begin(), $3->continuelist.end());
-		$1->breaklist.insert($1->breaklist.end(), $3->breaklist.begin(), $3->breaklist.end());
-        $$->continuelist = $1->continuelist;
-        $$->breaklist = $1->breaklist;
+		$$->nextlist = $3->nextlist;
+		extendList($1->caselist, $3->caselist);
+		$$->caselist = $1->caselist;
+		extendList($1->continuelist, $3->continuelist);
+		extendList($1->breaklist, $3->breaklist);
+		$$->continuelist = $1->continuelist;
+		$$->breaklist = $1->breaklist;
 	}
 	;
 
@@ -1426,41 +1360,41 @@ N
 
 
 selection_statement
-    : IF_CODE NEXT_QUAD statement {
-        $$ = getNode("if", mergeAttrs($1, $3));
+	: IF_CODE NEXT_QUAD statement {
+		$$ = getNode("if", mergeAttrs($1, $3));
 
-        backpatch($1->truelist, $2);
-        $3->nextlist.insert($3->nextlist.end(), $1->falselist.begin(), $1->falselist.end());
+		backpatch($1->truelist, $2);
+		extendList($3->nextlist, $1->falselist);
 
-        $$->nextlist = $3->nextlist;
-        $$->continuelist = $3->continuelist;
-        $$->breaklist = $3->breaklist;
-    }
-    | IF_CODE NEXT_QUAD statement N ELSE NEXT_QUAD statement {
-        $$ = getNode("if-else", mergeAttrs($1, $3, $7));
+		$$->nextlist = $3->nextlist;
+		$$->continuelist = $3->continuelist;
+		$$->breaklist = $3->breaklist;
+	}
+	| IF_CODE NEXT_QUAD statement N ELSE NEXT_QUAD statement {
+		$$ = getNode("if-else", mergeAttrs($1, $3, $7));
 
-        backpatch($1->truelist, $2);
-        backpatch($1->falselist, $6);
+		backpatch($1->truelist, $2);
+		backpatch($1->falselist, $6);
 
-        $3->nextlist.insert($3->nextlist.end(), $4->nextlist.begin(), $4->nextlist.end());
-        $3->nextlist.insert($3->nextlist.end(), $7->nextlist.begin(), $7->nextlist.end());
-        $$->nextlist = $3->nextlist;
+		extendList($3->nextlist, $4->nextlist);
+		extendList($3->nextlist, $7->nextlist);
+		$$->nextlist = $3->nextlist;
 
-        $3->breaklist.insert($3->breaklist.end(), $7->breaklist.begin(), $7->breaklist.end());
-        $$->breaklist = $3->breaklist;
-        $3->continuelist.insert($3->continuelist.end(), $7->continuelist.begin(), $7->continuelist.end());
-        $$->continuelist = $3->continuelist;
-    }
-    | SWITCH '(' expression ')' statement {
-        $$ = getNode("switch", mergeAttrs($3, $5));
+		extendList($3->breaklist, $7->breaklist);
+		$$->breaklist = $3->breaklist;
+		extendList($3->continuelist, $7->continuelist);
+		$$->continuelist = $3->continuelist;
+	}
+	| SWITCH '(' expression ')' statement {
+		$$ = getNode("switch", mergeAttrs($3, $5));
 
-        casepatch($5->caselist, $3->place);
+		casepatch($5->caselist, $3->place);
 
-        $5->nextlist.insert($5->nextlist.end(), $5->breaklist.begin(), $5->breaklist.end());
-        $$->nextlist = $5->nextlist;
-        $$->continuelist = $5->continuelist;
-    }
-    ;
+		extendList($5->nextlist, $5->breaklist);
+		$$->nextlist = $5->nextlist;
+		$$->continuelist = $5->continuelist;
+	}
+	;
 
 EXPR_CODE
     : {if_found = 1;} expression {
@@ -1499,59 +1433,66 @@ iteration_statement
         $$ = getNode("while-loop", mergeAttrs($4, $7));
 
         backpatch($4->truelist, $6);
-        $7->nextlist.insert($7->nextlist.end(), $7->continuelist.begin(), $7->continuelist.end());
+		extendList($7->nextlist, $7->continuelist);
         backpatch($7->nextlist, $3);
         
         $$->nextlist = $4->falselist;
-        $$->nextlist.insert($$->nextlist.end(), $7->breaklist.begin(), $7->breaklist.end());
-
+		extendList($$->nextlist, $7->breaklist);
         emit("GOTO", "", "", "", $3);
     }
-	| UNTIL '(' expression ')' statement { /*** Added UNTIL grammar ***/
-		$$ = getNode("until-loop", mergeAttrs($3, $5));
+	| UNTIL '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement { /*** Added UNTIL grammar ***/
+		$$ = getNode("until-loop", mergeAttrs($4, $7));
+
+		backpatch($4->falselist, $6);
+		extendList($7->nextlist, $7->continuelist);
+		backpatch($7->nextlist, $3);
+		
+		$$->nextlist = $4->truelist;
+		extendList($$->nextlist, $7->breaklist);
+		emit("GOTO", "", "", "", $3);
 	}
-    | DO NEXT_QUAD statement WHILE '(' NEXT_QUAD EXPR_CODE ')' ';' {
-        $$ = getNode("do-while-loop", mergeAttrs($3, $7));
+	| DO NEXT_QUAD statement WHILE '(' NEXT_QUAD EXPR_CODE ')' ';' {
+		$$ = getNode("do-while-loop", mergeAttrs($3, $7));
 
-        backpatch($7->truelist, $2);
-        $3->nextlist.insert($3->nextlist.end(), $3->continuelist.begin(), $3->continuelist.end());
-        backpatch($3->nextlist, $6);
+		backpatch($7->truelist, $2);
+		extendList($3->nextlist, $3->continuelist);
+		backpatch($3->nextlist, $6);
 
-        $$->nextlist = $7->falselist;
-        $$->nextlist.insert($$->nextlist.end(), $3->breaklist.begin(), $3->breaklist.end());
-    }
-    | FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE ')' NEXT_QUAD statement {
-        $$ = getNode("for-loop(w/o update stmt)", mergeAttrs($3, $5, $8));
+		$$->nextlist = $7->falselist;
+		extendList($$->nextlist, $3->breaklist);
+	}
+	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE ')' NEXT_QUAD statement {
+		$$ = getNode("for-loop(w/o update stmt)", mergeAttrs($3, $5, $8));
 
-        backpatch($3->nextlist, $4);
-        backpatch($5->truelist, $7);
+		backpatch($3->nextlist, $4);
+		backpatch($5->truelist, $7);
 
-        $$->nextlist = $5->falselist;
-        $$->nextlist.insert($$->nextlist.end(), $8->breaklist.begin(), $8->breaklist.end());
+		$$->nextlist = $5->falselist;
+		extendList($$->nextlist, $8->breaklist);
 
-        $8->nextlist.insert($8->nextlist.end(), $8->continuelist.begin(), $8->continuelist.end());
-        backpatch($8->nextlist, $4);
+		extendList($8->nextlist, $8->continuelist);
+		backpatch($8->nextlist, $4);
 
-        emit("GOTO", "", "", "", $4);
-    }
-    | FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement {
-        $$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
+		emit("GOTO", "", "", "", $4);
+	}
+	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement {
+		$$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
 
-        backpatch($3->nextlist, $4);
-        backpatch($5->truelist, $10);
+		backpatch($3->nextlist, $4);
+		backpatch($5->truelist, $10);
 
-        $$->nextlist = $5->falselist;
-        $$->nextlist.insert($$->nextlist.end(), $11->breaklist.begin(), $11->breaklist.end());
+		$$->nextlist = $5->falselist;
+		extendList($$->nextlist, $11->breaklist);
 
-        $11->nextlist.insert($11->nextlist.end(), $11->continuelist.begin(), $11->continuelist.end());
-        backpatch($11->nextlist, $6);
+		extendList($11->nextlist, $11->continuelist);
+		backpatch($11->nextlist, $6);
 
-        $7->nextlist.insert($7->nextlist.end(), $8->nextlist.begin(), $8->nextlist.end());
-        backpatch($7->nextlist, $4);
+		extendList($7->nextlist, $8->nextlist);
+		backpatch($7->nextlist, $4);
 
-        emit("GOTO", "", "", "", $6);
-    }
-    ;
+		emit("GOTO", "", "", "", $6);
+	}
+	;
 
 jump_statement
 	: GOTO IDENTIFIER ';'	{
@@ -1596,13 +1537,13 @@ translation_unit
 		$$ = getNode("program", mergeAttrs($1, $3));
 
 		backpatch($1->nextlist, $2);
-        $$->nextlist = $3->nextlist;
-		$1->caselist.insert($1->caselist.end(), $3->caselist.begin(), $3->caselist.end());
-        $$->caselist = $1->caselist;
-		$1->continuelist.insert($1->continuelist.end(), $3->continuelist.begin(), $3->continuelist.end());
-        $1->breaklist.insert($1->breaklist.end(), $3->breaklist.begin(), $3->breaklist.end());
-        $$->continuelist = $1->continuelist;
-        $$->breaklist = $1->breaklist;
+		$$->nextlist = $3->nextlist;
+		extendList($1->caselist, $3->caselist);
+		$$->caselist = $1->caselist;
+		extendList($1->continuelist, $3->continuelist);
+		extendList($1->breaklist, $3->breaklist);
+		$$->continuelist = $1->continuelist;
+		$$->breaklist = $1->breaklist;
 	}
 	| error ';' {
 		$$ = new Node; yyerrok;

@@ -23,12 +23,10 @@ void setResult(int ind, std::string value)
     tac_code[ind].result = value;
 }
 
-std::vector<int> mergeList(std::vector<int> &list1, std::vector<int> &list2)
+void extendList(std::vector<int> &list1, std::vector<int> &list2)
 {
-    std::vector<int> mrgList = list1;
-    for (auto &it : list2)
-        mrgList.push_back(it);
-    return mrgList;
+    for(auto &it : list2)
+        list1.push_back(it);
 }
 
 int emit(std::string op, std::string arg1, std::string arg2, std::string result, int gotoLabel)
