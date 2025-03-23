@@ -68,19 +68,19 @@
 //     }
 // }
 
-// void Test5(){
-//     int a,b,x,y,z,c;
-//     if ((x && y) && (a && b)) { 
-//         x = 1;
-//     }
-//     if ((x && y) || (a && b)) { 
-//         x = 1;
-//     }
+void Test5(){
+    int a,b,x,y,z,c=10,f = 5;;
+    if ((x && y) && (a && b)) { 
+        x = 1;
+    }
+    if ((x && y) || (a && b)) { 
+        x = 1;
+    }
 
 
-//     x = y + z;
-//     a = 5, b = 10, c = a + b;
-// }
+    x = y + z;
+    a = 5, b = 10, c = a + b;
+}
 
 // void Test5(){
 //     int x = 5;

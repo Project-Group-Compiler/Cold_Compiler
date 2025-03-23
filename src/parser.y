@@ -57,7 +57,7 @@ std::map<std::string, int> gotolabel;
 %start translation_unit
 
 %type<Int> NEXT_QUAD WRITE_GOTO
-%type<ptr> GOTO_AND GOTO_OR GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
+%type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
 %type<ptr> N
 
 %type<ptr> primary_expression postfix_expression argument_expression_list unary_expression unary_operator cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression
@@ -562,86 +562,94 @@ inclusive_or_expression
 //TODO : Define token also
 logical_and_expression
 	: inclusive_or_expression { $$ = $1; }
-	| GOTO_AND NEXT_QUAD inclusive_or_expression {
+	| logical_and_expression AND_OP inclusive_or_expression {
 		$$ = getNode("&&", mergeAttrs($1, $3));
 
 		// 3AC
 		//if($3->truelist.empty() && if_found);
-		if(if_found){//TODO : TEST When if is implemented
-			backpatch($3->nextlist, getCurrentSize());
-			int label = emit("GOTO", "IF", $3->place, "", 0);
-			$3->truelist.push_back(label);
-			label = emit("GOTO", "", "", "", 0);
-			$3->falselist.push_back(label);
-		}else{
-			std::string q = getTempVariable("int");
-			emit("&&", $1->place, $3->place, q, -1);
-			$$->place = q;
-		}
+		// if(if_found){//TODO : TEST When if is implemented
+		// 	backpatch($3->nextlist, getCurrentSize());
+		// 	int label = emit("GOTO", "IF", $3->place, "", 0);
+		// 	$3->truelist.push_back(label);
+		// 	label = emit("GOTO", "", "", "", 0);
+		// 	$3->falselist.push_back(label);
+		// }else{
+		// 	std::string q = getTempVariable("int");
+		// 	emit("&&", $1->place, $3->place, q, -1);
+		// 	$$->place = q;
+		// }
 
-		backpatch($1->truelist, $2);
-		$$->truelist = $3->truelist;
+		std::string q = getTempVariable("int");
+		emit("&&", $1->place, $3->place, q, -1);
+		$$->place = q;
+
+		// backpatch($1->truelist, $2);
+		// $$->truelist = $3->truelist;
+		// $$->falselist = mergeList($1->falselist, $3->falselist);
+
 		// $$->falselist = $1->falselist;
 		// $$->falselist.insert($$->falselist.end(), 
 		// 	$3->falselist.begin(), $3->falselist.end());
 
-		$$->falselist = mergeList($1->falselist, $3->falselist);
 	}
 	;
 
 
-GOTO_AND
-	: logical_and_expression AND_OP {
-		$$ = $1;
+// GOTO_AND
+// 	: logical_and_expression AND_OP {
+// 		$$ = $1;
 
-		// if ($1->truelist.empty() && if_found) {
-		if(if_found){ // TODO : TEST When if is implemented
-			backpatch($1->nextlist, getCurrentSize());
-			int label = emit("GOTO", "IF", $1->place, "", 0);
-			$1->truelist.push_back(label);
-			label = emit("GOTO", "", "", "", 0);
-			$1->falselist.push_back(label);
-		}
-	}
-	;
+// 		// if ($1->truelist.empty() && if_found) {
+// 		if(if_found){ // TODO : TEST When if is implemented
+// 			backpatch($1->nextlist, getCurrentSize());
+// 			int label = emit("GOTO", "IF", $1->place, "", 0);
+// 			$1->truelist.push_back(label);
+// 			label = emit("GOTO", "", "", "", 0);
+// 			$1->falselist.push_back(label);
+// 		}
+// 	}
+// 	;
 
 logical_or_expression
 	: logical_and_expression { $$ = $1; }
-	| GOTO_OR NEXT_QUAD logical_and_expression {
+	| logical_or_expression OR_OP logical_and_expression {
 		$$ = getNode("||", mergeAttrs($1, $3));
 
 		// 3AC
-		if(if_found) {
-			backpatch($3->nextlist, getCurrentSize());
-			int label = emit("GOTO", "IF", $3->place, "", 0);
-			$3->truelist.push_back(label);
-			label = emit("GOTO", "", "", "", 0);
-			$3->falselist.push_back(label);
-		} else {
-			std::string q = getTempVariable("int");
-			emit("||", $1->place, $3->place, q, -1);
-			$$->place = q;
-		}
+		// if(if_found) {
+		// 	backpatch($3->nextlist, getCurrentSize());
+		// 	int label = emit("GOTO", "IF", $3->place, "", 0);
+		// 	$3->truelist.push_back(label);
+		// 	label = emit("GOTO", "", "", "", 0);
+		// 	$3->falselist.push_back(label);
+		// } else {
+		// 	std::string q = getTempVariable("int");
+		// 	emit("||", $1->place, $3->place, q, -1);
+		// 	$$->place = q;
+		// }
+		std::string q = getTempVariable("int");
+		emit("||", $1->place, $3->place, q, -1);
+		$$->place = q;
 
-		backpatch($1->falselist, $2);
-		$$->truelist = mergeList($1->truelist, $3->truelist);
-		$$->falselist = $3->falselist;
+		// backpatch($1->falselist, $2);
+		// $$->truelist = mergeList($1->truelist, $3->truelist);
+		// $$->falselist = $3->falselist;
 	}
 	;
 
-GOTO_OR
-	: logical_or_expression OR_OP {
-		$$ = $1;
+// GOTO_OR
+// 	: logical_or_expression OR_OP {
+// 		$$ = $1;
 
-		if(if_found) {
-			backpatch($1->nextlist, getCurrentSize());
-			int label = emit("GOTO", "IF", $1->place, "", 0);
-			$1->truelist.push_back(label);
-			label = emit("GOTO", "", "", "", 0);
-			$1->falselist.push_back(label);
-		}
-	}
-	;
+// 		if(if_found) {
+// 			backpatch($1->nextlist, getCurrentSize());
+// 			int label = emit("GOTO", "IF", $1->place, "", 0);
+// 			$1->truelist.push_back(label);
+// 			label = emit("GOTO", "", "", "", 0);
+// 			$1->falselist.push_back(label);
+// 		}
+// 	}
+// 	;
 
 NEXT_QUAD
 	: %empty {
@@ -791,18 +799,16 @@ init_declarator_list
 init_declarator
     : declarator {
         $$ = $1;
-        $$->place = getTempVariable($1->type);
+        $$->place = $1->temp_name;
     }
     | declarator '=' NEXT_QUAD initializer {
 		$$ = getNode("=", mergeAttrs($1, $4));
 
         // 3AC
 		//TODO: Handle other things like arrays...etc .(void case also)
-		// TODO: Can use assign_exp function here 
-        $$->place = getTempVariable($1->type); //Think ...
+		$$->place = $1->temp_name;
 		
 		assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
-		// emit(qid("=", NULL), $4->place, qid("", NULL), $1->place, -1);
         $$->nextlist = $4->nextlist;
         backpatch($1->nextlist, $3);
     }
