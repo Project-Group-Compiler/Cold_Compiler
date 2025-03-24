@@ -74,6 +74,8 @@ inline std::string stringify(const quad &instr)
             s += "GOTO " + std::to_string(instr.gotoLabel);
         }else if(curr_op == "ptr+"){
             s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
+        }else if(curr_op == "CopyToOffset"){
+            s += curr_op + " " + instr.arg1 + " " + instr.result + " " + instr.arg2;
         }
     return s;
 }

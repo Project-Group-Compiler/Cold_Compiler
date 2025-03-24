@@ -29,6 +29,7 @@ int yylex();
 int rValue = 0;
 int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
 int previous_if_found = 0; // TODO: May need later
+std::vector<std::string> list_values;
 std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
 %}
@@ -141,13 +142,35 @@ postfix_expression
     | postfix_expression '[' expression ']' {
         $$ = getNode("postfix_expression", mergeAttrs($1, $3));
 
+		std::cerr << "\n" << line << " Postfix Expression 144: " << $1->type << ' ' << $3->type << std::endl;
+		std::cerr << "Postfix Expression 144: " << $1->temp_name << ' ' << $3->temp_name << std::endl;
+		std::cerr << "Postfix Expression 144: " << lookup($1->temp_name)->data_type << ' ' << lookup($3->temp_name)->data_type << std::endl;
         //3AC
+		// arr[i] -> 
+
+		//arr[][] -> arr[] -> arr as we apply [] operator
 		$$->type = $1->type;
-		$$->temp_name = $1->temp_name;
-		std::string temp_var = getTempVariable($$->type);
-		$$->place = temp_var;
+		$$->type.pop_back();
+		$$->type.pop_back();
+
+		if($$->type == "int"){
+			std::string q = getTempVariable("int*");
+			emit("=", $1->place,"", q, -1);
+			std::string q2 = getTempVariable("int");
+			emit("*", $3->place, getSizeOfType("int"), q2, -1);
+			std::string q3 = getTempVariable("int*");
+			emit("ptr+", q, q2, q3, -1);
+			$$->place = "*" + q3;
+		}else{
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->temp_name = $1->temp_name;
+			emit("[ ]", $1->place, $3->place, q, -1);
+		}
+
 		$$->nextlist.clear();
-		emit("[ ]", $1->place, $3->place, temp_var, -1);
+		std::cerr << $$->place << '\n';
+		std::cerr << $$->type << '\n';
     }
     | postfix_expression '(' ')' {
         $$ = $1;
@@ -366,6 +389,7 @@ cast_expression
 		$$->type = $2->type;
 		$4->nextlist.clear();
 		//TODO: Try to do CAST_typename
+		std::cerr << "369: CAST " << $4->place << " " << $2->place << ' ' << $2->type << std::endl;
         emit("CAST", $4->place, "", q, -1);
     }
 ;
@@ -780,16 +804,27 @@ init_declarator
 
         // 3AC
 		//TODO: Handle other things like arrays...etc .(void case also)
-		$$->place = $1->temp_name;
+		// for(auto i:list_values){
+		// 	std::cerr << "Init Declarator 808: " << i << std::endl;
+		// }
 		if(DEBUG){
-			std::cerr<<"Init Declarator 746: "<<$1->temp_name<< ' ' << $1->place << ' ' << $1->type <<std::endl;
 		}
-		assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+		std::cerr<<"Init Declarator 746: "<<$1->temp_name<< ' ' << $1->place << ' ' << $1->type <<std::endl;
+		std::string type = lookup($1->temp_name)->data_type;
+		if(type.find("int[]") != std::string::npos){
+			for(int i = 0; i<list_values.size();i++){
+				emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
+			}
+		}else{
+			assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+		}
 
+		$$->place = $1->temp_name;
         $$->nextlist = $5->nextlist;
         backpatch($1->nextlist, $4);
 
 		rValue = 0;
+		list_values.clear();
     }
     ;
 
@@ -1044,19 +1079,23 @@ direct_declarator
 	}
 	| direct_declarator '[' constant_expression ']'{
 		Node* node = getNode("[ ]", mergeAttrs($3));
-		$$ = getNode("direct_declarator", mergeAttrs($1, node));
+		$$ = getNode("direct_declarator[..]", mergeAttrs($1, node));
 
 		updateLastSymbolEntry();
 
+		// if(DEBUG){
+			std::cerr << "Direct Declarator 1052: " << $1->temp_name << ' ' << lookup($1->temp_name)->data_type << ' ' << $3->place << std::endl;
+		// }
 		//3AC
 		$$->temp_name = $1->temp_name;
 		$$->place = $$->temp_name;
+
 	}
 	| direct_declarator '[' ']'{
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, NULL, "[ ]", 0);
-		$$ = getNode("direct_declarator", &attr);
+		$$ = getNode("direct_declarator[]", &attr);
 
 		updateLastSymbolEntry();
 		//3AC
@@ -1240,6 +1279,7 @@ direct_abstract_declarator
 initializer
 	: assignment_expression{
 		$$ = $1 ;
+		list_values.push_back($1->place);
 	}
 	| '{' initializer_list '}' {
 		$$ = $2 ;
