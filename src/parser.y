@@ -1393,7 +1393,7 @@ class_definition
 		else{
 			yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
 		}
-		;
+		className = "";
     }
 	| class IDENTIFIER {
         DEBUG_PARSER("class_definition -> class_definition_head");
@@ -2603,7 +2603,7 @@ function_definition
 		$$ = createASTNode("function", &v);
 
 		// Semantics
-		// Extract and propagate function name and return type
+		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
         $$->type = funcType;            // Return type from declaration_specifiers
         $$->size = $2->size;            // Size if applicable
@@ -2622,7 +2622,7 @@ function_definition
 		$$ = createASTNode("function (w/o decl_list)", &v);
 
 		// Semantics 
-		// Extract and propagate function name and return type
+		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
         $$->type = funcType;            // Return type from declaration_specifiers
         $$->size = $2->size;            // Size if applicable
@@ -2664,12 +2664,16 @@ function_definition
 F 
 	: %empty {
         DEBUG_PARSER("F -> %empty");
-		if (gst.find(funcName) != gst.end()){
-			yyerror(("Redefinition of function " + funcName).c_str(), "scope error");
+		std::string qualifiedFuncName = funcName;
+        if (!className.empty()) {
+            qualifiedFuncName = className + "_" + funcName;
+        }
+		if (gst.find(qualifiedFuncName) != gst.end()){
+			yyerror(("Redefinition of function " + qualifiedFuncName).c_str(), "scope error");
 		}
 		else{
-			makeSymbolTable(funcName, funcType);
-			$$ = strdup(funcName.c_str());
+			makeSymbolTable(qualifiedFuncName, funcType);
+			$$ = strdup(qualifiedFuncName.c_str());
 			block_count = 1;
 			type = "";
 		}
