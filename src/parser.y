@@ -24,7 +24,7 @@ extern bool has_error;
 
 int yyerror(const char*);
 int yylex();
-
+int rValue = 0;
 int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
 int previous_if_found = 0; // TODO: May need later
 std::map<std::string, std::vector<int>> gotolablelist;
@@ -255,17 +255,37 @@ unary_expression
         $$->nextlist.clear();
         emit("--P", $2->place, "", q, -1);
     }
-    | unary_operator cast_expression {
+    | unary_operator cast_expression { //TODO: l value .. Here
         $$ = getNode("unary_exp", mergeAttrs($1, $2));
-
+		std::cerr << '\n' << line << '\n';
+		std::cerr << "Unary Expression 260: "<< $2->type << ' ' << $1->place << ' ' << $2->place << ' ' << rValue << std::endl;
         //3AC
-        std::string q = getTempVariable($2->type);
-		$$->place = q;
-		$$->type = $2->type; //Todo not always
-		$$->temp_name = $2->temp_name;
-        $$->place = q;
-        $$->nextlist.clear();
-        emit($1->place, $2->place, "", q, -1);
+		if($1->place == "unary*"){
+			// Reduce one level of pointer indirection for $$->type
+			if($2->type.back() == '*') {
+				$$->type = $2->type.substr(0, $2->type.size() - 1);
+			} else {
+				yyerror("syntax error, Invalid dereference of non-pointer type");
+				$$->type = "ERROR";
+			}
+		} else if($1->place == "unary&") {
+			// Add one level of pointer indirection for $$->type
+			$$->type = $2->type + "*";
+		}else{
+			$$->type = $2->type;
+		}
+
+		if(rValue == 0 && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
+			$$->temp_name = $2->temp_name;
+			$$->place = "*" + $2->place;
+			$$->nextlist.clear();
+		}else{
+			std::string q = getTempVariable($2->type);
+			$$->temp_name = $2->temp_name;
+			$$->place = q;
+			$$->nextlist.clear();
+			emit($1->place, $2->place, "", q, -1);
+		}
     }
     | SIZEOF unary_expression {
         $$ = getNode($1, mergeAttrs($2, nullptr));
@@ -648,15 +668,17 @@ WRITE_GOTO
 
 assignment_expression
     : conditional_expression { $$ = $1; }
-    | unary_expression assignment_operator { if_found = 0; } assignment_expression {
+    | unary_expression assignment_operator { if_found = 0; rValue = 1;} assignment_expression {
         $$ = getNode($2, mergeAttrs($1, $4));
 
         // 3AC
 		$$->type = $1->type;
+		std::cerr<<"Assignment Expression 656: "<<$1->type << ' ' << $1->place <<std::endl;
 		int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
         // int num = emit(qid($2, NULL), $1->place, $4->place, qid("", NULL), -1);
         $$->place = $1->place;
         backpatch($4->nextlist, num);
+		rValue = 0;
     }
     ;
 
@@ -734,16 +756,23 @@ init_declarator
     : declarator {
         $$ = $1;
         $$->place = $1->temp_name;
+		std::cerr<<"Init Declarator 737: "<<$1->temp_name<<std::endl;
+
     }
-    | declarator '=' NEXT_QUAD initializer {
-		$$ = getNode("=", mergeAttrs($1, $4));
+    | declarator '=' {rValue = 1;} NEXT_QUAD initializer {
+		$$ = getNode("=", mergeAttrs($1, $5));
 
         // 3AC
 		//TODO: Handle other things like arrays...etc .(void case also)
 		$$->place = $1->temp_name;
-		assign_exp("=", $1->type,$1->type, $4->type, $1->place, $4->place);
-        $$->nextlist = $4->nextlist;
-        backpatch($1->nextlist, $3);
+		std::cerr<<"Init Declarator 746: "<<$1->temp_name<< ' ' << $1->place <<std::endl;
+		assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+		std::cerr<<"Init Declarator 746: "<<$1->type<<std::endl;
+
+        $$->nextlist = $5->nextlist;
+        backpatch($1->nextlist, $4);
+
+		rValue = 0;
     }
     ;
 
@@ -957,6 +986,7 @@ declarator
 		$$ = getNode("declarator", mergeAttrs($1, $2));
 		$$->temp_name = $2->temp_name;
 		$$->place = $$->temp_name;
+		std::cerr<<"Declarator 963: "<<$2->temp_name<<std::endl;
 	}
 	| direct_declarator {
 		$$ = $1;
