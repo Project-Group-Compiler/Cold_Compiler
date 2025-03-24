@@ -1,6 +1,7 @@
 #include <iostream>
 #include <filesystem>
 #include "data_structures.hpp"
+#include "symbol_table.h"
 
 extern FILE *yyin;
 bool print_ast = false;
@@ -48,6 +49,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     inputFilename = argv[1];
+
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
     bool lexPrint = false;
     bool print_symtab = false;
@@ -94,9 +96,14 @@ int main(int argc, char *argv[])
 
     if (!has_error || force)
     {
+        symTable_init();//mohitmo's function
         performParsing(inputFileString);
-        if (print_symtab)
-            printTables(inputFileString);
+        if (print_symtab){
+            std::cout << "Printing symbol table\n";
+            printTables(inputFileString);//meet's function
+            printSymbolTable(&gst, "#Global_Symbol_Table#.csv");//mohitmo's function
+        }
+            
     }
     else
         print_error("\nlexical errors present, use -f to force parsing");

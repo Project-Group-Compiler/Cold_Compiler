@@ -46,7 +46,12 @@ Node *createASTNode(const std::string &str, std::vector<Data> *v)
 {
     Node *node = new Node;
     node->node_id = ++NodeCounter;
-    node->node_name = str;
+    try {
+        node->node_name = str;
+    } catch (const std::exception& e) {
+        delete node;  // Clean up before re-throwing
+        throw std::runtime_error("String assignment failed: " + std::string(e.what()));
+    }
 
     if (!v)
     { // Leaf Node
@@ -58,7 +63,7 @@ Node *createASTNode(const std::string &str, std::vector<Data> *v)
                 format += c;
         }
         node->node_name = format;
-        if (str[0] == '"')
+        if (!str.empty() && str[0] == '"') 
         { // String literal
             std::string s = format.substr(1, format.size() - 2);
             if (print_ast)

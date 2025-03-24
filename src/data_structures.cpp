@@ -71,7 +71,7 @@ void updateFuncSymbolEntry(int args)
     }
 }
 
-void printSymbolTable(std::ofstream &out)
+void printSymbolTable_meet(std::ofstream &out)
 {
     out << "\nSymbol Table:\n\n";
     out << std::left << std::setw(60) << "Token"
@@ -147,7 +147,7 @@ void printTables(const std::string &inputFile)
         print_error("cannot open " + outputDir + inputFile + "_tables.txt");
         return;
     }
-    printSymbolTable(out);
+    printSymbolTable_meet(out);
     printConstantTable(out);
     printType(out);
 }
