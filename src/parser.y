@@ -24,6 +24,7 @@ extern bool has_error;
 //Semantics
 string funcName = "";
 string structName = "";
+extern string className;
 string funcType = "";
 int block_count = 0;
 stack<int> block_stack;
@@ -32,12 +33,13 @@ int func_flag = 0;
 
 string type = "";
 int Anon_StructCounter=0;
+int Anon_ClassCounter = 0;
 vector<string> funcArgs;
 vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 0; // Flag to enable or disable debugging
+bool debug_enabled = 1; // Flag to enable or disable debugging
 #define DEBUG_PARSER(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -69,7 +71,7 @@ int warning(const char*);
 %token<str> UNTIL /*** Added UNTIL token ***/
 //Semantic
 %token<num> CONSTANT
-%type<str> F G
+%type<str> F G G_C
 %type<str> CHANGE_TABLE 
 
 %start translation_unit
@@ -106,7 +108,7 @@ primary_expression
 				$$->expType = 2; 
 			}
 			else $$->expType = 1;
-
+			printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
 			$$->type = temp;
 			$$->isInit = lookup(string($1))->init;
 			$$->size = getSize(temp);
@@ -239,25 +241,46 @@ postfix_expression
 		currArgs.clear();
 	}
 	| postfix_expression '.' IDENTIFIER {
-        DEBUG_PARSER("postfix_expression -> postfix_expression '.' IDENTIFIER");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, createASTNode($3), "", 1);
-		$$ = createASTNode("expression.id", &attr);
-		
-		// Semantics
-		string temp = string($3);
-		int ret = lookupStruct($1->type, temp);
-		if(ret == -1){
-			yyerror(("Struct " + $1->node_name + " not defined").c_str(), "scope error");
-		}
-		else if (ret == 0){
-			yyerror("Attribute of Struct not defined", "scope error");
-		}
-		else{
-			$$->type = StructAttrType($1->type, temp);
-			$$->temp_name = $1->temp_name + "." + temp;
-		}
+    	DEBUG_PARSER("postfix_expression -> postfix_expression '.' IDENTIFIER");
+    	std::vector<Data> attr;
+    	insertAttr(attr, $1, "", 1);
+    	insertAttr(attr, createASTNode($3), "", 1);
+    	$$ = createASTNode("expression.id", &attr);
+	
+    	// Semantics - check if it's a class or struct
+    	string temp = string($3);
+    	string memberName = $1->temp_name;
+    	string type = $1->type;
+	
+    	// First check if it's a class
+    	if (type.substr(0, 6) == "CLASS_") {
+    	    int ret = lookupClass(type, temp);
+    	    if (ret == 1) {
+    	        // Class member found
+    	        $$->type = classAttrType(type, temp); 
+    	        $$->temp_name = $1->temp_name + "." + temp;
+    	    }
+    	    else if (ret == 0) {
+    	        yyerror(("Member '" + temp + "' not found in class").c_str(), "scope error");
+    	    }
+    	    else {
+    	        yyerror(("Class '" + memberName + "' not defined").c_str(), "scope error");
+    	    }
+    	}
+    	// If not a class, try struct
+    	else {
+    	    int ret = lookupStruct($1->type, temp);
+    	    if (ret == -1) {
+    	        yyerror(("Struct or class '" + memberName + "' not defined").c_str(), "scope error");
+    	    }
+    	    else if (ret == 0) {
+    	        yyerror(("Member '" + temp + "' not found in struct").c_str(), "scope error");
+    	    }
+    	    else {
+    	        $$->type = StructAttrType($1->type, temp);
+    	        $$->temp_name = $1->temp_name + "." + temp;
+    	    }
+    	}
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
         DEBUG_PARSER("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
@@ -1311,37 +1334,62 @@ class
 	;
 
 class_definition_head 
-	: class INHERITANCE_OP inheritance_specifier_list {
+	: class S_C INHERITANCE_OP inheritance_specifier_list {
         DEBUG_PARSER("class_definition_head -> class INHERITANCE_OP inheritance_specifier_list");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
-        insertAttr(attr, $3, "", 1);
+        insertAttr(attr, $4, "", 1);
         $$ = createASTNode("class_definition_head", &attr);
-        // Semantics: For inherited classes without an explicit name, mark as anonymous.
-        $$->type = currentDataType; 
-        $$->temp_name = "AnonymousClass";  
+         // Semantics: For inherited classes without an explicit name, mark as anonymous.
+        $$->type = currentDataType;
+        Anon_ClassCounter++; 
+		$$->temp_name = "Anon_Class_" + to_string(Anon_ClassCounter);  
+        if(printClassTable("CLASS_" + to_string(Anon_ClassCounter)) == 1){
+			if(type == "") type = "CLASS_" + to_string(Anon_StructCounter);
+			else type += " CLASS_" + to_string(Anon_StructCounter);
+		}
+		else{
+			yyerror("Class is already defined", "scope error");
+		}
     }
-	| class IDENTIFIER {
+	| class G_C S_C {
         DEBUG_PARSER("class_definition_head -> class IDENTIFIER");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, createASTNode($2), "", 1);
         currentDataType = "Class " + std::string($2);
         $$ = createASTNode("class_definition_head", &attr);
+		$$->temp_name = std::string($2); 
         // Semantics: Save the class name for later symbol table insertion.
-        $$->temp_name = std::string($2);
-        $$->type = currentDataType;
+		// Semantics
+		if(printClassTable("CLASS_" + string($2)) == 1){
+			if(type == "") type = "CLASS_" + string($2);
+			else type += " CLASS_" + string($2);
+		}
+		else{
+			yyerror(("Class " + string($2) + " is already defined").c_str(), "scope error");
+		}
     }
-	| class IDENTIFIER INHERITANCE_OP inheritance_specifier_list {
+	| class G_C S_C INHERITANCE_OP inheritance_specifier_list {
         DEBUG_PARSER("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
         std::vector<Data> attr;
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, createASTNode($2), "", 1);
-        insertAttr(attr, $4, "", 1);
+        insertAttr(attr, $5, "", 1);
         currentDataType = "Class " + std::string($2);
         $$ = createASTNode("class_definition_head", &attr);
-        $$->temp_name = std::string($2);
-        $$->type = currentDataType;
+		$$->temp_name = std::string($2); 
+        // Semantics: Save the class name for later symbol table insertion.
+		// Semantics
+		if(printClassTable("CLASS_" + string($2)) == 1){
+			if(type == "") type = "CLASS_" + string($2);
+			else type += " CLASS_" + string($2);
+		}
+		else{
+			yyerror(("Class " + string($2) + " is already defined").c_str(), "scope error");
+		}
+        // Process inheritance
+        // TODO: Extract parent classes from $4 and add inheritance relationships
     }
 	;
 
@@ -1352,16 +1400,24 @@ class_definition
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("class_definition", &attr);
-        // Semantics: Insert the class into the symbol table after ensuring no duplicate exists.
-        if (currLookup($1->temp_name)) {
-            yyerror(("Class " + std::string($1->temp_name) + " is already declared").c_str(), "scope error");
-        } else {
-            insertSymbol(*curr_table, $1->temp_name, $1->type, 0, 0, NULL);
-        }
+		$$->temp_name = $1->temp_name;
     }
-	| class_definition_head {
+	| class IDENTIFIER {
         DEBUG_PARSER("class_definition -> class_definition_head");
         $$ = $1;
+
+		// Semantics
+		if(findClass("CLASS_" + string($2)) == 1){
+			if(type == "") type = "CLASS_" + string($2);
+			else type += " CLASS_" + string($2);
+		}
+		else if(className == string($2)){
+			// We are inside a class
+			type = "#INSIDE";
+		}
+		else{
+			yyerror(("Class " + string($2) + " is not defined").c_str(), "scope error");
+		}
     }
 	;
 
@@ -1410,13 +1466,38 @@ class_member
 	: function_definition { 
         DEBUG_PARSER("class_member -> function_definition");
 		 $1->strVal = currentAccess;
-		 $$ = $1; }
+		 // Add function as a class member with proper access specifier
+		 printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+
+        insertClassMember($1->temp_name, $1->type, $1->size, 0, currentAccess);
+		 $$ = $1; 
+	}
 	| declaration { 
         DEBUG_PARSER("class_member -> declaration");
 		$1->strVal = currentAccess;
-		$$ = $1; }
+		// Add declaration as a class member with proper access specifier
+		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+        if ($1->temp_name != "") {
+            insertClassMember($1->temp_name, $1->type, $1->size, 0, currentAccess);
+        }
+		$$ = $1; 
+	}
 	;
 
+G_C 
+	: IDENTIFIER {
+        DEBUG_PARSER("G_C -> IDENTIFIER");
+		$$ = $1;
+		className = $1;
+	}
+	;
+
+S_C 
+	: %empty {
+        DEBUG_PARSER("S_C -> %empty");
+		createClassTable();
+	}
+	;
 struct_or_union_specifier
 	: struct_or_union G S '{' struct_declaration_list '}'	{
         DEBUG_PARSER("struct_or_union_specifier -> struct_or_union G S '{' struct_declaration_list '}'");
