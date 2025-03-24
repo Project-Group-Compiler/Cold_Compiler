@@ -1350,10 +1350,10 @@ class_definition_head
          // Semantics: For inherited classes without an explicit name, mark as anonymous.
         $$->type = currentDataType;
         Anon_ClassCounter++; 
-		$$->temp_name = "Anon_Class_" + to_string(Anon_ClassCounter);  
+		$$->temp_name = to_string(Anon_ClassCounter);  
         //if(printClassTable("CLASS_" + to_string(Anon_ClassCounter)) == 1){
-		//	if(type == "") type = "CLASS_" + to_string(Anon_StructCounter);
-		//	else type += " CLASS_" + to_string(Anon_StructCounter);
+		//	if(type == "") type = "CLASS_" + to_string(Anon_ClassCounter);
+		//	else type += " CLASS_" + to_string(Anon_ClassCounter);
 		//}
 		//else{
 		//	yyerror("Class is already defined", "scope error");
@@ -1368,14 +1368,6 @@ class_definition_head
         $$ = createASTNode("class_definition_head", &attr);
 		$$->temp_name = std::string($2); 
         // Semantics: Save the class name for later symbol table insertion.
-		// Semantics
-		//if(printClassTable("CLASS_" + string($2)) == 1){
-		//	if(type == "") type = "CLASS_" + string($2);
-		//	else type += " CLASS_" + string($2);
-		//}
-		//else{
-		//	yyerror(("Class " + string($2) + " is already defined").c_str(), "scope error");
-		//}
     }
 	| class G_C S_C INHERITANCE_OP inheritance_specifier_list {
         DEBUG_PARSER("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
@@ -1387,14 +1379,6 @@ class_definition_head
         $$ = createASTNode("class_definition_head", &attr);
 		$$->temp_name = std::string($2); 
         // Semantics: Save the class name for later symbol table insertion.
-		// Semantics
-		//if(printClassTable("CLASS_" + string($2)) == 1){
-		//	if(type == "") type = "CLASS_" + string($2);
-		//	else type += " CLASS_" + string($2);
-		//}
-		//else{
-		//	yyerror(("Class " + string($2) + " is already defined").c_str(), "scope error");
-		//}
         // Process inheritance
         // TODO: Extract parent classes from $4 and add inheritance relationships
     }
@@ -1408,8 +1392,15 @@ class_definition
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("class_definition", &attr);
 		$$->temp_name = $1->temp_name;
-
-		printClassTable("CLASS_" + $1->temp_name);
+		// Semantics
+		if(printClassTable("CLASS_" + $1->temp_name) == 1){
+			if(type == "") type = "CLASS_" + $1->temp_name;
+			else type += " CLASS_" + $1->temp_name;
+		}
+		else{
+			yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
+		}
+		;
     }
 	| class IDENTIFIER {
         DEBUG_PARSER("class_definition -> class_definition_head");
@@ -1478,7 +1469,7 @@ class_member
 		 // Add function as a class member with proper access specifier
 		 printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
 
-        insertClassAttr($1->temp_name, $1->type, $1->size, 0);
+        insertClassAttr($1->temp_name, "FUNC_"+$1->type, $1->size, 0);
 		 $$ = $1; 
 	}
 	| declaration { 
