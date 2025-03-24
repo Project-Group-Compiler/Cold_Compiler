@@ -168,6 +168,18 @@ SymbolTableEntry* lookup(std::string Token)
     return nullptr;
 }
 
+std::string getSizeOfType(const std::string& typeStr) {
+    if (typeStr == "int") {
+        return "4";
+    } else if (typeStr == "int*") {
+        return "4";
+    } else if(typeStr.size() >= 4 && typeStr.substr(0, 4) == "int*"){//for int****
+        return "4";
+    } else {
+        return "0"; // Unknown type
+    }
+}
+
 
 void debugEntry(SymbolTableEntry* entry){
     if(entry != nullptr) {

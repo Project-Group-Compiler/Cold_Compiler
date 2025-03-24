@@ -39,4 +39,5 @@ void printType(std::ofstream &out);
 void printTables(const std::string &inputFile);
 
 SymbolTableEntry* lookup(std::string Token);
+std::string getSizeOfType(const std::string& typeStr);
 void debugEntry(SymbolTableEntry* entry);

@@ -62,7 +62,7 @@ std::string getTempVariable(std::string type)
 // TODO: Handle float
 int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2)
 {
-    std::cerr<<"assign_exp: "<<op<<"#"<<type<<"#"<<type1<<"#"<<type2<<"#"<<arg1<<"#"<<arg2<<std::endl;
+    // std::cerr<<"assign_exp: "<<op<<"#"<<type<<"#"<<type1<<"#"<<type2<<"#"<<arg1<<"#"<<arg2<<std::endl;
     std::string temp_op = "";
     std::string str = op;
 

@@ -58,21 +58,23 @@ inline std::string stringify(const quad &instr)
         s += instr.result + " = " + instr.arg1;
     else if (fi == '+' || fi == '-' || fi == '*' || fi == '/' || fi == '%')
         s += instr.result + " = " + instr.arg1 + " " + fi + " " + instr.arg2;
-    else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "PTR_OP" || curr_op == "member_access")
+        else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "PTR_OP" || curr_op == "member_access")
         s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
-    else if (curr_op == "RETURN" || curr_op == "param")
+        else if (curr_op == "RETURN" || curr_op == "param")
         s += curr_op + " " + instr.arg1;
-    else if (curr_op == "CALL")
+        else if (curr_op == "CALL")
         s += instr.result + " = " + curr_op + " " + instr.arg1 + " " + instr.arg2;
-    else if (curr_op == "[ ]")
+        else if (curr_op == "[ ]")
         s += instr.result + " = " + instr.arg1 + "[" + instr.arg2 + "]";
-    else if (curr_op == "GOTO")
-    {
-        if (instr.arg1 == "IF")
+        else if (curr_op == "GOTO")
+        {
+            if (instr.arg1 == "IF")
             s += "IF " + instr.arg2 + " GOTO " + std::to_string(instr.gotoLabel);
-        else
+            else
             s += "GOTO " + std::to_string(instr.gotoLabel);
-    }
+        }else if(curr_op == "ptr+"){
+            s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
+        }
     return s;
 }
 

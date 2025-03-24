@@ -10,12 +10,16 @@ void test_multi_level_pointers() {
 
     ptr2 = &ptr;
     *ptr = 10; 
-    val = *ptr;//both are diff
+    val = *ptr;
 
     ptr = *ptr2;
     **ptr2 = 20;
 
     *ptr2 = ptr;
     
-    //val = *( *(ptr2 + 2) + 1); //TODO : Fix ptr2+2 issue -> use addptr ...
+}
+
+void pointerAdd(){ //int* + int
+    int val, **ptr2;
+    val = (*( *(ptr2 + 2) + 1)) + 3;
 }

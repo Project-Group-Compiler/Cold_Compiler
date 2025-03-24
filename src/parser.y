@@ -13,6 +13,8 @@
 extern int yyleng;
 std::string currentDataType="";
 
+bool DEBUG = 0;
+
 int noArgs=0;
 bool flag=0,flag2=0;;
 
@@ -257,8 +259,10 @@ unary_expression
     }
     | unary_operator cast_expression { //TODO: l value .. Here
         $$ = getNode("unary_exp", mergeAttrs($1, $2));
-		std::cerr << '\n' << line << '\n';
-		std::cerr << "Unary Expression 260: "<< $2->type << ' ' << $1->place << ' ' << $2->place << ' ' << rValue << std::endl;
+		if(DEBUG) {
+			std::cerr << '\n' << line << '\n';
+			std::cerr << "Unary Expression 260: "<< $2->type << ' ' << $1->place << ' ' << $2->place << ' ' << rValue << std::endl;
+		}
         //3AC
 		if($1->place == "unary*"){
 			// Reduce one level of pointer indirection for $$->type
@@ -374,8 +378,8 @@ multiplicative_expression
         $$ = getNode("*", mergeAttrs($1, $3));
 
         //3AC
-        std::string q = getTempVariable("int"); //TODO not always int
-		$$->type = "int"; //TODO not always int
+        std::string q = getTempVariable($1->type); //TODO not always int
+		$$->type = $1->type; //TODO not always int
         $$->place = q;
         $$->nextlist.clear();
         emit("*", $1->place, $3->place, q, -1);
@@ -385,7 +389,7 @@ multiplicative_expression
 
         //3AC
         std::string q = getTempVariable("int"); //TODO not always int
-		$$->type = "int"; //TODO not always int
+		$$->type = $1->type; //TODO not always int
         $$->place = q;
         $$->nextlist.clear();
         emit("/", $1->place, $3->place, q, -1);
@@ -394,8 +398,8 @@ multiplicative_expression
         $$ = getNode("%", mergeAttrs($1, $3));
 
         //3AC
-        std::string q = getTempVariable("int"); //TODO not always int
-		$$->type = "int"; //TODO not always int
+        std::string q = getTempVariable($1->type); //TODO not always int
+		$$->type = $1->type; //TODO not always int
         $$->place = q;
         $$->nextlist.clear();
         emit("%", $1->place, $3->place, q, -1);
@@ -411,19 +415,28 @@ additive_expression
         $$ = getNode("+", mergeAttrs($1, $3));
 
         //3AC
-        std::string q = getTempVariable("int");//TODO not always int
-		$$->type = "int"; // TODO not always int
-        $$->place = q;
-        $$->nextlist.clear();
+		if(DEBUG) {
+			std::cerr<<"Additive Expression 414: "<<$1->type << ' ' << $1->place << ' ' << $3->type <<std::endl;
+		}
 
-        emit("+", $1->place, $3->place, q, -1);
+		std::string q = getTempVariable($1->type);//TODO not always int
+		$$->type = $1->type;
+		$$->place = q;
+		if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
+			std::string q2 = getTempVariable($3->type);
+			emit("*", $3->place, getSizeOfType($1->type.substr(0, $1->type.size()-1)), q2, -1);
+			emit("ptr+", $1->place, q2, q, -1);
+		}else{
+			emit("+", $1->place, $3->place, q, -1);
+		}
+        $$->nextlist.clear();
     }
     | additive_expression '-' multiplicative_expression {
         $$ = getNode("-", mergeAttrs($1, $3));
 
         //3AC
-        std::string q = getTempVariable("int");//TODO not always int
-		$$->type = "int"; // TODO not always int
+        std::string q = getTempVariable($1->type);//TODO not always int
+		$$->type = $1->type; // TODO not always int
         $$->place = q;
         $$->nextlist.clear();
 
@@ -673,7 +686,9 @@ assignment_expression
 
         // 3AC
 		$$->type = $1->type;
-		std::cerr<<"Assignment Expression 656: "<<$1->type << ' ' << $1->place <<std::endl;
+		if(DEBUG) {
+			std::cerr<<"Assignment Expression 656: "<<$1->type << ' ' << $1->place <<std::endl;
+		}
 		int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
         // int num = emit(qid($2, NULL), $1->place, $4->place, qid("", NULL), -1);
         $$->place = $1->place;
@@ -756,8 +771,9 @@ init_declarator
     : declarator {
         $$ = $1;
         $$->place = $1->temp_name;
-		std::cerr<<"Init Declarator 737: "<<$1->temp_name<<std::endl;
-
+		if(DEBUG) {
+			std::cerr<<"Init Declarator 737: "<<$1->temp_name<<std::endl;
+		}
     }
     | declarator '=' {rValue = 1;} NEXT_QUAD initializer {
 		$$ = getNode("=", mergeAttrs($1, $5));
@@ -765,9 +781,10 @@ init_declarator
         // 3AC
 		//TODO: Handle other things like arrays...etc .(void case also)
 		$$->place = $1->temp_name;
-		std::cerr<<"Init Declarator 746: "<<$1->temp_name<< ' ' << $1->place <<std::endl;
+		if(DEBUG){
+			std::cerr<<"Init Declarator 746: "<<$1->temp_name<< ' ' << $1->place << ' ' << $1->type <<std::endl;
+		}
 		assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
-		std::cerr<<"Init Declarator 746: "<<$1->type<<std::endl;
 
         $$->nextlist = $5->nextlist;
         backpatch($1->nextlist, $4);
@@ -986,7 +1003,9 @@ declarator
 		$$ = getNode("declarator", mergeAttrs($1, $2));
 		$$->temp_name = $2->temp_name;
 		$$->place = $$->temp_name;
-		std::cerr<<"Declarator 963: "<<$2->temp_name<<std::endl;
+		if(DEBUG) {
+			std::cerr<<"Declarator 963: "<<$2->temp_name<<std::endl;
+		}
 	}
 	| direct_declarator {
 		$$ = $1;
