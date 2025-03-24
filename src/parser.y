@@ -1322,14 +1322,17 @@ access_specifier
 	: PRIVATE {
         DEBUG_PARSER("access_specifier -> PRIVATE");
         $$ = createASTNode($1);
+		currentAccess="private";
     }
 	| PUBLIC {
         DEBUG_PARSER("access_specifier -> PUBLIC");
         $$ = createASTNode($1);
+		currentAccess="public";
     }
 	| PROTECTED {
         DEBUG_PARSER("access_specifier -> PROTECTED");
         $$ = createASTNode($1);
+		currentAccess="public";
     }
 	;
 
@@ -1462,7 +1465,7 @@ class_member
 		 // Add function as a class member with proper access specifier
 		 printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
 
-        insertClassAttr($1->temp_name, "FUNC_"+$1->type, $1->size, 0);
+        insertClassAttr($1->temp_name, "FUNC_"+$1->type, $1->size, 0,currentAccess);
 		 $$ = $1; 
 	}
 	| declaration { 
@@ -1470,7 +1473,7 @@ class_member
 		$1->strVal = currentAccess;
 		// Add declaration as a class member with proper access specifier
 		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
-        insertClassAttr($1->temp_name, $1->type, $1->size, 0);
+        insertClassAttr($1->temp_name, $1->type, $1->size, 0,currentAccess);
 		$$ = $1; 
 	}
 	;
