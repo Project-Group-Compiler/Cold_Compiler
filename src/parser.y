@@ -1351,13 +1351,6 @@ class_definition_head
         $$->type = currentDataType;
         Anon_ClassCounter++; 
 		$$->temp_name = to_string(Anon_ClassCounter);  
-        //if(printClassTable("CLASS_" + to_string(Anon_ClassCounter)) == 1){
-		//	if(type == "") type = "CLASS_" + to_string(Anon_ClassCounter);
-		//	else type += " CLASS_" + to_string(Anon_ClassCounter);
-		//}
-		//else{
-		//	yyerror("Class is already defined", "scope error");
-		//}
     }
 	| class G_C S_C {
         DEBUG_PARSER("class_definition_head -> class IDENTIFIER");
