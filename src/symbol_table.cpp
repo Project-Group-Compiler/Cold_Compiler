@@ -15,21 +15,17 @@ sym_table* curr_structure;
 struct_sym_table *curr_struct_table;
 stack<ull> Goffset, Loffset, blockSz;
 
-// Add these declarations at the top with other global variables
-
-// Class-related data structures
-typedef map<string, pair<ull, sym_table*>> class_sym_table;  // Maps class name to (size, symbol table)
-class_sym_table class_gst;
-map<class_sym_table*, class_sym_table*> class_parent_table;
-map<string, vector<string>> class_inheritance;  // Maps class name to parent classes
-sym_table* curr_class_structure;  // Current class symbol table being built
-string className = "";  // Current class being processed
-int class_count = 1;
-map<string, string> member_access;  // Maps member to access specifier
-
 typ_table typ_gst;  
 map<typ_table*, typ_table*> typ_parent_table;
 typ_table* curr_typ;
+
+class_sym_table class_gst;
+map<class_sym_table*, class_sym_table*> class_parent_table;
+map<string, ull> class_size;
+ull class_offset;
+sym_table* curr_class_structure;
+class_sym_table* curr_class_table;
+int class_count = 1;
 
 int struct_count = 1;
 int avl = 0;
@@ -44,14 +40,13 @@ void symTable_init(){
     // Insert the global symbol table as the root.
     parent_table.insert(make_pair(&gst, nullptr));
     struct_parent_table.insert(make_pair(&struct_gst, nullptr));
-    
-    curr_table = &gst;
-    curr_struct_table = &struct_gst;
-    curr_typ = &typ_gst;
-    
-    // Add class initialization
     class_parent_table.insert(make_pair(&class_gst, nullptr));
 
+    curr_table = &gst;
+    curr_struct_table = &struct_gst;
+    curr_class_table = &class_gst;
+    curr_typ = &typ_gst;
+    
     insertKeywords();
 }
 
@@ -73,8 +68,9 @@ void makeSymbolTable(string name, string f_type){
     if(!avl){
         sym_table* new_table = new (std::nothrow) sym_table;
         struct_sym_table* new_struct_table = new (std::nothrow) struct_sym_table;
+        class_sym_table* new_class_table = new (std::nothrow) class_sym_table;
         typ_table* new_typ = new (std::nothrow) typ_table;
-        if(!new_table || !new_struct_table || !new_typ){
+        if(!new_table || !new_struct_table || !new_typ || !new_class_table){
             std::cerr << "Error: Memory allocation failed in makeSymbolTable.\n";
             exit(EXIT_FAILURE);
         }
@@ -90,10 +86,12 @@ void makeSymbolTable(string name, string f_type){
         blockSz.push(0);
         parent_table.insert(make_pair(new_table, curr_table));
         struct_parent_table.insert(make_pair(new_struct_table, curr_struct_table));
+        class_parent_table.insert(make_pair(new_class_table, curr_class_table));
         typ_parent_table.insert(make_pair(new_typ, curr_typ));
         
         curr_table = new_table;
         curr_struct_table = new_struct_table;
+        curr_class_table = new_class_table;
         curr_typ = new_typ;
     }
     else {
@@ -144,6 +142,7 @@ void updSymbolTable(string id){
     }
     curr_table = parent_table[curr_table];
     curr_struct_table = struct_parent_table[curr_struct_table];
+    curr_class_table = class_parent_table[curr_class_table];
     curr_typ = typ_parent_table[curr_typ];
     
     sym_entry* entry = lookup(id);
@@ -184,7 +183,7 @@ sym_entry* currLookup(string id){
 }
 
 void insertKeywords(){
-    vector<string> key_words = {"auto","break","case","char","const","continue","default","do","double","else","enum","extern","float","for","goto","if","int","long","register","return","short","signed","sizeof","static","struct","switch","typedef","union","unsigned","void","volatile","while"}; 
+    vector<string> key_words = {"auto","break","case","char","const","continue","default","do","double","else","enum","extern","float","for","goto","if","int","long","register","return","short","signed","sizeof","static","struct","class","switch","typedef","union","unsigned","void","volatile","while"}; 
     vector<string> op = {"...",">>=","<<=","+=","-=","*=","/=","%=","&=","^=","|=",">>","<<","++","--","->","&&","||","<=",">=","==","!=",";","{","<%","}","%>",",",":","=","(",")","[","<:","]",":>",".","&","!","~","-","+","*","/","%","<",">","^","|","?"};
     
     for(auto h : key_words){
@@ -306,120 +305,98 @@ ull getStructsize(string struct_name){
     return 0;
 }
 
-// Add these functions after the struct-related functions
-
-// Create a new symbol table for a class
-void createClassTable() {
+void createClassTable(){
     sym_table* new_table = new (std::nothrow) sym_table;
-    if(!new_table) {
+    if(!new_table){
         std::cerr << "Error: Memory allocation failed in createClassTable.\n";
         exit(EXIT_FAILURE);
     }
     curr_class_structure = new_table;
-    struct_offset = 0;  // Reuse struct_offset for class member offsets
+    class_offset = 0;
 }
-
-// Insert a class member with its access specifier
-int insertClassMember(string member, string type, ull size, bool init, string access) {
-    if(!curr_class_structure) {
-        std::cerr << "Error: curr_class_structure is NULL in insertClassMember.\n";
+int insertClassAttr(string attr, string type, ull size, bool init){  
+    if(!curr_class_structure){
+        std::cerr << "Error: curr_class_structure is NULL in insertClassAttr.\n";
         return 0;
     }
-    if((*curr_class_structure).find(member) == (*curr_class_structure).end()) {
+    if((*curr_class_structure).find(attr) == (*curr_class_structure).end()){
         if(!blockSz.empty()) blockSz.top() += size;
         if(!Goffset.empty()) Goffset.top() += size;
-        (*curr_class_structure).insert(make_pair(member, createEntry(type, size, init, struct_offset, nullptr)));
-        struct_offset += size;
-        member_access[className + "::" + member] = access;  // Store access specifier
+        (*curr_class_structure).insert(make_pair(attr, createEntry(type, size, init, class_offset, nullptr)));
+        class_offset += size;
         return 1;
     }
     return 0;
 }
-
-// Finalize and register a class in the class symbol table
-int printClassTable(string class_name) {
-    if(class_gst.find(class_name) == class_gst.end()) {
-        class_gst.insert(make_pair(class_name, make_pair(struct_offset, curr_class_structure)));
-        
-        // Also register as a valid type in main symbol table
-        insertSymbol(*curr_table, class_name.substr(6), class_name, 0, 0, NULL);
-        
-        printSymbolTable(curr_class_structure, class_name + "_" + to_string(class_count) + ".csv");
+int printClassTable(string class_name){
+    if(!curr_class_table){
+        std::cerr << "Error: curr_class_table is NULL in printClassTable.\n";
+        return 0;
+    }
+    if((*curr_class_table).find(class_name) == (*curr_class_table).end()){
+        (*curr_class_table).insert(make_pair(class_name, make_pair(class_offset, curr_class_structure)));
+        printSymbolTable(curr_class_structure, class_name + "_" + to_string(class_count) + ".csv");  // prints class symbol table
         class_count++;
         return 1;
     }
     return 0;
 }
-
-// Check if a class exists
-int findClass(string class_name) {
-    if(class_gst.find(class_name) != class_gst.end()) {
-        return 1;
+string ClassAttrType(string class_name, string id){
+    class_sym_table* temp = curr_class_table;
+    while(temp && ((*temp).find(class_name) == (*temp).end())){
+        if(class_parent_table.find(temp) == class_parent_table.end()){
+            std::cerr << "Error: class_name " << class_name << " not found in ClassAttrType.\n";
+            return ""; 
+        }
+        temp = class_parent_table[temp];
+    }
+    if(!temp){
+        std::cerr << "Error: No valid class_sym_table found in ClassAttrType.\n";
+        return ""; 
+    }
+    sym_table* table = (*temp)[class_name].second;
+    if(!table || (*table).find(id) == (*table).end()){
+        std::cerr << "Error: Identifier " << id << " not found in class " << class_name << ".\n";
+        return ""; 
+    }
+    return ((*table)[id]->type);
+}
+int findClass(string class_name){
+    class_sym_table* temp = curr_class_table;
+    while(temp){
+        if((*temp).find(class_name) != (*temp).end())
+            return 1;
+        if(class_parent_table.find(temp) == class_parent_table.end())
+            break;
+        temp = class_parent_table[temp];
     }
     return 0;
 }
-
-// Look up a member within a class
-int lookupClass(string class_name, string id) {
-    cout << "DEBUG: lookupClass - class_name: " << class_name << ", id: " << id << endl;
-    
-    // Print all classes in class_gst
-    cout << "DEBUG: All classes in class_gst:" << endl;
-    for(auto& c : class_gst) {
-        cout << "  " << c.first << endl;
-    }
-    
-    if(class_gst.find(class_name) != class_gst.end()) {
-        sym_table* table = class_gst[class_name].second;
-        
-        // Print all members in this class
-        cout << "DEBUG: Class found, members:" << endl;
-        for(auto& m : *table) {
-            cout << "  " << m.first << " (type: " << m.second->type << ")" << endl;
+int lookupClass(string class_name, string id){
+    class_sym_table* temp = curr_class_table;
+    while(temp){
+        if((*temp).find(class_name) != (*temp).end()){
+            sym_table* table = (*temp)[class_name].second;
+            if(table && (*table).find(id) != (*table).end())
+                return 1; // found
+            else 
+                return 0; // class doesn't contain id
         }
-        
-        if(table && (*table).find(id) != (*table).end()) {
-            cout << "DEBUG: Member found!" << endl;
-            return 1; // found
+        if(class_parent_table.find(temp) == class_parent_table.end())
+            break;
+        temp = class_parent_table[temp];
+    }
+    return -1; // class table not found
+}
+ull getClassSize(string class_name){
+    class_sym_table* temp = curr_class_table;
+    while(temp){
+        if((*temp).find(class_name) != (*temp).end()){
+            return (*temp)[class_name].first;
         }
-        else {
-            cout << "DEBUG: Member NOT found in class" << endl;
-            return 0; // class doesn't contain id
-        }
-    }
-    cout << "DEBUG: Class NOT found!" << endl;
-    return -1; // class not found
-}
-
-// Get the access specifier for a class member
-string getClassMemberAccess(string class_name, string member) {
-    string key = class_name + "::" + member;
-    if(member_access.find(key) != member_access.end()) {
-        return member_access[key];
-    }
-    return "private";  // Default access is private
-}
-
-// Add inheritance relationship
-void addInheritance(string derived, string base, string access) {
-    if(class_inheritance.find(derived) == class_inheritance.end()) {
-        class_inheritance[derived] = vector<string>();
-    }
-    class_inheritance[derived].push_back(base + ":" + access);
-}
-string classAttrType(string class_name, string member) {
-    if(class_gst.find(class_name) != class_gst.end()) {
-        sym_table* table = class_gst[class_name].second;
-        if(table && (*table).find(member) != (*table).end()) {
-            return (*table)[member]->type;
-        }
-    }
-    return "";
-}
-// Get the size of a class
-ull getClassSize(string class_name) {
-    if(class_gst.find(class_name) != class_gst.end()) {
-        return class_gst[class_name].first;
+        if(class_parent_table.find(temp) == class_parent_table.end())
+            break;
+        temp = class_parent_table[temp];
     }
     return 0;
 }
@@ -544,6 +521,8 @@ void printSymbolTable(sym_table* table, string file_name){
 ull getSize(string id){
     if(struct_size.find(id) != struct_size.end()) 
         return getStructsize(id);
+    if(class_size.find(id) != class_size.end())
+        return getClassSize(id);
     if(id == "char") return sizeof(char);
     if(id == "short") return sizeof(short);
     if(id == "short int") return sizeof(short int);

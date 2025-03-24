@@ -24,7 +24,7 @@ extern bool has_error;
 //Semantics
 string funcName = "";
 string structName = "";
-extern string className;
+string className="";
 string funcType = "";
 int block_count = 0;
 stack<int> block_stack;
@@ -257,7 +257,7 @@ postfix_expression
     	    int ret = lookupClass(type, temp);
     	    if (ret == 1) {
     	        // Class member found
-    	        $$->type = classAttrType(type, temp); 
+    	        $$->type = ClassAttrType(type, temp); 
     	        $$->temp_name = $1->temp_name + "." + temp;
     	    }
     	    else if (ret == 0) {
@@ -1025,35 +1025,42 @@ declaration //POTENTIAL ISSUE
           insertAttr(attr, $1, "", 1);
           insertAttr(attr, $2, "", 1);
           $$ = createASTNode("declaration", &attr);
-          type = "";
+
+			//changes made for classes
+		  $$->temp_name = $2->temp_name;
+        $$->type = $2->type;
+        $$->size = $2->size;
+        
+        type = "";
+
           // Check if this is a function declaration
           if($2->expType == 3) {
-              // Remove the temporary function prototype from the symbol table.
-              removeFuncProto();  // Assumes a function exists to clear the dummy function entry.
-              
-              // Retrieve any previously stored argument list for this function name.
-              std::vector<std::string> prevArgs = getFuncArgs($2->temp_name);
-              
-              // If the function already has an entry in the FuncArgs map, validate the parameter types.
-              if(!prevArgs.empty() && prevArgs[0] != "#NO_FUNC") {
-                  if(prevArgs.size() != funcArgs.size()) {
-                      yyerror(("Function " + std::string($2->temp_name) + 
-                               " declared with a different number of arguments").c_str(), "semantic error");
-                  } else {
-                      for (size_t i = 0; i < prevArgs.size(); ++i) {
-                          if(prevArgs[i] != funcArgs[i]) {
-                              yyerror(("Argument type mismatch in function " + 
-                                       std::string($2->temp_name)).c_str(), "semantic error");
-                              break;
-                          }
-                      }
-                  }
-              } else {
-                  // This is the first declaration: insert the function's argument list.
-                  insertFuncArg($2->temp_name, funcArgs);
-              }
-              // Clear the global argument list for the next function declaration.
-              funcArgs.clear();
+          //    // Remove the temporary function prototype from the symbol table.
+          //    removeFuncProto();  // Assumes a function exists to clear the dummy function entry.
+          //    
+          //    // Retrieve any previously stored argument list for this function name.
+          //    std::vector<std::string> prevArgs = getFuncArgs($2->temp_name);
+          //    
+          //    // If the function already has an entry in the FuncArgs map, validate the parameter types.
+          //    if(!prevArgs.empty() && prevArgs[0] != "#NO_FUNC") {
+          //        if(prevArgs.size() != funcArgs.size()) {
+          //            yyerror(("Function " + std::string($2->temp_name) + 
+          //                     " declared with a different number of arguments").c_str(), "semantic error");
+          //        } else {
+          //            for (size_t i = 0; i < prevArgs.size(); ++i) {
+          //                if(prevArgs[i] != funcArgs[i]) {
+          //                    yyerror(("Argument type mismatch in function " + 
+          //                             std::string($2->temp_name)).c_str(), "semantic error");
+          //                    break;
+          //                }
+          //            }
+          //        }
+          //    } else {
+          //        // This is the first declaration: insert the function's argument list.
+          //        insertFuncArg($2->temp_name, funcArgs);
+          //    }
+          //    // Clear the global argument list for the next function declaration.
+          //    funcArgs.clear();
           }
       }
     ;
@@ -1344,13 +1351,13 @@ class_definition_head
         $$->type = currentDataType;
         Anon_ClassCounter++; 
 		$$->temp_name = "Anon_Class_" + to_string(Anon_ClassCounter);  
-        if(printClassTable("CLASS_" + to_string(Anon_ClassCounter)) == 1){
-			if(type == "") type = "CLASS_" + to_string(Anon_StructCounter);
-			else type += " CLASS_" + to_string(Anon_StructCounter);
-		}
-		else{
-			yyerror("Class is already defined", "scope error");
-		}
+        //if(printClassTable("CLASS_" + to_string(Anon_ClassCounter)) == 1){
+		//	if(type == "") type = "CLASS_" + to_string(Anon_StructCounter);
+		//	else type += " CLASS_" + to_string(Anon_StructCounter);
+		//}
+		//else{
+		//	yyerror("Class is already defined", "scope error");
+		//}
     }
 	| class G_C S_C {
         DEBUG_PARSER("class_definition_head -> class IDENTIFIER");
@@ -1362,13 +1369,13 @@ class_definition_head
 		$$->temp_name = std::string($2); 
         // Semantics: Save the class name for later symbol table insertion.
 		// Semantics
-		if(printClassTable("CLASS_" + string($2)) == 1){
-			if(type == "") type = "CLASS_" + string($2);
-			else type += " CLASS_" + string($2);
-		}
-		else{
-			yyerror(("Class " + string($2) + " is already defined").c_str(), "scope error");
-		}
+		//if(printClassTable("CLASS_" + string($2)) == 1){
+		//	if(type == "") type = "CLASS_" + string($2);
+		//	else type += " CLASS_" + string($2);
+		//}
+		//else{
+		//	yyerror(("Class " + string($2) + " is already defined").c_str(), "scope error");
+		//}
     }
 	| class G_C S_C INHERITANCE_OP inheritance_specifier_list {
         DEBUG_PARSER("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
@@ -1381,13 +1388,13 @@ class_definition_head
 		$$->temp_name = std::string($2); 
         // Semantics: Save the class name for later symbol table insertion.
 		// Semantics
-		if(printClassTable("CLASS_" + string($2)) == 1){
-			if(type == "") type = "CLASS_" + string($2);
-			else type += " CLASS_" + string($2);
-		}
-		else{
-			yyerror(("Class " + string($2) + " is already defined").c_str(), "scope error");
-		}
+		//if(printClassTable("CLASS_" + string($2)) == 1){
+		//	if(type == "") type = "CLASS_" + string($2);
+		//	else type += " CLASS_" + string($2);
+		//}
+		//else{
+		//	yyerror(("Class " + string($2) + " is already defined").c_str(), "scope error");
+		//}
         // Process inheritance
         // TODO: Extract parent classes from $4 and add inheritance relationships
     }
@@ -1401,6 +1408,8 @@ class_definition
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("class_definition", &attr);
 		$$->temp_name = $1->temp_name;
+
+		printClassTable("CLASS_" + $1->temp_name);
     }
 	| class IDENTIFIER {
         DEBUG_PARSER("class_definition -> class_definition_head");
@@ -1469,7 +1478,7 @@ class_member
 		 // Add function as a class member with proper access specifier
 		 printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
 
-        insertClassMember($1->temp_name, $1->type, $1->size, 0, currentAccess);
+        insertClassAttr($1->temp_name, $1->type, $1->size, 0);
 		 $$ = $1; 
 	}
 	| declaration { 
@@ -1477,9 +1486,7 @@ class_member
 		$1->strVal = currentAccess;
 		// Add declaration as a class member with proper access specifier
 		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
-        if ($1->temp_name != "") {
-            insertClassMember($1->temp_name, $1->type, $1->size, 0, currentAccess);
-        }
+        insertClassAttr($1->temp_name, $1->type, $1->size, 0);
 		$$ = $1; 
 	}
 	;
@@ -1973,7 +1980,7 @@ direct_declarator
 	}
 	;
 
-A  //can remove
+A 
 	: %empty	{
         DEBUG_PARSER("A -> %empty");
 		type ="";
@@ -2612,6 +2619,11 @@ function_definition
 		$$ = createASTNode("function", &v);
 
 		// Semantics
+		// Extract and propagate function name and return type
+        $$->temp_name = $2->temp_name;  // Function name from declarator
+        $$->type = funcType;            // Return type from declaration_specifiers
+        $$->size = $2->size;            // Size if applicable
+
 		type = "";
 		string fName = string($3);
 		printSymbolTable(curr_table, fName + ".csv");
@@ -2626,12 +2638,17 @@ function_definition
 		$$ = createASTNode("function (w/o decl_list)", &v);
 
 		// Semantics 
+		// Extract and propagate function name and return type
+        $$->temp_name = $2->temp_name;  // Function name from declarator
+        $$->type = funcType;            // Return type from declaration_specifiers
+        $$->size = $2->size;            // Size if applicable
+
 		type = "";
 		string fName = string($3);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
 	}
-	| declarator F declaration_list compound_statement	{
+	| declarator F declaration_list compound_statement	{//this rule can be constructor of classess OOPS
         DEBUG_PARSER("function_definition -> declarator F declaration_list compound_statement");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
@@ -2645,7 +2662,7 @@ function_definition
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
 	}
-	| declarator F compound_statement	{
+	| declarator F compound_statement	{//this rule can be constructor of classess OOPS
         DEBUG_PARSER("function_definition -> declarator F compound_statement");
 		std::vector<Data> v;
 		insertAttr(v, $1, "", 1);
