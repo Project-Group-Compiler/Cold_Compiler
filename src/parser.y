@@ -187,8 +187,8 @@ postfix_expression
 			$$->type = temp;
 			if($1->expType == 3){
 				vector<string> funcArg = getFuncArgs($1->temp_name);
-				if(!funcArg.empty()){
-					yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
+				if (!(funcArg.size()==1 && funcArg[0]=="#NO_FUNC")){
+					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
 			}
 		}
@@ -216,7 +216,7 @@ postfix_expression
 				for(int i=0; i<funcArgs.size(); i++){
 					if(funcArgs[i]=="...")break;
 					if(currArgs.size()==i){
-						yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
+						yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
 					string msg = checkType(funcArgs[i],currArgs[i]);
@@ -281,6 +281,114 @@ postfix_expression
     	        $$->temp_name = $1->temp_name + "." + temp;
     	    }
     	}
+	}
+	| postfix_expression '.' IDENTIFIER '(' ')'  {
+	    DEBUG_PARSER("postfix_expression -> postfix_expression '.' IDENTIFIER '(' ')'");
+	    std::vector<Data> attr;
+	    insertAttr(attr, $1, "", 1);
+	    insertAttr(attr, createASTNode($3), "", 1);
+	    $$ = createASTNode("method_call", &attr);
+	
+	    // Semantics - check if it's a class method call
+	    string classType = $1->type;
+	    string methodName = string($3);
+	
+	    // First check if it's a class
+	    if (classType.substr(0, 6) == "CLASS_") {
+	        // Look up method in class
+	        int ret = lookupClass(classType, methodName);
+	        if (ret == 1) {
+	            // Get method type (should be FUNC_returnType)
+	            string methodType = ClassAttrType(classType, methodName);
+	
+	            // Check if it's a function
+	            if (methodType.substr(0, 5) == "FUNC_") {
+	                string returnType = methodType.substr(5); // Extract return type
+	                $$->type = returnType;
+	                $$->temp_name = $1->temp_name + "." + methodName;
+	                $$->isInit = 1;
+	
+	                // Check arguments (none for this rule)
+	                vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);
+	                if (methodArgs.size() > 0 && !(methodArgs.size()==1 && methodArgs[0]=="#NO_FUNC")) {
+	                    yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+	                }
+	            } else {
+	                yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            }
+	        } else if (ret == 0) {
+	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
+	        } else {
+	            yyerror(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
+	        }
+	    } else {
+	        yyerror("Cannot call method on non-class type", "type error");
+	    }
+	    currArgs.clear();
+	}
+	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
+	    DEBUG_PARSER("postfix_expression -> postfix_expression '.' IDENTIFIER '(' argument_expression_list ')'");
+	    std::vector<Data> attr;
+	    insertAttr(attr, $1, "", 1);
+	    insertAttr(attr, createASTNode($3), "", 1);
+	    insertAttr(attr, $5, "", 1);
+	    $$ = createASTNode("method_call_args", &attr);
+	
+	    // Semantics - check if it's a class method call with arguments
+	    string classType = $1->type;
+	    string methodName = string($3);
+	
+	    // First check if it's a class
+	    if (classType.substr(0, 6) == "CLASS_") {
+	        // Look up method in class
+	        int ret = lookupClass(classType, methodName);
+	        if (ret == 1) {
+	            // Get method type (should be FUNC_returnType)
+	            string methodType = ClassAttrType(classType, methodName);
+	
+	            // Check if it's a function
+	            if (methodType.substr(0, 5) == "FUNC_") {
+	                string returnType = methodType.substr(5); // Extract return type
+	
+	                // Check arguments against parameter types
+	                vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);//gives className_func ->className empty right now
+	
+	                for (int i = 0; i < methodArgs.size(); i++) {
+	                    if (methodArgs[i] == "...") break;
+	                    if (currArgs.size() == i) {
+	                        yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+	                        break;
+	                    }
+						if (i == methodArgs.size() - 1 && i < currArgs.size() - 1) {
+	                        yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+	                        break;
+	                    }
+	                    string msg = checkType(methodArgs[i], currArgs[i]);
+	                    if (msg == "warning") {
+	                        warning(("Incompatible conversion of " + currArgs[i] + 
+	                                " to parameter of type " + methodArgs[i]).c_str());
+	                    } else if (msg.empty()) {
+	                        yyerror(("Incompatible argument to method " + methodName).c_str(), 
+	                               "semantic error");
+	                        break;
+	                    }
+	                }
+	
+	                $$->type = returnType;
+	                $$->temp_name = $1->temp_name + "." + methodName;
+	                $$->isInit = $5->isInit;
+	            } else {
+	                yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            }
+	        } else if (ret == 0) {
+	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
+	        } else {
+	            yyerror(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
+	        }
+	    } else {
+	        yyerror("Cannot call method on non-class type", "type error");
+	    }
+	    currArgs.clear();
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
         DEBUG_PARSER("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
@@ -1851,37 +1959,43 @@ direct_declarator
 		noArgs=0;
 
 		// Semantics
+		string argMapKey = $1->temp_name;
+        
+        	// If inside a class definition, use qualified name
+        if (!className.empty()) {
+            	argMapKey = className + "_" + argMapKey;
+        }
 		if($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
 			$$->expType = 3;
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
-
-			vector<string> temp = getFuncArgs($1->temp_name);
+			
+			vector<string> temp = getFuncArgs(argMapKey);
 			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
-				insertFuncArg($$->temp_name, funcArgs);
+				insertFuncArg(argMapKey, funcArgs);
 				funcArgs.clear();
-				funcName = string($1->temp_name);
+				funcName = string(argMapKey);
 				funcType = $1->type;
 			}
 			else{
 				// Check if temp is correct
 				if(temp == funcArgs){
 					funcArgs.clear();
-					funcName = string($1->temp_name);
+					funcName = string(argMapKey);
 					funcType = $1->type;
 				}
 				else{
-					yyerror(("Conflicting types for " + $1->temp_name).c_str(), "type error");
+					yyerror(("Conflicting types for " + argMapKey).c_str(), "type error");
 				}
 			}
 		}
 		else{
 			if($1->expType == 2){
-				yyerror( ($1->temp_name + "declared as array of function").c_str(), "type error");
+				yyerror( (argMapKey + "declared as array of function").c_str(), "type error");
 			}
 			else{
-				yyerror( ($1->temp_name + "declared as function of function").c_str(), "type error");
+				yyerror( (argMapKey + "declared as function of function").c_str(), "type error");
 			}
 		}
 	}
