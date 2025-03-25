@@ -142,9 +142,9 @@ postfix_expression
     | postfix_expression '[' expression ']' {
         $$ = getNode("postfix_expression", mergeAttrs($1, $3));
 
-		std::cerr << "\n" << line << " Postfix Expression 144: " << $1->type << ' ' << $3->type << std::endl;
-		std::cerr << "Postfix Expression 144: " << $1->temp_name << ' ' << $3->temp_name << std::endl;
-		std::cerr << "Postfix Expression 144: " << lookup($1->temp_name)->data_type << ' ' << lookup($3->temp_name)->data_type << std::endl;
+		// std::cerr << "\n" << line << " Postfix Expression 144: " << $1->type << ' ' << $3->type << std::endl;
+		// std::cerr << "Postfix Expression 144: " << $1->temp_name << ' ' << $3->temp_name << std::endl;
+		// std::cerr << "Postfix Expression 144: " << lookup($1->temp_name)->data_type << ' ' << lookup($3->temp_name)->data_type << std::endl;
         //3AC
 		// arr[i] -> 
 
@@ -714,7 +714,6 @@ assignment_expression
 			std::cerr<<"Assignment Expression 656: "<<$1->type << ' ' << $1->place <<std::endl;
 		}
 		int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
-        // int num = emit(qid($2, NULL), $1->place, $4->place, qid("", NULL), -1);
         $$->place = $1->place;
         backpatch($4->nextlist, num);
 		rValue = 0;
@@ -809,7 +808,7 @@ init_declarator
 		// }
 		if(DEBUG){
 		}
-		std::cerr<<"Init Declarator 746: "<<$1->temp_name<< ' ' << $1->place << ' ' << $1->type <<std::endl;
+		// std::cerr<<"Init Declarator 746: "<<$1->temp_name<< ' ' << $1->place << ' ' << $1->type <<std::endl;
 		std::string type = lookup($1->temp_name)->data_type;
 		if(type.find("int[]") != std::string::npos){
 			for(int i = 0; i<list_values.size();i++){
