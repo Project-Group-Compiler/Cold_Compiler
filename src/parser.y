@@ -108,7 +108,7 @@ primary_expression
 				$$->expType = 2; 
 			}
 			else $$->expType = 1;
-			printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
+			//printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
 			$$->type = temp;
 			$$->isInit = lookup(string($1))->init;
 			$$->size = getSize(temp);
@@ -1571,7 +1571,7 @@ class_member
         DEBUG_PARSER("class_member -> function_definition");
 		 $1->strVal = currentAccess;
 		 // Add function as a class member with proper access specifier
-		 printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+		 //printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
 
         insertClassAttr($1->temp_name, "FUNC_"+$1->type, $1->size, 0,currentAccess);
 		 $$ = $1; 
@@ -1580,7 +1580,7 @@ class_member
         DEBUG_PARSER("class_member -> declaration");
 		$1->strVal = currentAccess;
 		// Add declaration as a class member with proper access specifier
-		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+		//printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
         insertClassAttr($1->temp_name, $1->type, $1->size, 0,currentAccess);
 		$$ = $1; 
 	}
@@ -2782,9 +2782,14 @@ F
 	: %empty {
         DEBUG_PARSER("F -> %empty");
 		std::string qualifiedFuncName = funcName;
-        if (!className.empty()) {
-            qualifiedFuncName = className + "_" + funcName;
-        }
+		if (!className.empty()) {
+		    // Check if funcName already has className prefix to avoid duplication
+		    if (funcName.find(className + "_") == 0) {
+		        qualifiedFuncName = funcName;  // Already prefixed
+		    } else {
+		        qualifiedFuncName = className + "_" + funcName;
+		    }
+		}
 		if (gst.find(qualifiedFuncName) != gst.end()){
 			yyerror(("Redefinition of function " + qualifiedFuncName).c_str(), "scope error");
 		}
