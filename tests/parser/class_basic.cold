@@ -7,14 +7,15 @@ class Person
         char* name;
     };
     public{
-        int returnAge(int x,int y)  { return age;}
+        int returnAge(int x)  { return age;}
     };
 };
 
 int main()
 {
+    int* c;
 	class Person p1;
     p1.age=5;
-	p1.returnAge();
+	p1.returnAge(c);
 	return 0;
 }

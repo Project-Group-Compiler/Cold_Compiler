@@ -363,7 +363,23 @@ postfix_expression
 	                        yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
 	                        break;
 	                    }
-	                    string msg = checkType(methodArgs[i], currArgs[i]);
+						// Before the for loop
+						//printf("DEBUG: Method args for %s_%s (total: %zu):\n", 
+						//       classType.substr(6).c_str(), methodName.c_str(), methodArgs.size());
+						//for (const auto& arg : methodArgs) {
+						//    printf("  - %s\n", arg.c_str());
+						//}
+						//printf("DEBUG: Current arguments passed (total: %zu):\n", currArgs.size());
+						//for (const auto& arg : currArgs) {
+						//    printf("  - %s\n", arg.c_str());
+						//}
+//
+						//// Inside the for loop, right before checkType
+						//printf("DEBUG: Checking argument types - expected: %s, got: %s\n", 
+						//       methodArgs[i].c_str(), currArgs[i].c_str());
+						string msg = checkType(methodArgs[i], currArgs[i]);
+						//printf("DEBUG: checkType result: '%s'\n", msg.c_str());
+	                    
 	                    if (msg == "warning") {
 	                        warning(("Incompatible conversion of " + currArgs[i] + 
 	                                " to parameter of type " + methodArgs[i]).c_str());
