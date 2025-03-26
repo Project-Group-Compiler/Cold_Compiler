@@ -219,10 +219,10 @@ postfix_expression
 						yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
-					string msg = checkType(funcArgs[i],currArgs[i]);
+					string msg = checkType(funcArgs[i],currArgs[i-1]);
 					
 					if(msg =="warning"){
-						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
+						warning(("Incompatible conversion of " +  currArgs[i-1] + " to parameter of type " + funcArgs[i]).c_str());
 					}
 					else if(msg.empty()){
 						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
@@ -251,9 +251,22 @@ postfix_expression
     	string temp = string($3);
     	string memberName = $1->temp_name;
     	string type = $1->type;
-	
-    	// First check if it's a class
-    	if (type.substr(0, 6) == "CLASS_") {
+		
+		// Debug the type to see what's reaching this rule
+    	printf("DEBUG: Member access type = '%s', member = '%s',memberName='%s'\n", type.c_str(), temp.c_str(),memberName.c_str());
+
+		if ($1->temp_name == "this" || ($1->type.substr(0, 6) == "CLASS_" && !className.empty() && $1->type.substr(6) == className)) {
+        	// We're inside a class method accessing a member through 'this'
+        	// Check if the member exists in the current class structure
+        	if (curr_class_structure && (*curr_class_structure).find(temp) != (*curr_class_structure).end()) {
+        	    $$->type = (*curr_class_structure)[temp]->type;
+        	    $$->temp_name = $1->temp_name + "." + temp;
+        	} else {
+        	    yyerror(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
+        	}
+    	}
+    	// First check if it's a regular class
+		else if (type.substr(0, 6) == "CLASS_") {
     	    int ret = lookupClass(type, temp);
     	    if (ret == 1) {
     	        // Class member found
@@ -352,17 +365,20 @@ postfix_expression
 	
 	                // Check arguments against parameter types
 	                vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);//gives className_func ->className empty right now
-	
-	                for (int i = 0; i < methodArgs.size(); i++) {
+					if(currArgs.size() != methodArgs.size()-1)
+						yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+				else{
+
+	                for (int i = 1; i < methodArgs.size(); i++) {
 	                    if (methodArgs[i] == "...") break;
-	                    if (currArgs.size() == i) {
-	                        yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+	                    /*if (currArgs.size() == i) {
+	                        
 	                        break;
 	                    }
 						if (i == methodArgs.size() - 1 && i < currArgs.size() - 1) {
 	                        yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
 	                        break;
-	                    }
+	                    }*/
 						// Before the for loop
 						//printf("DEBUG: Method args for %s_%s (total: %zu):\n", 
 						//       classType.substr(6).c_str(), methodName.c_str(), methodArgs.size());
@@ -376,12 +392,12 @@ postfix_expression
 //
 						//// Inside the for loop, right before checkType
 						//printf("DEBUG: Checking argument types - expected: %s, got: %s\n", 
-						//       methodArgs[i].c_str(), currArgs[i].c_str());
-						string msg = checkType(methodArgs[i], currArgs[i]);
+						//       methodArgs[i].c_str(), currArgs[i-1].c_str());
 						//printf("DEBUG: checkType result: '%s'\n", msg.c_str());
 	                    
+						string msg = checkType(methodArgs[i], currArgs[i-1]);
 	                    if (msg == "warning") {
-	                        warning(("Incompatible conversion of " + currArgs[i] + 
+	                        warning(("Incompatible conversion of " + currArgs[i-1] + 
 	                                " to parameter of type " + methodArgs[i]).c_str());
 	                    } else if (msg.empty()) {
 	                        yyerror(("Incompatible argument to method " + methodName).c_str(), 
@@ -389,7 +405,7 @@ postfix_expression
 	                        break;
 	                    }
 	                }
-	
+				}
 	                $$->type = returnType;
 	                $$->temp_name = $1->temp_name + "." + methodName;
 	                $$->isInit = $5->isInit;
@@ -543,14 +559,22 @@ unary_expression
 		
 		// Semantic
 		$$->isInit = $2->isInit;
-		string temp = unaryExp($1->node_name, $2->type);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $2->intVal;
-		}
-		else{
-			yyerror("Type inconsistent with operator", "type error");
-		}
+			// Special handling for dereferencing class pointers (this pointer)
+    	if ($1->node_name == "*" && $2->type.substr(0, 6) == "CLASS_" && $2->type.back() == '*') {
+			std::cout<<"type: "<<$2->type<<std::endl;
+    	    // For class pointers, preserve the class type without the trailing *
+    	    $$->type = $2->type.substr(0, $2->type.size() - 1);
+    	} else {
+    	    // Normal unary expression handling
+    	    string temp = unaryExp($1->node_name, $2->type);
+    	    if(!temp.empty()){
+    	        $$->type = temp;
+    	        $$->intVal = $2->intVal;
+    	    }
+    	    else{
+    	        yyerror("Type inconsistent with operator", "type error");
+    	    }
+    	}
 	}
 	| SIZEOF unary_expression {
         DEBUG_PARSER("unary_expression -> SIZEOF unary_expression");
@@ -1596,7 +1620,7 @@ class_member
         DEBUG_PARSER("class_member -> declaration");
 		$1->strVal = currentAccess;
 		// Add declaration as a class member with proper access specifier
-		//printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
         insertClassAttr($1->temp_name, $1->type, $1->size, 0,currentAccess);
 		$$ = $1; 
 	}
@@ -1877,13 +1901,13 @@ declarator
 		if(type == "#INSIDE"){
 			$$->type = "STRUCT_" + structName + $1->type;
 			$$->temp_name = $2->temp_name;
-			$$->size = 8;
+			$$->size = 4;
 			$$->expType = 2;
 		}
 		else{
 			$$->type = $2->type + $1->type;
 			$$->temp_name = $2->temp_name;
-			$$->size = 8;
+			$$->size = 4;
 			$$->expType = 2;
 		}
 	}
@@ -1957,7 +1981,7 @@ direct_declarator
 			$$->expType = 2;
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
-			$$->size = 8;
+			$$->size = 4;
 		}
 		else{
 			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
@@ -1980,6 +2004,23 @@ direct_declarator
         	// If inside a class definition, use qualified name
         if (!className.empty()) {
             	argMapKey = className + "_" + argMapKey;
+        		// Add implicit 'this' pointer as first parameter
+        		string thisType = "CLASS_" + className + "*";
+        		vector<string> newFuncArgs;
+
+        		// Add 'this' as first parameter
+        		newFuncArgs.push_back(thisType);
+
+        		// Add the rest of the parameters
+        		for (const auto& arg : funcArgs) {
+        		    newFuncArgs.push_back(arg);
+        		}
+
+        		// Replace funcArgs with the new list including 'this'
+        		funcArgs = newFuncArgs;
+
+        		// Insert 'this' parameter into symbol table
+        		insertSymbol(*curr_table, "this", thisType, 4, true, NULL);
         }
 		if($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
@@ -2067,6 +2108,15 @@ direct_declarator
 		insertAttr(v, NULL, "( )", 0);
 		$$ = createASTNode("direct_declarator", &v);
 		updateFuncSymbolEntry(0);
+
+		if (!className.empty()) {
+        // Add implicit 'this' pointer for class methods
+        string thisType = "CLASS_" + className + "*";
+        funcArgs.push_back(thisType);
+        
+        // Insert 'this' parameter into symbol table
+        insertSymbol(*curr_table, "this", thisType, 8, true, NULL);
+    	}
 
 		// Semantics
 		if($1->expType == 1) {
@@ -2291,7 +2341,7 @@ direct_abstract_declarator
 		
 		// Semantics
 		$$->type = type + "*"; // Array type
-		$$->size = 8; // Default size for a pointer
+		$$->size = 4; // Default size for a pointer
 	}
 	| '[' constant_expression ']' {
         DEBUG_PARSER("direct_abstract_declarator -> '[' constant_expression ']'");
@@ -2312,7 +2362,7 @@ direct_abstract_declarator
 		
 		// Semantics
 		$$->type = $1->type + "*";
-		$$->size = 8;
+		$$->size = 4;
 	}
 	| direct_abstract_declarator '[' constant_expression ']'{
         DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '[' constant_expression ']'");

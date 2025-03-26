@@ -38,6 +38,7 @@ extern ull struct_offset;
 extern ull class_offset;
 extern sym_table *curr_table; // store pointer of the current symbol table
 extern sym_table *curr_structure;
+extern sym_table *curr_class_structure;
 extern struct_sym_table *curr_struct_table;
 extern class_sym_table *curr_class_table;
 extern stack<ull> Goffset, Loffset, blockSz;
