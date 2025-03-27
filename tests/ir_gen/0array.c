@@ -1,5 +1,5 @@
 void testArray() {
-    int v1[3] = {1, 2,3}; //Not working for now
+    int v1[3] = {1, 2,3};
 }
 
 void test_md() {

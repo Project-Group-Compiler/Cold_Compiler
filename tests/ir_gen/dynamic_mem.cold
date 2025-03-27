@@ -1,0 +1,8 @@
+void test() 
+{
+    int *ptr = (int *)malloc(sizeof(int));
+    if (ptr) {
+        *ptr = 42;
+        free(ptr);
+    }
+}

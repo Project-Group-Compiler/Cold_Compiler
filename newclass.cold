@@ -1,0 +1,8 @@
+int main()
+{	
+	class person p1;
+	p1.age = 6;
+	p1.foo();
+	p1.bar(4, 6);
+	return 0;
+}

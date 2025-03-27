@@ -498,19 +498,18 @@ shift_expression
 ;
 
 relational_expression
-    : shift_expression {
+    : inclusive_or_expression {
         $$ = $1; 
     }
-    | relational_expression '<' shift_expression {
+    | relational_expression '<' inclusive_or_expression {
         $$ = getNode("<", mergeAttrs($1, $3));
-		// TODO : Can do constant folding if both $1 and $2 are constant
         // 3AC 
         std::string q = getTempVariable("int");
         emit("<", $1->place, $3->place, q, -1);
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression '>' shift_expression {
+    | relational_expression '>' inclusive_or_expression {
         $$ = getNode(">", mergeAttrs($1, $3));
 
         // 3AC
@@ -519,7 +518,7 @@ relational_expression
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression LE_OP shift_expression {
+    | relational_expression LE_OP inclusive_or_expression {
         $$ = getNode("<=", mergeAttrs($1, $3));
 
         // 3AC
@@ -528,7 +527,7 @@ relational_expression
         $$->place = q;
         $$->nextlist.clear();
     }
-    | relational_expression GE_OP shift_expression {
+    | relational_expression GE_OP inclusive_or_expression {
         $$ = getNode(">=", mergeAttrs($1, $3));
 
         // 3AC
@@ -567,10 +566,10 @@ equality_expression
 ;
 
 and_expression
-    : equality_expression {
+    : shift_expression {
         $$ = $1;
     }
-    | and_expression '&' equality_expression {
+    | and_expression '&' shift_expression {
         $$ = getNode("&", mergeAttrs($1, $3));
 
         // 3AC
@@ -617,8 +616,8 @@ inclusive_or_expression
 ;
 //TODO : Define token also
 logical_and_expression
-	: inclusive_or_expression { $$ = $1; }
-	| logical_and_expression AND_OP inclusive_or_expression {
+	: equality_expression { $$ = $1; }
+	| logical_and_expression AND_OP equality_expression {
 		$$ = getNode("&&", mergeAttrs($1, $3));
 
 		// 3AC

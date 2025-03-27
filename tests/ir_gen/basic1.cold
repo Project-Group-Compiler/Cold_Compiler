@@ -1,23 +1,14 @@
 void solve() {
-    unsigned int x = 0;
+    int x = 0;
     x = 10; 
-    if (x == 5) {
+    if (x == 5)
         x = 6;
-        // Test Passed
-    }
 }
 
-void test_do_while(int x) {
+void test_loops(int x) {
     do {
         x++;
     } while (x < 5);
-    
-    if (x == 5) {
-        // Test Passed
-    }
-    else {
-        printf("Fail");
-    }
 }
 
 int func(){
@@ -40,18 +31,11 @@ int func(){
     return 0;
 }
 
-int WHITE = 0;
-int GRAY = 1;
-int BLACK = 2;
-int head, tail;
+int d; // global variable
 
-extern int d;
 int main(){
     const int a=5;
     static char b='c';
-    int* b;
-    int x=5;
-    printf("ehllo world");
-    solve(x);
+    int* ptr; // pointer
     return 0;
 }

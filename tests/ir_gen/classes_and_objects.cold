@@ -1,0 +1,17 @@
+class Person 
+{
+    private{
+        int age;
+    };
+    public{
+        int returnAge()  { return this->age;}
+    };
+};
+
+int main()
+{
+	class Person p1;
+    p1.age = 6;
+	p1.returnAge();
+	return 0;
+}
