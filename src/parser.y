@@ -26,7 +26,7 @@ extern bool has_error;
 
 int yyerror(const char*);
 int yylex();
-int rValue = 0;
+int arr_rValue = 0, struct_rValue = 0;
 int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
 int previous_if_found = 0; // TODO: May need later
 std::vector<std::string> list_values;
@@ -199,20 +199,75 @@ postfix_expression
 
         //3AC
 		// Todo -> $$->type
-        std::string temp_var = getTempVariable($$->type);
-        $$->place = temp_var;
+        std::string temp_var = getTempVariable("int*"); // TODO : need to confirm type
 		// $$->nextlist.clear();
-        emit("member_access", $1->place, std::string($3), temp_var, -1);
+		// TODO : replace std::string($3) with $3->offset
+		emit("unary&", $1->place, "", temp_var, -1);
+		emit("ptr+", temp_var, std::string($3), temp_var, -1);
+		temp_var = "*" + temp_var;
+        $$->place = temp_var;
+        // emit("member_access", $1->place, std::string($3), temp_var, -1); changed from this
     }
     | postfix_expression PTR_OP IDENTIFIER {
         $$ = getNode($2, mergeAttrs($1, getNode($3)));
 
         //3AC
 		// Todo $$ -> type
-		std::string temp_var = getTempVariable($$->type);
-		emit("PTR_OP", $1->place, std::string($3), temp_var, -1);
+		std::string temp_var = getTempVariable("int*"); // TODO : need to confirm type
+		// TODO : replace std::string($3) with $3->offset
+		emit("ptr+", $1->place, std::string($3), temp_var, -1);
+		temp_var = "*" + temp_var;
 		$$->place = temp_var;
+		//emit("PTR_OP", $1->place, std::string($3), temp_var, -1);
     }
+	| postfix_expression '.' IDENTIFIER '(' ')' {
+		// handle ast, symtable and semantic checks
+		// $$ = $1;
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		std::string p = getTempVariable("int"); // TODO : type = CLASS *
+		emit("unary&", $1->place, "", p, -1);
+		emit("param", p, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, "1", q, -1);
+		$$->place = q;
+    }
+	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
+        // handle ast, symtable and semantic checks
+		// $$ = getNode("postfix_expression", mergeAttrs($1, $3));
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		std::string p = getTempVariable("int"); // TODO : type = CLASS *
+		emit("unary&", $1->place, "", p, -1);
+		emit("param", p, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, std::to_string($5->argCount + 1), q, -1);
+		$$->place = q;
+    }
+	| postfix_expression PTR_OP IDENTIFIER '(' ')' {
+        // handle ast, symtable and semantic checks
+		// $$ = $1;
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		emit("param", $1->place, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, "1", q, -1);
+		$$->place = q;
+    }
+	| postfix_expression PTR_OP IDENTIFIER '(' argument_expression_list ')' {
+        // handle ast and symtable
+		// $$ = getNode("postfix_expression", mergeAttrs($1, $3));
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		emit("param", $1->place, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, std::to_string($5->argCount + 1), q, -1);
+		$$->place = q;
+    }	
     | postfix_expression INC_OP {
         $$ = getNode($2, mergeAttrs($1, nullptr));
 
@@ -284,7 +339,7 @@ unary_expression
         $$ = getNode("unary_exp", mergeAttrs($1, $2));
 		if(DEBUG) {
 			std::cerr << '\n' << line << '\n';
-			std::cerr << "Unary Expression 260: "<< $2->type << ' ' << $1->place << ' ' << $2->place << ' ' << rValue << std::endl;
+			std::cerr << "Unary Expression 260: "<< $2->type << ' ' << $1->place << ' ' << $2->place << ' ' << arr_rValue << std::endl;
 		}
         //3AC
 		if($1->place == "unary*"){
@@ -302,7 +357,7 @@ unary_expression
 			$$->type = $2->type;
 		}
 
-		if(rValue == 0 && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
+		if(arr_rValue == 0 && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
 			$$->temp_name = $2->temp_name;
 			$$->place = "*" + $2->place;
 			$$->nextlist.clear();
@@ -704,7 +759,7 @@ WRITE_GOTO
 
 assignment_expression
     : conditional_expression { $$ = $1; }
-    | unary_expression assignment_operator { if_found = 0; rValue = 1;} assignment_expression {
+    | unary_expression assignment_operator { if_found = 0; arr_rValue = 1; struct_rValue = 1;} assignment_expression {
         $$ = getNode($2, mergeAttrs($1, $4));
 
         // 3AC
@@ -716,7 +771,8 @@ assignment_expression
         // int num = emit(qid($2, NULL), $1->place, $4->place, qid("", NULL), -1);
         $$->place = $1->place;
         backpatch($4->nextlist, num);
-		rValue = 0;
+		arr_rValue = 0;
+		struct_rValue = 0;
     }
     ;
 
@@ -798,7 +854,7 @@ init_declarator
 			std::cerr<<"Init Declarator 737: "<<$1->temp_name<<std::endl;
 		}
     }
-    | declarator '=' {rValue = 1;} NEXT_QUAD initializer {
+    | declarator '=' {arr_rValue = 1; struct_rValue = 1;} NEXT_QUAD initializer {
 		$$ = getNode("=", mergeAttrs($1, $5));
 
         // 3AC
@@ -822,7 +878,8 @@ init_declarator
         $$->nextlist = $5->nextlist;
         backpatch($1->nextlist, $4);
 
-		rValue = 0;
+		arr_rValue = 0;
+		struct_rValue = 0;
 		list_values.clear();
     }
     ;
