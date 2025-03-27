@@ -306,8 +306,34 @@ postfix_expression
 	    string classType = $1->type;
 	    string methodName = string($3);
 	
+    	// Special case for 'this' pointer access within a class definition
+    	if ($1->temp_name == "this" || 
+    	    ($1->type.substr(0, 6) == "CLASS_" && !className.empty() && 
+    	     $1->type.substr(6) == className)) {
+			
+    	    // We're inside a class method calling another method through 'this'
+    	    if (curr_class_structure && (*curr_class_structure).find(methodName) != (*curr_class_structure).end()) {
+    	        string methodType = (*curr_class_structure)[methodName]->type;
+	
+    	        if (methodType.substr(0, 5) == "FUNC_") {
+    	            $$->type = methodType.substr(5); // Extract return type
+    	            $$->temp_name = $1->temp_name + "." + methodName;
+    	            $$->isInit = 1;
+	
+    	            // Check arguments
+    	            vector<string> methodArgs = getFuncArgs(className + "_" + methodName);
+    	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
+    	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+    	            }
+    	        } else {
+    	            yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+    	        }
+    	    } else {
+    	        yyerror(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
+    	    }
+    	}
 	    // First check if it's a class
-	    if (classType.substr(0, 6) == "CLASS_") {
+	    else if (classType.substr(0, 6) == "CLASS_") {
 	        // Look up method in class
 	        int ret = lookupClass(classType, methodName);
 	        if (ret == 1) {
@@ -323,9 +349,9 @@ postfix_expression
 	
 	                // Check arguments (none for this rule)
 	                vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);
-	                if (methodArgs.size() > 0 && !(methodArgs.size()==1 && methodArgs[0]=="#NO_FUNC")) {
-	                    yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-	                }
+	                if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
+                    	yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+                	}
 	            } else {
 	                yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
 	            }
@@ -350,9 +376,53 @@ postfix_expression
 	    // Semantics - check if it's a class method call with arguments
 	    string classType = $1->type;
 	    string methodName = string($3);
+
+    	// Special case for 'this' pointer access within a class definition
+    	if (($1->temp_name == "this") || 
+    	    (classType.substr(0, 6) == "CLASS_" && !className.empty() && 
+    	     classType.substr(6) == className)) {
+			
+    	    // We're inside a class method calling another method through 'this'
+    	    if (curr_class_structure && (*curr_class_structure).find(methodName) != (*curr_class_structure).end()) {
+    	        string methodType = (*curr_class_structure)[methodName]->type;
+
+    	        if (methodType.substr(0, 5) == "FUNC_") {
+    	            string returnType = methodType.substr(5); // Extract return type
+    	            $$->type = returnType;
+    	            $$->temp_name = $1->temp_name + "." + methodName;
+    	            $$->isInit = $5->isInit;
+
+    	            // Check arguments
+    	            vector<string> methodArgs = getFuncArgs(className + "_" + methodName);
 	
+    	            // Check number of arguments (account for implicit 'this')
+    	            if (currArgs.size() != methodArgs.size() - 1) {
+    	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+    	            } else {
+    	                // Type check arguments
+    	                for (int i = 1; i < methodArgs.size(); i++) { // Start from 1 to skip 'this'
+    	                    if (methodArgs[i] == "...") break;
+	
+    	                    string msg = checkType(methodArgs[i], currArgs[i-1]);
+    	                    if (msg == "warning") {
+    	                        warning(("Incompatible conversion of " + currArgs[i-1] + 
+    	                                " to parameter of type " + methodArgs[i]).c_str());
+    	                    } else if (msg.empty()) {
+    	                        yyerror(("Incompatible argument to method " + methodName).c_str(), 
+    	                              "semantic error");
+    	                        break;
+    	                    }
+    	                }
+    	            }
+    	        } else {
+    	            yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+    	        }
+    	    } else {
+    	        yyerror(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
+    	    }
+    	}
 	    // First check if it's a class
-	    if (classType.substr(0, 6) == "CLASS_") {
+	    else if (classType.substr(0, 6) == "CLASS_") {
 	        // Look up method in class
 	        int ret = lookupClass(classType, methodName);
 	        if (ret == 1) {
@@ -1442,12 +1512,11 @@ type_specifier
 	;
 
 inheritance_specifier
-	: access_specifier IDENTIFIER {
+	: IDENTIFIER {
         DEBUG_PARSER("inheritance_specifier -> access_specifier IDENTIFIER");
         std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
         /* Wrap IDENTIFIER into an AST node */
-        insertAttr(attr, createASTNode($2), "", 1);
+        insertAttr(attr, createASTNode($1), "", 1);
         $$ = createASTNode("inheritance_specifier", &attr);
     }
 	;

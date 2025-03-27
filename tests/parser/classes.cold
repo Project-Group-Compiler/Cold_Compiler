@@ -11,7 +11,7 @@ class Person {
     };
 }; 
   
-class Faculty <- public Person { 
+class Faculty <- Person { 
    // data members of Faculty
     protected{
         long employeeID;
@@ -23,19 +23,22 @@ class Faculty <- public Person {
     }; 
 }; 
   
-class Student <- public Person { 
+class Student <- Person { 
    // data members of Student 
    private {
        long rollNo;
    };
     public{ 
         long getRollNo() { 
+            (*this).rollNo=aadhar_number; // or should it be (*this).aadhar_number??  2nd option seems better
+            (*this).returnName();//till now we created object and then called function -> *this does the same thing
+            //ofc there should be errors on using private vars
             return this->rollNo; 
         } 
     };
 }; 
   
-class Instructor <- public Faculty, public Student  {
+class Instructor <- Faculty  {//need to flag errors for multiple inheritance as it is not allowed
     private{
         char** courses;
         int maxSize =  1024;
