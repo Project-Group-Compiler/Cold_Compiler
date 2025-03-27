@@ -31,8 +31,6 @@ int func(){
     return 0;
 }
 
-int d; // global variable
-
 int main(){
     const int a=5;
     static char b='c';
