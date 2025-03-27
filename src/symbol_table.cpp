@@ -429,6 +429,29 @@ string ClassAttrType(string class_name, string id)
     }
     return ((*table)[id]->type);
 }
+string ClassAttrAccess(string className, string attr) {
+    // Search through class table hierarchy
+    class_sym_table* temp = curr_class_table;
+    
+    while (temp) {
+        // Check if this class table has the class we're looking for
+        if ((*temp).find(className) != (*temp).end()) {
+            sym_table* classTable = (*temp)[className].second;
+            if (classTable && (*classTable).find(attr) != (*classTable).end()) {
+                return (*classTable)[attr]->access;
+            }
+            return ""; // Member not found in this class
+        }
+        
+        // Move up to parent class table if exists
+        if (class_parent_table.find(temp) == class_parent_table.end()) {
+            break;
+        }
+        temp = class_parent_table[temp];
+    }
+    
+    return ""; // Class or member not found
+}
 int findClass(string class_name)
 {
     class_sym_table *temp = curr_class_table;

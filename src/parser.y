@@ -268,10 +268,20 @@ postfix_expression
     	// First check if it's a regular class
 		else if (type.substr(0, 6) == "CLASS_") {
     	    int ret = lookupClass(type, temp);
+			std::cout<<type<<" "<<temp<<std::endl;
     	    if (ret == 1) {
-    	        // Class member found
-    	        $$->type = ClassAttrType(type, temp); 
-    	        $$->temp_name = $1->temp_name + "." + temp;
+    	        string memberAccess = ClassAttrAccess(type, temp);
+        
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != type.substr(6))) {
+        		    yyerror(("Cannot access " + memberAccess + " member '" + temp + 
+        		            "' of class '" + type.substr(6) + "'").c_str(), "access error");
+        		} else {
+        		    // Member found and accessible
+        		    $$->type = ClassAttrType(type, temp);
+        		    $$->temp_name = $1->temp_name + "." + temp;
+        		}
     	    }
     	    else if (ret == 0) {
     	        yyerror(("Member '" + temp + "' not found in class").c_str(), "scope error");
@@ -336,25 +346,36 @@ postfix_expression
 	    else if (classType.substr(0, 6) == "CLASS_") {
 	        // Look up method in class
 	        int ret = lookupClass(classType, methodName);
+			std::cout<<classType<<" "<<methodName<<std::endl;
 	        if (ret == 1) {
-	            // Get method type (should be FUNC_returnType)
-	            string methodType = ClassAttrType(classType, methodName);
-	
-	            // Check if it's a function
-	            if (methodType.substr(0, 5) == "FUNC_") {
-	                string returnType = methodType.substr(5); // Extract return type
-	                $$->type = returnType;
-	                $$->temp_name = $1->temp_name + "." + methodName;
-	                $$->isInit = 1;
-	
-	                // Check arguments (none for this rule)
-	                vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);
-	                if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
-                    	yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-                	}
-	            } else {
-	                yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
-	            }
+				string memberAccess = ClassAttrAccess(classType, methodName);
+				
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != classType.substr(6))) {
+        		    yyerror(("Cannot access " + memberAccess + " member '" + methodName + 
+        		            "' of class '" + classType.substr(6) + "'").c_str(), "access error");
+        		}
+				else{
+	            	// Get method type (should be FUNC_returnType)
+	            	string methodType = ClassAttrType(classType, methodName);
+
+	            	// Check if it's a function
+	            	if (methodType.substr(0, 5) == "FUNC_") {
+	            	    string returnType = methodType.substr(5); // Extract return type
+	            	    $$->type = returnType;
+	            	    $$->temp_name = $1->temp_name + "." + methodName;
+	            	    $$->isInit = 1;
+
+	            	    // Check arguments (none for this rule)
+	            	    vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);
+	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
+                	    	yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+                		}
+	            	} else {
+	            	    yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            	}
+				}
 	        } else if (ret == 0) {
 	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
 	        } else {
@@ -425,63 +446,74 @@ postfix_expression
 	    else if (classType.substr(0, 6) == "CLASS_") {
 	        // Look up method in class
 	        int ret = lookupClass(classType, methodName);
+			std::cout<<classType<<" "<<methodName<<std::endl;
 	        if (ret == 1) {
-	            // Get method type (should be FUNC_returnType)
-	            string methodType = ClassAttrType(classType, methodName);
-	
-	            // Check if it's a function
-	            if (methodType.substr(0, 5) == "FUNC_") {
-	                string returnType = methodType.substr(5); // Extract return type
-	
-	                // Check arguments against parameter types
-	                vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);//gives className_func ->className empty right now
-					if(currArgs.size() != methodArgs.size()-1)
-						yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-				else{
+				string memberAccess = ClassAttrAccess(classType, methodName);
 
-	                for (int i = 1; i < methodArgs.size(); i++) {
-	                    if (methodArgs[i] == "...") break;
-	                    /*if (currArgs.size() == i) {
-	                        
-	                        break;
-	                    }
-						if (i == methodArgs.size() - 1 && i < currArgs.size() - 1) {
-	                        yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-	                        break;
-	                    }*/
-						// Before the for loop
-						//printf("DEBUG: Method args for %s_%s (total: %zu):\n", 
-						//       classType.substr(6).c_str(), methodName.c_str(), methodArgs.size());
-						//for (const auto& arg : methodArgs) {
-						//    printf("  - %s\n", arg.c_str());
-						//}
-						//printf("DEBUG: Current arguments passed (total: %zu):\n", currArgs.size());
-						//for (const auto& arg : currArgs) {
-						//    printf("  - %s\n", arg.c_str());
-						//}
-//
-						//// Inside the for loop, right before checkType
-						//printf("DEBUG: Checking argument types - expected: %s, got: %s\n", 
-						//       methodArgs[i].c_str(), currArgs[i-1].c_str());
-						//printf("DEBUG: checkType result: '%s'\n", msg.c_str());
-	                    
-						string msg = checkType(methodArgs[i], currArgs[i-1]);
-	                    if (msg == "warning") {
-	                        warning(("Incompatible conversion of " + currArgs[i-1] + 
-	                                " to parameter of type " + methodArgs[i]).c_str());
-	                    } else if (msg.empty()) {
-	                        yyerror(("Incompatible argument to method " + methodName).c_str(), 
-	                               "semantic error");
-	                        break;
-	                    }
-	                }
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != classType.substr(6))) {
+        		    yyerror(("Cannot access " + memberAccess + " member '" + methodName + 
+        		            "' of class '" + classType.substr(6) + "'").c_str(), "access error");
+        		}
+				else{
+	            	// Get method type (should be FUNC_returnType)
+	            	string methodType = ClassAttrType(classType, methodName);
+
+	            	// Check if it's a function
+	            	if (methodType.substr(0, 5) == "FUNC_") {
+	            	    string returnType = methodType.substr(5); // Extract return type
+
+	            	    // Check arguments against parameter types
+	            	    vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);//gives className_func ->className empty right now
+						if(currArgs.size() != methodArgs.size()-1)
+							yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+					else{
+
+	            	    for (int i = 1; i < methodArgs.size(); i++) {
+	            	        if (methodArgs[i] == "...") break;
+	            	        /*if (currArgs.size() == i) {
+							
+	            	            break;
+	            	        }
+							if (i == methodArgs.size() - 1 && i < currArgs.size() - 1) {
+	            	            yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+	            	            break;
+	            	        }*/
+							// Before the for loop
+							//printf("DEBUG: Method args for %s_%s (total: %zu):\n", 
+							//       classType.substr(6).c_str(), methodName.c_str(), methodArgs.size());
+							//for (const auto& arg : methodArgs) {
+							//    printf("  - %s\n", arg.c_str());
+							//}
+							//printf("DEBUG: Current arguments passed (total: %zu):\n", currArgs.size());
+							//for (const auto& arg : currArgs) {
+							//    printf("  - %s\n", arg.c_str());
+							//}
+//	
+							//// Inside the for loop, right before checkType
+							//printf("DEBUG: Checking argument types - expected: %s, got: %s\n", 
+							//       methodArgs[i].c_str(), currArgs[i-1].c_str());
+							//printf("DEBUG: checkType result: '%s'\n", msg.c_str());
+
+							string msg = checkType(methodArgs[i], currArgs[i-1]);
+	            	        if (msg == "warning") {
+	            	            warning(("Incompatible conversion of " + currArgs[i-1] + 
+	            	                    " to parameter of type " + methodArgs[i]).c_str());
+	            	        } else if (msg.empty()) {
+	            	            yyerror(("Incompatible argument to method " + methodName).c_str(), 
+	            	                   "semantic error");
+	            	            break;
+	            	        }
+	            	    }
+					}
+	            	    $$->type = returnType;
+	            	    $$->temp_name = $1->temp_name + "." + methodName;
+	            	    $$->isInit = $5->isInit;
+	            	} else {
+	            	    yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            	}
 				}
-	                $$->type = returnType;
-	                $$->temp_name = $1->temp_name + "." + methodName;
-	                $$->isInit = $5->isInit;
-	            } else {
-	                yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
-	            }
 	        } else if (ret == 0) {
 	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
 	        } else {
@@ -1549,7 +1581,7 @@ access_specifier
 	| PROTECTED {
         DEBUG_PARSER("access_specifier -> PROTECTED");
         $$ = createASTNode($1);
-		currentAccess="public";
+		currentAccess="protected";
     }
 	;
 
