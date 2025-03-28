@@ -56,6 +56,7 @@ void updSymbolTable(string id);
 sym_entry* lookup(string id);
 sym_entry* currLookup(string id);
 void insertKeywords();
+void insert_imp_func(string func_name, vector<string> type, string ret_type);
 string getType(string id);
 void createStructTable();
 int insertStructAttr(string attr, string type, ull size, bool init);
@@ -82,5 +83,7 @@ void printSymbolTable(sym_table* table, string file_name);
 ull getSize(string id);
 string lookupType(string a);
 void insertType(string a, string b);
+
+
 
 #endif // SYMBOL_TABLE_H
