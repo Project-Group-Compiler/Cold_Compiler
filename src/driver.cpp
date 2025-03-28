@@ -2,6 +2,7 @@
 #include <filesystem>
 #include "data_structures.hpp"
 #include "symbol_table.h"
+#include "tac.hpp"
 
 extern FILE *yyin;
 bool print_ast = false;
@@ -34,6 +35,7 @@ int main(int argc, char *argv[])
             std::cout << "Usage: driver <input_file> [options]\n"
                       << "Options:\n"
                       << "  -h, --help       Show this help message and exit\n"
+                      << "  -O0              Generate unoptimized IR\n"
                       << "  -l, --lex        Print lexical analysis table\n"
                       << "  -a, --ast        Print abstract syntax tree\n"
                       << "  -s, --symtab     Print symbol tables\n"
@@ -51,18 +53,24 @@ int main(int argc, char *argv[])
     inputFilename = argv[1];
 
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
+    bool optimize_ir = true;
     bool lexPrint = false;
     bool print_symtab = false;
+    bool print_ir = true; // TODO : make it false in next phase
     bool force = false;
     for (int i = 2; i < argc; i++)
     {
         std::string arg = argv[i];
-        if (arg == "-l" || arg == "--lex")
+        if (arg == "-O0")
+            optimize_ir = false;
+        else if (arg == "-l" || arg == "--lex")
             lexPrint = true;
         else if (arg == "-a" || arg == "--ast")
             print_ast = true;
         else if (arg == "-s" || arg == "--symtab")
             print_symtab = true;
+        else if (arg == "-t" || arg == "--tac")
+            print_ir = true;
         else if (arg == "-f" || arg == "--force")
             force = true;
         else if (arg == "-o" || arg == "--output")
@@ -103,7 +111,21 @@ int main(int argc, char *argv[])
             printTables(inputFileString);//meet's function
             printSymbolTable(&gst, "#Global_Symbol_Table#.csv");//mohitmo's function
         }
-            
+        if (!has_error || force)
+        {
+            generate_ir();
+
+            if (optimize_ir)
+                run_optimisations();
+
+            if (print_ir)
+                print_tac_code(inputFileString);
+
+            // generate asm code fn comes here
+        }
+        else
+            print_error("\nsyntax or semantic errors present, use -f to forcefully continue");
+
     }
     else
         print_error("\nlexical errors present, use -f to force parsing");

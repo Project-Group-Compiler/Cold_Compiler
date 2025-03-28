@@ -1,3 +1,4 @@
+#pragma once
 #ifndef AST_HPP
 #define AST_HPP
 
@@ -20,6 +21,15 @@ struct Node
 	int isInit;
     std::string temp_name;
     long long int size;
+
+    std::string place;
+    std::vector<int> truelist;
+    std::vector<int> falselist;
+    std::vector<int> breaklist;
+    std::vector<int> continuelist;
+    std::vector<int> nextlist;
+    std::vector<int> caselist;
+
 };
 
 struct Data

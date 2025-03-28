@@ -12,12 +12,16 @@ AST_HPP = $(SRC_DIR)/AST.hpp
 AST_CPP = $(SRC_DIR)/AST.cpp
 DS_HPP = $(SRC_DIR)/data_structures.hpp
 DS_CPP = $(SRC_DIR)/data_structures.cpp
-DRIVER = $(SRC_DIR)/driver.cpp
 SYM_TABLE = $(SRC_DIR)/symbol_table.cpp
 TYPECHECK = $(SRC_DIR)/typecheck.cpp
+TAC_HPP = $(SRC_DIR)/tac.hpp
+TAC_GEN_CPP = $(SRC_DIR)/tac_gen.cpp
+TAC_OPT_CPP = $(SRC_DIR)/tac_opt.cpp
+DRIVER = $(SRC_DIR)/driver.cpp
+
 
 # Final binary output
-OUTPUT = $(BIN_DIR)/parser
+OUTPUT = $(BIN_DIR)/ir_gen
 
 # Object files including new ones
 OBJS = \
@@ -27,6 +31,8 @@ OBJS = \
 	$(BUILD_DIR)/data_structures.o \
 	$(BUILD_DIR)/symbol_table.o \
 	$(BUILD_DIR)/typecheck.o \
+	$(BUILD_DIR)/tac_gen.o \
+	$(BUILD_DIR)/tac_opt.o \
 	$(BUILD_DIR)/driver.o
 
 # Compiler and tools
@@ -73,6 +79,14 @@ $(BUILD_DIR)/symbol_table.o: $(SYM_TABLE) $(SRC_DIR)/symbol_table.h
 # Compile typecheck object file
 $(BUILD_DIR)/typecheck.o: $(TYPECHECK) $(SRC_DIR)/typecheck.h
 	$(CXX) $(CXXFLAGS) -c -o $@ $(TYPECHECK)
+
+# Compile the TAC generator object file
+$(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_GEN_CPP)
+
+# Compile the TAC optimizer object file
+$(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP) $(DS_HPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
 
 # Compile driver object file
 $(BUILD_DIR)/driver.o: $(DRIVER) $(DS_HPP)

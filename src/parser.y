@@ -4,17 +4,20 @@
 #include <iomanip>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <cstring>
 #include "AST.hpp"
 #include "data_structures.hpp"
 #include "typecheck.h"
 #include "symbol_table.h"
-extern int yyleng;
+#include "tac.hpp"
+
 std::string currentDataType="";
 std::string currentAccess = "";//for classes
 int noArgs=0;
 bool flag=0,flag2=0;
 
+extern int yyleng;
 extern char* yytext;
 extern int column;
 extern int line;
@@ -38,13 +41,20 @@ vector<string> funcArgs;
 vector<string> idList;
 vector<string> currArgs;
 
-// Debug tracking
-bool debug_enabled = 1; // Flag to enable or disable debugging
-#define DEBUG_PARSER(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
+bool debug_enabled = 0;
+#define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char* s, const std::string &errorType = "syntax error");
 int yylex();
 int warning(const char*);
+
+//3 - AC 
+int rValue = 0;
+int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
+int previous_if_found = 0; // TODO: May need later
+std::vector<std::string> list_values;
+std::map<std::string, std::vector<int>> gotolablelist;
+std::map<std::string, int> gotolabel;
 %}
 
 %define parse.error detailed
@@ -54,6 +64,7 @@ int warning(const char*);
 	char* str;
 	Node* ptr;
 	constants* num;
+	int Int;
 }
 
 %token<str> IDENTIFIER STRING_LITERAL SIZEOF
@@ -74,6 +85,12 @@ int warning(const char*);
 %type<str> F G G_C
 %type<str> CHANGE_TABLE 
 
+//3AC 
+%type<Int> NEXT_QUAD WRITE_GOTO
+%type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
+%type<ptr> N
+
+
 %start translation_unit
 
 %type<ptr> primary_expression postfix_expression argument_expression_list unary_expression unary_operator cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression
@@ -92,8 +109,8 @@ int warning(const char*);
 
 primary_expression
     : IDENTIFIER {
-        DEBUG_PARSER("primary_expression -> IDENTIFIER");
-    	$$ = createASTNode($1);
+        DBG("primary_expression -> IDENTIFIER");
+    	$$ = getNode(std::string($1));
 		
 		// Semantics
 		string temp = primaryExpression(string($1));
@@ -108,25 +125,34 @@ primary_expression
 				$$->expType = 2; 
 			}
 			else $$->expType = 1;
-			printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
 			$$->type = temp;
 			$$->isInit = lookup(string($1))->init;
 			$$->size = getSize(temp);
 			$$->temp_name = string($1); 
+
+			//3AC
+			if(temp.substr(0, 5) == "FUNC_") {
+				$$->place = "CALL " + std::string($1);
+			} 
+			else {
+				$$->place = std::string($1);
+			}
+			$$->nextlist.clear();
 		}
     }
-	| CONSTANT IDENTIFIER {
-        DEBUG_PARSER("primary_expression -> CONSTANT IDENTIFIER");
+	/* | CONSTANT IDENTIFIER {
+		DBG("primary_expression -> CONSTANT IDENTIFIER");
 		yyerror("invalid identifier", "syntax error");
-		$$ = createASTNode($1->str);
+		$$ = getNode($1);
 	}
 	| CONSTANT CONSTANT {
-        DEBUG_PARSER("primary_expression -> CONSTANT CONSTANT");
+		DBG("primary_expression -> CONSTANT CONSTANT");
 		yyerror("invalid constant", "syntax error");
-		$$ = createASTNode($1->str);
-	}
+		$$ = getNode($1);
+	} */
 	| CONSTANT {
-		$$ = createASTNode($1->str);
+		std::string tp = std::string($1->str);
+		$$ = getNode(tp);
 		
 		// Semantics for constants
 		$$->type = $1->type;
@@ -134,35 +160,41 @@ primary_expression
 		$$->realVal = $1->realVal;
 		$$->expType = 4;
 		$$->temp_name = $1->str;
+
+		//3AC
+		$$->place = $$->temp_name;
+		$$->nextlist.clear();
+
 	}
 	| STRING_LITERAL {
-        DEBUG_PARSER("primary_expression -> STRING_LITERAL");
+        DBG("primary_expression -> STRING_LITERAL");
 		std::string check=std::string($1);
 		addToConstantTable(check,"String Literal");
-		$$ = createASTNode($1);
+		$$ = getNode($1);
 		
 		// Semantics for string literals
 		$$->type = string("char*");
 		$$->temp_name = string($1);
 		$$->strVal = string($1);
+
+		//3AC
+		$$->place = $$->temp_name;
+		$$->nextlist.clear();
 	}
 	| '(' expression ')' {
-        DEBUG_PARSER("primary_expression -> '(' expression ')'");
+        DBG("primary_expression -> '(' expression ')'");
 		$$ = $2;
 	}
 	;
 
 postfix_expression
 	: primary_expression {
-        DEBUG_PARSER("postfix_expression -> primary_expression");
+        DBG("postfix_expression -> primary_expression");
 		$$ = $1;
 	}
 	| postfix_expression '[' expression ']' {
-        DEBUG_PARSER("postfix_expression -> postfix_expression '[' expression ']'");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("postfix_expression", &attr);
+        DBG("postfix_expression -> postfix_expression '[' expression ']'");
+		$$ = getNode("postfix_expression", mergeAttrs($1, $3));
 		
 		// Semantics
 		if($1->isInit && $3->isInit){
@@ -171,13 +203,28 @@ postfix_expression
 		string temp = postfixExpression($1->type, 1);
 		if(!temp.empty()){	
 			$$->type = temp;
+			//3AC
+			if($$->type == "int"){
+				std::string q = getTempVariable("int*");
+				emit("=", $1->place,"", q, -1);
+				std::string q2 = getTempVariable("int");
+				emit("*", $3->place, getSizeOfType("int"), q2, -1);
+				std::string q3 = getTempVariable("int*");
+				emit("ptr+", q, q2, q3, -1);
+				$$->place = "*" + q3;
+			}else{
+				std::string q = getTempVariable($$->type);
+				$$->place = q;
+				emit("[ ]", $1->place, $3->place, q, -1);
+			}
+			$$->temp_name = $1->temp_name;
 		}
 		else{
 			yyerror(("Array " + $1->temp_name +  " Index out of bound").c_str(), "semantic error");
 		}
 	}
 	| postfix_expression '(' ')' {
-        DEBUG_PARSER("postfix_expression -> postfix_expression '(' ')'");
+        DBG("postfix_expression -> postfix_expression '(' ')'");
 		$$ = $1;
 		
 		// Semantics
@@ -189,6 +236,13 @@ postfix_expression
 				vector<string> funcArg = getFuncArgs($1->temp_name);
 				if(!funcArg.empty()){
 					yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
+				}else{
+					//3AC_5
+					std::string q = getTempVariable($1->type);
+					$$->place = q;
+					$$->temp_name = $1->temp_name;
+					$$->nextlist.clear();
+					emit("CALL", $$->temp_name, "0", q, -1);
 				}
 			}
 		}
@@ -198,11 +252,8 @@ postfix_expression
 		currArgs.clear(); 
 	}
 	| postfix_expression '(' argument_expression_list ')' {
-        DEBUG_PARSER("postfix_expression -> postfix_expression '(' argument_expression_list ')'");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("postfix_expression", &attr);
+        DBG("postfix_expression -> postfix_expression '(' argument_expression_list ')'");
+		$$ = getNode("postfix_expression", mergeAttrs($1, $3));
 		
 		// Semantics
 		$$->isInit = $3->isInit;
@@ -220,7 +271,6 @@ postfix_expression
 						break;
 					}
 					string msg = checkType(funcArgs[i],currArgs[i]);
-					
 					if(msg =="warning"){
 						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
 					}
@@ -233,6 +283,12 @@ postfix_expression
 						break;
 					}
 				}
+				//3AC_6
+				std::string q = getTempVariable($1->type);
+				$$->temp_name = $1->temp_name;
+				$$->place = q;
+				$$->nextlist.clear();
+				emit("CALL", $$->temp_name, std::to_string(funcArgs.size()), q, -1);
 			}
 		}
 		else{
@@ -241,11 +297,8 @@ postfix_expression
 		currArgs.clear();
 	}
 	| postfix_expression '.' IDENTIFIER {
-    	DEBUG_PARSER("postfix_expression -> postfix_expression '.' IDENTIFIER");
-    	std::vector<Data> attr;
-    	insertAttr(attr, $1, "", 1);
-    	insertAttr(attr, createASTNode($3), "", 1);
-    	$$ = createASTNode("expression.id", &attr);
+    	DBG("postfix_expression -> postfix_expression '.' IDENTIFIER");
+    	$$ = getNode("expression.id", mergeAttrs($1, getNode($3)));
 	
     	// Semantics - check if it's a class or struct
     	string temp = string($3);
@@ -281,13 +334,16 @@ postfix_expression
     	        $$->temp_name = $1->temp_name + "." + temp;
     	    }
     	}
+		//3AC
+		std::string q = getTempVariable($$->type);
+        $$->place = q;
+		$$->nextlist.clear();
+        emit("member_access", $1->place, std::string($3), q, -1);
+
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
-        DEBUG_PARSER("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, createASTNode($3), "", 1);
-		$$ = createASTNode($2, &attr);
+        DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
+		$$ = getNode($2, mergeAttrs($1, getNode($3)));
 		
 		// Semantics
 		string temp = string($3);
@@ -307,13 +363,15 @@ postfix_expression
 		else{
 			$$->type = StructAttrType(temp1, temp);
 			$$->temp_name = $1->temp_name + "->" + temp;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			emit("PTR_OP", $1->place, std::string($3), q, -1);
+			$$->place = q;
 		}
 	}
 	| postfix_expression INC_OP {
-        DEBUG_PARSER("postfix_expression -> postfix_expression INC_OP");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		$$ = createASTNode($2, &attr);
+        DBG("postfix_expression -> postfix_expression INC_OP");
+		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
 		// Semantics
 		$$->isInit = $1->isInit;
@@ -321,16 +379,19 @@ postfix_expression
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $1->intVal + 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("S++", $1->place, "", q, -1);
 		}
 		else{
 			yyerror("Increment not defined for this type", "type error");
 		}
 	}
 	| postfix_expression DEC_OP {
-        DEBUG_PARSER("postfix_expression -> postfix_expression DEC_OP");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		$$ = createASTNode($2, &attr);
+        DBG("postfix_expression -> postfix_expression DEC_OP");
+		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
 		// Semantics
 		$$->isInit = $1->isInit;
@@ -338,6 +399,11 @@ postfix_expression
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $1->intVal - 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("S--", $1->place, "", q, -1);
 		}
 		else{
 			yyerror("Decrement not defined for this type", "type error");
@@ -347,167 +413,206 @@ postfix_expression
 
 argument_expression_list
 	: assignment_expression {
-        DEBUG_PARSER("argument_expression_list -> assignment_expression");
+        DBG("argument_expression_list -> assignment_expression");
 		$$ = $1;
 		
-		// Semantic
+		// Semantics
 		$$->isInit = $1->isInit;
 		currArgs.push_back($1->type);
 		$$->type = "void";
+		//3AC
+		$$->nextlist.clear();
+        emit("param", $$->place, "", "", -1);
 	}
 	| argument_expression_list ',' assignment_expression {
-        DEBUG_PARSER("argument_expression_list -> argument_expression_list ',' assignment_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("argument_list", &attr);
+        DBG("argument_expression_list -> argument_expression_list ',' assignment_expression");
+		$$ = getNode("argument_list", mergeAttrs($1, $3));
 		
-		// Semantic
+		// Semantics
 		string temp = argExp($1->type, $3->type, 2);
 		
 		if($1->isInit && $3->isInit) $$->isInit=1;
 		currArgs.push_back($3->type);
 		$$->type = "void";
+		//3AC
+		$$->nextlist.clear();
+        int Label = emit("param", $3->place, "", "", -1);
+		backpatch($1->nextlist, Label);
 	}
 	;
 
 unary_expression
 	: postfix_expression {
-        DEBUG_PARSER("unary_expression -> postfix_expression");
+        DBG("unary_expression -> postfix_expression");
 		$$ = $1;
 	}
 	| INC_OP unary_expression {
-        DEBUG_PARSER("unary_expression -> INC_OP unary_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode($1, &attr);
+        DBG("unary_expression -> INC_OP unary_expression");
+		$$ = getNode($1, mergeAttrs($2, nullptr));
 		
-		// Semantic
+		// Semantics
 		$$->isInit = $2->isInit;
 		string temp = postfixExpression($2->type, 6);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal + 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("++P", $2->place, "", q, -1);
 		}
 		else{
 			yyerror("Increment not defined for this type", "type error");
 		}
 	}
 	| DEC_OP unary_expression {
-        DEBUG_PARSER("unary_expression -> DEC_OP unary_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode($1, &attr);
+        DBG("unary_expression -> DEC_OP unary_expression");
+		$$ = getNode($1, mergeAttrs($2, nullptr));
+
 		
-		// Semantic
+		// Semantics
 		$$->isInit = $2->isInit;
 		string temp = postfixExpression($2->type, 7);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal - 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("--P", $2->place, "", q, -1);
 		}
 		else{
 			yyerror("Decrement not defined for this type", "type error");
 		}
 	}
 	| unary_operator cast_expression {
-        DEBUG_PARSER("unary_expression -> unary_operator cast_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode("unary_exp", &attr);
+        DBG("unary_expression -> unary_operator cast_expression");
+		$$ = getNode("unary_exp", mergeAttrs($1, $2));
 		
-		// Semantic
+		// Semantics
 		$$->isInit = $2->isInit;
 		string temp = unaryExp($1->node_name, $2->type);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal;
+			//3AC
+			//TODO : Check Later
+			if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
+				$$->temp_name = $2->temp_name;
+				$$->place = "*" + $2->place;
+				$$->nextlist.clear();
+			}else{
+				std::string q = getTempVariable($2->type);
+				$$->temp_name = $2->temp_name;
+				$$->place = q;
+				$$->nextlist.clear();
+				emit($1->place, $2->place, "", q, -1);
+			}
 		}
 		else{
 			yyerror("Type inconsistent with operator", "type error");
 		}
 	}
 	| SIZEOF unary_expression {
-        DEBUG_PARSER("unary_expression -> SIZEOF unary_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode($1, &attr);
+        DBG("unary_expression -> SIZEOF unary_expression");
+		$$ = getNode($1, mergeAttrs($2, nullptr));
 		
-		// Semantic
+		// Semantics
 		$$->type = "int";
 		$$->isInit = 1;
 		$$->intVal = $2->size;
+		//3AC
+        std::string q = getTempVariable("int");
+        $$->place = q;
+        $$->nextlist.clear();
+        emit("SIZEOF", $2->place, "", q, -1);
 	}
 	| SIZEOF '(' type_name ')' {
-        DEBUG_PARSER("unary_expression -> SIZEOF '(' type_name ')'");
-		std::vector<Data> attr;
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($1, &attr);
+        DBG("unary_expression -> SIZEOF '(' type_name ')'");
+		$$ = getNode($1, mergeAttrs($3, nullptr));
 		
-		// Semantic
+		// Semantics
 		$$->type = "int";
 		$$->isInit = 1;
 		$$->intVal = $3->size;
+		//3AC
+        std::string q = getTempVariable("int");
+        $$->place = q;
+        $$->nextlist.clear();
+        emit("SIZEOF", $3->place, "", q, -1);
 	}
 	;
 
 unary_operator
 	: '&' {
-		DEBUG_PARSER("unary_operator -> '&'");
-		$$ = createASTNode("&");
+		DBG("unary_operator -> '&'");
+		$$ = getNode("&");
+		//3AC
+        $$->place = "unary&";
 	}
 	| '*' {
-		DEBUG_PARSER("unary_operator -> '*'");
-		$$ = createASTNode("*");
+		DBG("unary_operator -> '*'");
+		$$ = getNode("*");
+		//3AC
+        $$->place = "unary*";
 	}
 	| '+' {
-		DEBUG_PARSER("unary_operator -> '+'");
-		$$ = createASTNode("+");
+		DBG("unary_operator -> '+'");
+		$$ = getNode("+");
+		//3AC
+        $$->place = "unary+";
 	}
 	| '-' {
-		DEBUG_PARSER("unary_operator -> '-'");
-		$$ = createASTNode("-");
+		DBG("unary_operator -> '-'");
+		$$ = getNode("-");
+		//3AC
+        $$->place = "unary-";
 	}
 	| '~' {
-		DEBUG_PARSER("unary_operator -> '~'");
-		$$ = createASTNode("~");
+		DBG("unary_operator -> '~'");
+		$$ = getNode("~");
+		//3AC
+        $$->place = "~";
 	}
 	| '!' {
-		DEBUG_PARSER("unary_operator -> '!'");
-		$$ = createASTNode("!");
+		DBG("unary_operator -> '!'");
+		$$ = getNode("!");
+		//3AC
+        $$->place = "!";
 	}
 	;
 
 cast_expression
 	: unary_expression {
-		DEBUG_PARSER("cast_expression -> unary_expression");
+		DBG("cast_expression -> unary_expression");
 		$$ = $1;
 	}
 	| '(' type_name ')' cast_expression {
-		DEBUG_PARSER("cast_expression -> '(' type_name ')' cast_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $2, "", 1);
-		insertAttr(attr, $4, "", 1);
-		$$ = createASTNode("cast_expression", &attr);
+		DBG("cast_expression -> '(' type_name ')' cast_expression");
+		$$ = getNode("cast_expression", mergeAttrs($2, $4));
 		
 		// Semantic
 		$$->type = $2->type;
 		$$->isInit = $4->isInit;
+		//3AC
+		//TODO: Try to do CAST_typename
+		std::string q = getTempVariable($2->type);
+        $$->place = q;
+		$4->nextlist.clear();
+        emit("CAST", $4->place, "", q, -1);
 	}
 	;
 
 multiplicative_expression
 	: cast_expression {
-		DEBUG_PARSER("multiplicative_expression -> cast_expression");
+		DBG("multiplicative_expression -> cast_expression");
 		$$ = $1;
 	}
 	| multiplicative_expression '*' cast_expression {
-		DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '*' cast_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("*", &attr);
+		DBG("multiplicative_expression -> multiplicative_expression '*' cast_expression");
+		$$ = getNode("*", mergeAttrs($1, $3));
 		
 		// Semantic
 		$$->intVal = $1->intVal * $3->intVal;
@@ -522,17 +627,20 @@ multiplicative_expression
 			else if(temp == "float"){
 				$$->type = "long double";
 			}
+			//3AC
+			std::string q = getTempVariable($$->type); //TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			$$->nextlist.clear();
+			emit("*", $1->place, $3->place, q, -1);
 		}
 		else{
 			yyerror("Incompatible type for * operator", "type error");
 		}
 	}
 	| multiplicative_expression '/' cast_expression {
-		DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '/' cast_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("/", &attr);
+		DBG("multiplicative_expression -> multiplicative_expression '/' cast_expression");
+		$$ = getNode("/", mergeAttrs($1, $3));
 		
 		// Semantic
 		if($3->intVal != 0) $$->intVal = $1->intVal / $3->intVal;
@@ -545,17 +653,20 @@ multiplicative_expression
 			else if(temp == "float"){
 				$$->type = "long double";
 			}
+			//3AC
+			std::string q = getTempVariable($$->type); //TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			$$->nextlist.clear();
+			emit("/", $1->place, $3->place, q, -1);
 		}
 		else{
 			yyerror("Incompatible type for / operator", "type error");
 		}
 	}
 	| multiplicative_expression '%' cast_expression {
-		DEBUG_PARSER("multiplicative_expression -> multiplicative_expression '%' cast_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("%", &attr);
+		DBG("multiplicative_expression -> multiplicative_expression '%' cast_expression");
+		$$ = getNode("%", mergeAttrs($1, $3));
 		
 		// Semantic
 		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
@@ -563,6 +674,12 @@ multiplicative_expression
 		string temp = mulExp($1->type, $3->type, '%');
 		if(temp == "int"){
 			$$->type = "long long";
+			//3AC
+			std::string q = getTempVariable($$->type); //TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			$$->nextlist.clear();
+			emit("%", $1->place, $3->place, q, -1);
 		}
 		else{
 			yyerror("Incompatible type for % operator", "type error");
@@ -571,560 +688,560 @@ multiplicative_expression
 	;
 
 additive_expression
-	: multiplicative_expression {
-		DEBUG_PARSER("additive_expression -> multiplicative_expression");
-		$$ = $1;
-	}
-	| additive_expression '+' multiplicative_expression {
-        DEBUG_PARSER("additive_expression -> additive_expression '+' multiplicative_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("+", &attr);
-		
-		// Semantic
-		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		$$->intVal = $1->intVal + $3->intVal;
-		string temp = addExp($1->type, $3->type, '+');
-		if(!temp.empty()){
-			if(temp == "int") $$->type = "long long";
-			else if(temp == "real") $$->type = "long double";
-			else $$->type = temp;
-		}
-		else{
-			yyerror("Incompatible type for + operator", "type error");
-		}
-	}
-	| additive_expression '-' multiplicative_expression {
-		DEBUG_PARSER("additive_expression -> additive_expression '-' multiplicative_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("-", &attr);
-		
-		// Semantic
-		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		$$->intVal = $1->intVal - $3->intVal;
-		string temp = addExp($1->type, $3->type, '-');
-		if(!temp.empty()){
-			if(temp == "int") $$->type = "long long";
-			else if(temp == "real") $$->type = "long double";
-			else $$->type = temp;
-		}
-		else{
-			yyerror("Incompatible type for - operator", "type error");
-		}
-	}
-	;
+    : multiplicative_expression {
+        DBG("additive_expression -> multiplicative_expression");
+        $$ = $1;
+    }
+    | additive_expression '+' multiplicative_expression {
+        DBG("additive_expression -> additive_expression '+' multiplicative_expression");
+        $$ = getNode("+", mergeAttrs($1, $3));
+        
+        // Semantic
+        if($1->isInit && $3->isInit) $$->isInit = 1;
+        $$->intVal = $1->intVal + $3->intVal;
+        string temp = addExp($1->type, $3->type, '+');
+        if(!temp.empty()){
+            $$->type = (temp == "int") ? "long long" : (temp == "real") ? "long double" : temp;
+			//3AC
+			std::string q = getTempVariable($$->type);//TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
+				std::string q2 = getTempVariable($3->type);
+				emit("*", $3->place, getSizeOfType($1->type.substr(0, $1->type.size()-1)), q2, -1);
+				emit("ptr+", $1->place, q2, q, -1);
+			}else{
+				emit("+", $1->place, $3->place, q, -1);
+			}
+			$$->nextlist.clear();
+        } else {
+            yyerror("Incompatible type for + operator", "type error");
+        }
+    }
+    | additive_expression '-' multiplicative_expression {
+        DBG("additive_expression -> additive_expression '-' multiplicative_expression");
+        $$ = getNode("-", mergeAttrs($1, $3));
+        
+        // Semantic
+        if($1->isInit && $3->isInit) $$->isInit = 1;
+        $$->intVal = $1->intVal - $3->intVal;
+        string temp = addExp($1->type, $3->type, '-');
+        if(!temp.empty()){
+            $$->type = (temp == "int") ? "long long" : (temp == "real") ? "long double" : temp;
+			//3AC
+			std::string q = getTempVariable($$->type);//TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			$$->nextlist.clear();
+			emit("-", $1->place, $3->place, q, -1);
+        } else {
+            yyerror("Incompatible type for - operator", "type error");
+        }
+    }
+    ;
 
 shift_expression
-	: additive_expression {
-		DEBUG_PARSER("shift_expression -> additive_expression");
-		$$ = $1;
-	}
-	| shift_expression LEFT_OP additive_expression {
-		DEBUG_PARSER("shift_expression -> shift_expression LEFT_OP additive_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-		//Semantic
-		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
-		string temp = shiftExp($1->type,$3->type);
-		if(!temp.empty()){
-			$$->type = $1->type;
-		}
-		else{
-			yyerror("Invalid operands to binary <<", "type error");
-		}
-	}
-	| shift_expression RIGHT_OP additive_expression {
-		DEBUG_PARSER("shift_expression -> shift_expression RIGHT_OP additive_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-		//Semantic
-		if($1->isInit ==1 && $3->isInit ==1) $$->isInit = 1;
-		string temp = shiftExp($1->type,$3->type);
-		if(!temp.empty()){
-			$$->type = $1->type;
-		}
-		else{
-			yyerror("Invalid operands to binary >>", "type error");
-		}
-	}
-	; 
+    : additive_expression {
+        DBG("shift_expression -> additive_expression");
+        $$ = $1;
+    }
+    | shift_expression LEFT_OP additive_expression {
+        DBG("shift_expression -> shift_expression LEFT_OP additive_expression");
+        $$ = getNode($2, mergeAttrs($1, $3));
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = shiftExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = $1->type;
+			//3AC
+			std::string q = getTempVariable($$->type);//TODO not always int
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("<<", $1->place, $3->place, q, -1);
+        } else {
+            yyerror("Invalid operands to binary <<", "type error");
+        }
+    }
+    | shift_expression RIGHT_OP additive_expression {
+        DBG("shift_expression -> shift_expression RIGHT_OP additive_expression");
+        $$ = getNode($2, mergeAttrs($1, $3));
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = shiftExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = $1->type;
+			//3AC
+			std::string q = getTempVariable($$->type);//TODO not always int
+			$$->place = q;
+			$$->nextlist.clear();
+			emit(">>", $1->place, $3->place, q, -1);
+        } else {
+            yyerror("Invalid operands to binary >>", "type error");
+        }
+    }
+    ;
 
-relational_expression   //POTENTIAL ISSUE
+relational_expression
     : inclusive_or_expression {
-        DEBUG_PARSER("relational_expression -> inclusive_or_expression");
-		$$ = $1;
-	}
+        DBG("relational_expression -> inclusive_or_expression");
+        $$ = $1;
+    }
     | relational_expression '<' inclusive_or_expression {
-        DEBUG_PARSER("relational_expression -> relational_expression '<' inclusive_or_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-          $$ = createASTNode("<", &attr);
-
-          // Semantic actions:
-          if($1->isInit == 1 && $3->isInit == 1)
-              $$->isInit = 1;
-          std::string temp = relExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "bool"){
-				$$->type = "bool";
-              } else if(temp == "Bool"){
-				$$->type = "bool";
-				 warning("Comparison between pointer and integer");
-			}
-          } else {
-			yyerror("Invalid operands to binary <", "type error");
-		}
-	}
+        DBG("relational_expression -> relational_expression '<' inclusive_or_expression");
+        $$ = getNode("<", mergeAttrs($1, $3));
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = relExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = "bool";
+            if (temp == "Bool") warning("Comparison between pointer and integer");
+			// 3AC 
+			std::string q = getTempVariable($$->type);
+			emit("<", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary <", "type error");
+        }
+    }
     | relational_expression '>' inclusive_or_expression {
-        DEBUG_PARSER("relational_expression -> relational_expression '>' inclusive_or_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-          $$ = createASTNode(">", &attr);
-
-          // Semantic actions:
-          if($1->isInit == 1 && $3->isInit == 1)
-              $$->isInit = 1;
-          std::string temp = relExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "bool"){
-				$$->type = "bool";
-              } else if(temp == "Bool"){
-				$$->type = "bool";
-				 warning("Comparison between pointer and integer");
-			}
-          } else {
-			yyerror("Invalid operands to binary >", "type error");
-		}
-	}
+        DBG("relational_expression -> relational_expression '>' inclusive_or_expression");
+        $$ = getNode(">", mergeAttrs($1, $3));
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = relExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = "bool";
+            if (temp == "Bool") warning("Comparison between pointer and integer");
+			// 3AC
+			std::string q = getTempVariable($$->type);
+			emit(">", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary >", "type error");
+        }
+    }
     | relational_expression LE_OP inclusive_or_expression {
-        DEBUG_PARSER("relational_expression -> relational_expression LE_OP inclusive_or_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-          $$ = createASTNode($2, &attr);
-
-          // Semantic actions:
-          if($1->isInit == 1 && $3->isInit == 1)
-              $$->isInit = 1;
-          std::string temp = relExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "bool"){
-				$$->type = "bool";
-              } else if(temp == "Bool"){
-				$$->type = "bool";
-				 warning("Comparison between pointer and integer");
-			}
-          } else {
-			yyerror("Invalid operands to binary <=", "type error");
-		}
-	}
+        DBG("relational_expression -> relational_expression LE_OP inclusive_or_expression");
+        $$ = getNode("<=", mergeAttrs($1, $3));
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = relExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = "bool";
+            if (temp == "Bool") warning("Comparison between pointer and integer");
+			//3AC
+			std::string q = getTempVariable($$->type);
+			emit("<=", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary <=", "type error");
+        }
+    }
     | relational_expression GE_OP inclusive_or_expression {
-        DEBUG_PARSER("relational_expression -> relational_expression GE_OP inclusive_or_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-          $$ = createASTNode($2, &attr);
-
-          // Semantic actions:
-          if($1->isInit == 1 && $3->isInit == 1)
-              $$->isInit = 1;
-          std::string temp = relExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "bool"){
-				$$->type = "bool";
-              } else if(temp == "Bool"){
-				$$->type = "bool";
-				 warning("Comparison between pointer and integer");
-			}
-          } else {
-			yyerror("Invalid operands to binary >=", "type error");
-		}
-	}
-	;
-
+        DBG("relational_expression -> relational_expression GE_OP inclusive_or_expression");
+        $$ = getNode(">=", mergeAttrs($1, $3));
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = relExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = "bool";
+            if (temp == "Bool") warning("Comparison between pointer and integer");
+			// 3AC
+			std::string q = getTempVariable($$->type);
+			emit(">=", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary >=", "type error");
+        }
+    }
+    ;
 
 equality_expression
-	: relational_expression { 
-        DEBUG_PARSER("equality_expression -> relational_expression");
-		$$ = $1;
-	}
-	| equality_expression EQ_OP relational_expression {
-        DEBUG_PARSER("equality_expression -> equality_expression EQ_OP relational_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-		
-		// Semantics
-		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		string temp = eqExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "ok"){
-				yyerror("Comparison between pointer and integer", "type error");
-			}
-			$$->type = "bool";
-		}
-		else{
-			yyerror("Invalid operands to binary ==", "type error");
-		}
-	}
-	| equality_expression NE_OP relational_expression {
-        DEBUG_PARSER("equality_expression -> equality_expression NE_OP relational_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-		
-		// Semantics
-		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		string temp = eqExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "ok"){
-				yyerror("Comparison between pointer and integer", "type error");
-			}
-			$$->type = "bool";
-		}
-		else{
-			yyerror("Invalid operands to binary !=", "type error");
-		}
-	}
-	;
+    : relational_expression { 
+        DBG("equality_expression -> relational_expression");
+        $$ = $1;
+    }
+    | equality_expression EQ_OP relational_expression {
+        DBG("equality_expression -> equality_expression EQ_OP relational_expression");
+        $$ = getNode($2, mergeAttrs($1, $3));
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = eqExp($1->type, $3->type);
+        if(!temp.empty()){
+            if(temp == "ok"){
+                yyerror("Comparison between pointer and integer", "type error");
+            }
+            $$->type = "bool";
+			std::string q = getTempVariable($$->type);
+			emit("==", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        }
+        else{
+            yyerror("Invalid operands to binary ==", "type error");
+        }
+    }
+    | equality_expression NE_OP relational_expression {
+        DBG("equality_expression -> equality_expression NE_OP relational_expression");
+        $$ = getNode($2, mergeAttrs($1, $3));
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = eqExp($1->type, $3->type);
+        if(!temp.empty()){
+            if(temp == "ok"){
+                yyerror("Comparison between pointer and integer", "type error");
+            }
+            $$->type = "bool";
+			//3AC
+			std::string q = getTempVariable($$->type);
+			emit("!=", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        }
+        else{
+            yyerror("Invalid operands to binary !=", "type error");
+        }
+    }
+    ;
 
 and_expression
-	: shift_expression {	
-        DEBUG_PARSER("and_expression -> shift_expression");
-		$$ = $1;
-	}
-	| and_expression '&' shift_expression{
-        DEBUG_PARSER("and_expression -> and_expression '&' shift_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("&", &attr);
-		
-		// Semantics
-		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		string temp = bitExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "ok"){
-				$$->type = "bool";
-			}
-			else $$->type = "long long";
-		}
-		else{
-			yyerror("Invalid operands to binary &", "type error");
-		}
-	}
-	;
+    : shift_expression {	
+        DBG("and_expression -> shift_expression");
+        $$ = $1;
+    }
+    | and_expression '&' shift_expression {
+        DBG("and_expression -> and_expression '&' shift_expression");
+        $$ = getNode("&", mergeAttrs($1, $3));
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = bitExp($1->type, $3->type);
+        if(!temp.empty()){
+            if(temp == "ok"){
+                $$->type = "bool";
+            }
+            else $$->type = "long long";
+			// 3AC
+			std::string q = getTempVariable($$->type);
+			emit("&", $1->place, $3->place, q, -1);
+			$$->place = q;
+        }
+        else{
+            yyerror("Invalid operands to binary &", "type error");
+        }
+    }
+    ;
 
 exclusive_or_expression
-	: and_expression {
-        DEBUG_PARSER("exclusive_or_expression -> and_expression");
-		$$ = $1;
-	}
-	| exclusive_or_expression '^' and_expression{
-        DEBUG_PARSER("exclusive_or_expression -> exclusive_or_expression '^' and_expression");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, $3, "", 1);
-        $$ = createASTNode("^", &attr);
-		
-		// Semantics
-		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		string temp = bitExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "ok"){
-				$$->type = "bool";
-			}
-			else $$->type = "long long";
-		}
-		else{
-			yyerror("Invalid operands to binary ^", "type error");
-		}
+    : and_expression {
+        DBG("exclusive_or_expression -> and_expression");
+        $$ = $1;
     }
-	;
+    | exclusive_or_expression '^' and_expression {
+        DBG("exclusive_or_expression -> exclusive_or_expression '^' and_expression");
+        $$ = getNode("^", mergeAttrs($1, $3));
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = bitExp($1->type, $3->type);
+        if(!temp.empty()){
+            $$->type = (temp == "ok") ? "bool" : "long long";
+
+			// -3AC ---
+			std::string q = getTempVariable($$->type);  
+			emit("^", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary ^", "type error");
+        }
+    }
+    ;
 
 inclusive_or_expression
-	: exclusive_or_expression {
-        DEBUG_PARSER("inclusive_or_expression -> exclusive_or_expression");
+    : exclusive_or_expression {
+        DBG("inclusive_or_expression -> exclusive_or_expression");
         $$ = $1;
     }
-	| inclusive_or_expression '|' exclusive_or_expression{
-        DEBUG_PARSER("inclusive_or_expression -> inclusive_or_expression '|' exclusive_or_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("|", &attr);
-		
-		// Semantics
-		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		string temp = bitExp($1->type, $3->type);
-		if(!temp.empty()){
-			if(temp == "ok"){
-				$$->type = "bool";
-			}
-			else $$->type = "long long";
-		}
-		else{
-			yyerror("Invalid operands to binary |", "type error");
-		}
-	}
-	;
+    | inclusive_or_expression '|' exclusive_or_expression {
+        DBG("inclusive_or_expression -> inclusive_or_expression '|' exclusive_or_expression");
+        $$ = getNode("|", mergeAttrs($1, $3));
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = bitExp($1->type, $3->type);
+        if(!temp.empty()){
+            $$->type = (temp == "ok") ? "bool" : "long long";
+			// -3AC ---
+			std::string q = getTempVariable($$->type); 
+			emit("|", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary |", "type error");
+        }
+    }
+    ;
 
 logical_and_expression
-	: equality_expression {
-        DEBUG_PARSER("logical_and_expression -> equality_expression");
-		$$ = $1;
-	}
-	| logical_and_expression AND_OP equality_expression{
-        DEBUG_PARSER("logical_and_expression -> logical_and_expression AND_OP equality_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("&&", &attr);
-
-		// Semantics
-		$$->type = string("bool");
-		$$->isInit = (($1->isInit) & ($3->isInit));   
-		$$->intVal = $1->intVal && $3->intVal;
-	}
-	;
-
-logical_or_expression
-	: logical_and_expression {
-        DEBUG_PARSER("logical_or_expression -> logical_and_expression");
+    : equality_expression {
+        DBG("logical_and_expression -> equality_expression");
         $$ = $1;
     }
-	| logical_or_expression OR_OP logical_and_expression{
-        DEBUG_PARSER("logical_or_expression -> logical_or_expression OR_OP logical_and_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("||", &attr);
-		
-		// Semantics
-		$$->type = string("bool");
-		$$->isInit = (($1->isInit) & ($3->isInit));
-		$$->intVal = $1->intVal || $3->intVal;
+    | logical_and_expression AND_OP equality_expression {
+        DBG("logical_and_expression -> logical_and_expression AND_OP equality_expression");
+        $$ = getNode("&&", mergeAttrs($1, $3));
+
+        // Semantics
+        $$->type = "bool";
+        $$->isInit = ($1->isInit & $3->isInit);   
+        $$->intVal = $1->intVal && $3->intVal;
+		// 3AC
+		std::string q = getTempVariable($$->type);
+		emit("&&", $1->place, $3->place, q, -1);
+		$$->place = q;
+		$$->nextlist.clear();
+    }
+    ;
+
+logical_or_expression
+    : logical_and_expression {
+        DBG("logical_or_expression -> logical_and_expression");
+        $$ = $1;
+    }
+    | logical_or_expression OR_OP logical_and_expression {
+        DBG("logical_or_expression -> logical_or_expression OR_OP logical_and_expression");
+        $$ = getNode("||", mergeAttrs($1, $3));
+        
+        // Semantics
+        $$->type = "bool";
+        $$->isInit = $1->isInit & $3->isInit;
+        $$->intVal = $1->intVal || $3->intVal;
+		// 3AC
+		std::string q = getTempVariable($$->type);
+		emit("||", $1->place, $3->place, q, -1);
+		$$->place = q;
+		$$->nextlist.clear();
+    }
+    ;
+NEXT_QUAD
+	: %empty {
+		$$ = getCurrentSize();
 	}
 	;
 
 conditional_expression
-	: logical_or_expression {
-        DEBUG_PARSER("conditional_expression -> logical_or_expression");
+    : logical_or_expression {
+        DBG("conditional_expression -> logical_or_expression");
         $$ = $1;
     }
-	| logical_or_expression '?' expression ':' conditional_expression{
-        DEBUG_PARSER("conditional_expression -> logical_or_expression '?' expression ':' conditional_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		insertAttr(attr, $5, "", 1);
-		$$ = createASTNode("ternary operator", &attr);
-		
-		// Semantics
-		string temp = condExp($3->type, $5->type);
-		if(!temp.empty()){
-			$$->type = "int";
+	| GOTO_COND NEXT_QUAD expression WRITE_GOTO ':' NEXT_QUAD conditional_expression {
+        DBG("conditional_expression -> logical_or_expression '?' expression ':' conditional_expression");
+        $$ = getNode("ternary operator", mergeAttrs($1, $3, $7));
+        
+        // Semantics
+        string temp = condExp($3->type, $7->type);
+        if (!temp.empty()) {
+            $$->type = "int";
+			// 3AC
+			std::string q = getTempVariable($$->type);
+
+			backpatch($1->truelist, $2);
+			backpatch($1->falselist, $6);
+			backpatch($3->nextlist, $4-1);
+			backpatch($3->truelist, $4-1);
+			backpatch($3->falselist, $4-1);
+
+			setArg1($4-1,$3->place);
+			setResult($4-1,q);
+
+			backpatch($7->nextlist, getCurrentSize());
+			backpatch($7->falselist, getCurrentSize());
+			backpatch($7->truelist, getCurrentSize());
+
+			emit("=", $7->place, "", q, -1);
+			$$->nextlist.push_back($4);
+			$$->place = q;
+        } else {
+            yyerror("Type mismatch in Conditional Expression", "type error");
+        }
+        $$->isInit = $1->isInit & $3->isInit & $7->isInit;
+    }
+    ;
+
+GOTO_COND
+	: logical_or_expression '?' {
+		previous_if_found = if_found;
+		if_found = 0;
+		$$ = $1;
+
+		// 3AC
+		if ($1->truelist.empty()) {
+			backpatch($1->nextlist, getCurrentSize());
+			int label = emit("GOTO", "IF", $1->place, "", 0);
+			$1->truelist.push_back(label);
+			label = emit("GOTO", "", "", "", 0);
+			$1->falselist.push_back(label);
 		}
-		else {
-			yyerror("Type mismatch in Conditional Expression", "type error");
-		}
-		if($1->isInit == 1 && $3->isInit == 1 && $5->isInit == 1) $$->isInit = 1;
 	}
 	;
+
+WRITE_GOTO
+	: %empty {
+		// 3AC
+		emit("=", "", "", "", -1);
+		int label = emit("GOTO", "", "", "", 0);
+		$$ = label;
+	}
+	;
+
 
 assignment_expression
-	: conditional_expression {
-        DEBUG_PARSER("assignment_expression -> conditional_expression");
+    : conditional_expression {
+        DBG("assignment_expression -> conditional_expression");
         $$ = $1;
     }
-	| unary_expression assignment_operator assignment_expression{
-        DEBUG_PARSER("assignment_expression -> unary_expression assignment_operator assignment_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode($2, &attr);
-		
-		// Semantics
-		string temp = assignExp($1->type, $3->type, string($2));
-		if(!temp.empty()){
-			if(temp == "ok"){
-				$$->type = $1->type;
-			}
-			else if(temp == "warning"){
-				$$->type = $1->type;
-				warning("Assignment with incompatible pointer type");
-			}
-		}
-		else{
-			yyerror("Incompatible types when assigning type", "type error");
-		}
-		if($1->expType == 3 && $3->isInit){
-			updInit($1->temp_name);
-		}
-	}
-	;
+    | unary_expression assignment_operator { if_found = 0; rValue = 1;} assignment_expression {
+        DBG("assignment_expression -> unary_expression assignment_operator assignment_expression");
+        $$ = getNode($2, mergeAttrs($1, $4));
+        
+        // Semantics
+        string temp = assignExp($1->type, $4->type, string($2));
+        if (!temp.empty()) {
+            if (temp == "ok") {
+                $$->type = $1->type;
+            } else if (temp == "warning") {
+                $$->type = $1->type;
+                warning("Assignment with incompatible pointer type");
+            }
+			// 3AC
+			int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
+			$$->place = $1->place;
+			backpatch($4->nextlist, num);
+			rValue = 0;
+        } else {
+            yyerror("Incompatible types when assigning type", "type error");
+        }
+        if ($1->expType == 3 && $4->isInit) {
+            updInit($1->temp_name);
+        }
+    }
+    ;
 
 assignment_operator
-	: '='	{
-		$$ = strdup("=");
-	}
-	| MUL_ASSIGN		{$$ = $1;}
-	| DIV_ASSIGN		{$$ = $1;}
-	| MOD_ASSIGN		{$$ = $1;}
-	| ADD_ASSIGN		{$$ = $1;}
-	| SUB_ASSIGN		{$$ = $1;}
-	| LEFT_ASSIGN		{$$ = $1;}
-	| RIGHT_ASSIGN		{$$ = $1;}
-	| AND_ASSIGN		{$$ = $1;}
-	| XOR_ASSIGN		{$$ = $1;}
-	| OR_ASSIGN			{$$ = $1;}
-	;
-
+    : '=' {
+        $$ = strdup("=");
+    }
+    | MUL_ASSIGN { $$ = $1; }
+    | DIV_ASSIGN { $$ = $1; }
+    | MOD_ASSIGN { $$ = $1; }
+    | ADD_ASSIGN { $$ = $1; }
+    | SUB_ASSIGN { $$ = $1; }
+    | LEFT_ASSIGN { $$ = $1; }
+    | RIGHT_ASSIGN { $$ = $1; }
+    | AND_ASSIGN { $$ = $1; }
+    | XOR_ASSIGN { $$ = $1; }
+    | OR_ASSIGN { $$ = $1; }
+    ;
 expression
 	: assignment_expression {
-        DEBUG_PARSER("expression -> assignment_expression");
-        $$ = $1;
-    }
-	| expression ',' assignment_expression{
-        DEBUG_PARSER("expression -> expression ',' assignment_expression");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("expression", &attr);
-		//Semantic
-		$$->type = string("void");
+		DBG("expression -> assignment_expression");
+		$$ = $1;
+	}
+	| expression ',' NEXT_QUAD assignment_expression {
+		DBG("expression -> expression ',' assignment_expression");
+		$$ = getNode("expression", mergeAttrs($1, $4));
+		$$->type = "void"; // Semantic
+
+		//3AC
+		backpatch($1->nextlist, $3);
+        backpatch($1->truelist, $3);
+        backpatch($1->falselist, $3);
+        $$->nextlist = $4->nextlist;
+        $$->place = $4->place;
 	}
 	;
 
 constant_expression
 	: conditional_expression {
-        DEBUG_PARSER("constant_expression -> conditional_expression");
-        $$ = $1;
-    }
+		DBG("constant_expression -> conditional_expression");
+		$$ = $1;
+	}
 	;
 
-declaration //POTENTIAL ISSUE
-    : declaration_specifiers ';' { 
-        DEBUG_PARSER("declaration -> declaration_specifiers ';'");
-          $$ = $1; 
-      }
-    | declaration_specifiers init_declarator_list ';' {
-        DEBUG_PARSER("declaration -> declaration_specifiers init_declarator_list ';'");
-          std::vector<Data> attr;
-          insertAttr(attr, $1, "", 1);
-          insertAttr(attr, $2, "", 1);
-          $$ = createASTNode("declaration", &attr);
-
-			//changes made for classes
-		  $$->temp_name = $2->temp_name;
-        $$->type = $2->type;
-        $$->size = $2->size;
-        
-        type = "";
-
-          // Check if this is a function declaration
-          if($2->expType == 3) {
-          //    // Remove the temporary function prototype from the symbol table.
-          //    removeFuncProto();  // Assumes a function exists to clear the dummy function entry.
-          //    
-          //    // Retrieve any previously stored argument list for this function name.
-          //    std::vector<std::string> prevArgs = getFuncArgs($2->temp_name);
-          //    
-          //    // If the function already has an entry in the FuncArgs map, validate the parameter types.
-          //    if(!prevArgs.empty() && prevArgs[0] != "#NO_FUNC") {
-          //        if(prevArgs.size() != funcArgs.size()) {
-          //            yyerror(("Function " + std::string($2->temp_name) + 
-          //                     " declared with a different number of arguments").c_str(), "semantic error");
-          //        } else {
-          //            for (size_t i = 0; i < prevArgs.size(); ++i) {
-          //                if(prevArgs[i] != funcArgs[i]) {
-          //                    yyerror(("Argument type mismatch in function " + 
-          //                             std::string($2->temp_name)).c_str(), "semantic error");
-          //                    break;
-          //                }
-          //            }
-          //        }
-          //    } else {
-          //        // This is the first declaration: insert the function's argument list.
-          //        insertFuncArg($2->temp_name, funcArgs);
-          //    }
-          //    // Clear the global argument list for the next function declaration.
-          //    funcArgs.clear();
-          }
-      }
-    ;
-
+declaration
+	: declaration_specifiers ';' {
+		DBG("declaration -> declaration_specifiers ';'");
+		$$ = $1;
+	}
+	| declaration_specifiers init_declarator_list ';' {
+		DBG("declaration -> declaration_specifiers init_declarator_list ';'");
+		$$ = getNode("declaration", mergeAttrs($1, $2));
+		$$->temp_name = $2->temp_name;
+		$$->type = $2->type;
+		$$->size = $2->size;
+		type = ""; // Reset type
+		// 3AC
+		$$->nextlist = $2->nextlist;
+	}
+	;
 
 declaration_specifiers
 	: storage_class_specifier {
-        DEBUG_PARSER("declaration_specifiers -> storage_class_specifier");
-        $$ = $1;
-    }
-	| storage_class_specifier declaration_specifiers{
-        DEBUG_PARSER("declaration_specifiers -> storage_class_specifier declaration_specifiers");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode("declaration_specifiers", &attr);
+		DBG("declaration_specifiers -> storage_class_specifier");
+		$$ = $1;
+	}
+	| storage_class_specifier declaration_specifiers {
+		DBG("declaration_specifiers -> storage_class_specifier declaration_specifiers");
+		$$ = getNode("declaration_specifiers", mergeAttrs($1, $2));
 	}
 	| type_specifier {
-        DEBUG_PARSER("declaration_specifiers -> type_specifier");
-        $$ = $1;
-    }
-	| type_specifier declaration_specifiers{
-        DEBUG_PARSER("declaration_specifiers -> type_specifier declaration_specifiers");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode("declaration_specifiers", &attr);
+		DBG("declaration_specifiers -> type_specifier");
+		$$ = $1;
+	}
+	| type_specifier declaration_specifiers {
+		DBG("declaration_specifiers -> type_specifier declaration_specifiers");
+		$$ = getNode("declaration_specifiers", mergeAttrs($1, $2));
 	}
 	| type_qualifier {
-        DEBUG_PARSER("declaration_specifiers -> type_qualifier");
-        $$ = $1;
-    }
-	| type_qualifier declaration_specifiers{
-        DEBUG_PARSER("declaration_specifiers -> type_qualifier declaration_specifiers");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $2, "", 1);
-		$$ = createASTNode("declaration_specifiers", &attr);
+		DBG("declaration_specifiers -> type_qualifier");
+		$$ = $1;
+	}
+	| type_qualifier declaration_specifiers {
+		DBG("declaration_specifiers -> type_qualifier declaration_specifiers");
+		$$ = getNode("declaration_specifiers", mergeAttrs($1, $2));
 	}
 	;
 
 init_declarator_list
 	: init_declarator {
-        DEBUG_PARSER("init_declarator_list -> init_declarator");
-        $$ = $1;
-    }
-	| init_declarator_list ',' init_declarator{
-        DEBUG_PARSER("init_declarator_list -> init_declarator_list ',' init_declarator");
-		std::vector<Data> attr;
-		insertAttr(attr, $1, "", 1);
-		insertAttr(attr, $3, "", 1);
-		$$ = createASTNode("init_declarator_list", &attr);
+		DBG("init_declarator_list -> init_declarator");
+		$$ = $1;
+	}
+	| init_declarator_list ',' NEXT_QUAD init_declarator {
+		DBG("init_declarator_list -> init_declarator_list ',' init_declarator");
+		$$ = getNode("init_declarator_list", mergeAttrs($1, $4));
+		// 3AC
+        backpatch($1->nextlist, $3);
+        $$->nextlist = $4->nextlist;
 	}
 	;
-
 init_declarator
 	: declarator {
-        DEBUG_PARSER("init_declarator -> declarator");
-		$$ = $1;
+		DBG("init_declarator -> declarator");
+		//$$=getNode($1);
+		//
+		$$ = $1;  // Just pass the node directly
 		
 		// Semantics
 		if(currLookup($1->temp_name)){
-			string errstr = $1->temp_name + " is already declared";
-			yyerror(errstr.c_str(), "scope error");
+			yyerror(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
 		else if($1->expType == 3){
 			if(fn_decl){
@@ -1136,420 +1253,349 @@ init_declarator
 		else{
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
 		}
+		//3AC
+		$$->place = $1->temp_name;
 	}
-	| declarator '=' initializer{
-        DEBUG_PARSER("init_declarator -> declarator '=' initializer");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("=", &v);
+	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
+		DBG("init_declarator -> declarator '=' initializer");
+		$$ = getNode("=", mergeAttrs($1, $5));
 		
 		// Semantics
 		if(currLookup($1->temp_name)){
-			string errstr = $1->temp_name + " is already declared";
-			yyerror(errstr.c_str(), "scope error");
+			yyerror(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
 		else{
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
+			//3AC
+			std::string type = $1->type;
+			if(type.find("int[]") != std::string::npos){
+				for(int i = 0; i<list_values.size();i++){
+					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
+				}
+			}else{
+				assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+			}
+
+			$$->place = $1->temp_name;
+			$$->nextlist = $5->nextlist;
+			backpatch($1->nextlist, $4);
+
+			rValue = 0;
+			list_values.clear();
 		}
 	}
 	;
 
 storage_class_specifier
-	: TYPEDEF	{ 
-        DEBUG_PARSER("storage_class_specifier -> TYPEDEF");
-        $$ = createASTNode($1); flag=1;
-    }
-	| EXTERN	{ 
-        DEBUG_PARSER("storage_class_specifier -> EXTERN");
-        $$ = createASTNode($1); currentDataType="extern "; flag2=1;
-    }
-	| STATIC	{ 
-        DEBUG_PARSER("storage_class_specifier -> STATIC");
-        $$ = createASTNode($1); currentDataType="static "; flag2=1;
-    }
-	| AUTO		{ 
-        DEBUG_PARSER("storage_class_specifier -> AUTO");
-        $$ = createASTNode($1); currentDataType="auto "; flag2=1;
-    }
-	| REGISTER	{ 
-        DEBUG_PARSER("storage_class_specifier -> REGISTER");
-        $$ = createASTNode($1); currentDataType="register "; flag2=1;
-    }
+	: TYPEDEF {
+		DBG("storage_class_specifier -> TYPEDEF");
+		$$ = getNode($1);
+		flag = 1;
+	}
+	| EXTERN {
+		DBG("storage_class_specifier -> EXTERN");
+		$$ = getNode($1);
+		currentDataType = "extern ";
+		flag2 = 1;
+	}
+	| STATIC {
+		DBG("storage_class_specifier -> STATIC");
+		$$ = getNode($1);
+		currentDataType = "static ";
+		flag2 = 1;
+	}
+	| AUTO {
+		DBG("storage_class_specifier -> AUTO");
+		$$ = getNode($1);
+		currentDataType = "auto ";
+		flag2 = 1;
+	}
+	| REGISTER {
+		DBG("storage_class_specifier -> REGISTER");
+		$$ = getNode($1);
+		currentDataType = "register ";
+		flag2 = 1;
+	}
 	;
 
 type_specifier
-	: VOID			{
-        DEBUG_PARSER("type_specifier -> VOID");
-		$$ = createASTNode($1); 
-		currentDataType="void";
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}	
-	| CHAR			{
-        DEBUG_PARSER("type_specifier -> CHAR");
-		$$ = createASTNode($1); 
-		if(flag2){currentDataType+=" char";flag2=0;}else{currentDataType="char";}
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}	
-	| SHORT			{
-        DEBUG_PARSER("type_specifier -> SHORT");
-		$$ = createASTNode($1); 
-		if(flag2){currentDataType+=" short";flag2=0;}else{currentDataType="short";}
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}	
-	| INT			{
-        DEBUG_PARSER("type_specifier -> INT");
-		$$ = createASTNode($1); 
-		if(flag2){currentDataType+=" int";flag2=0;}else{currentDataType="int";}
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}
-	| LONG			{
-        DEBUG_PARSER("type_specifier -> LONG");
-		$$ = createASTNode($1); 
-		if(flag2){currentDataType+=" long";flag2=0;}else{currentDataType="long";}
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}
-	| FLOAT			{
-        DEBUG_PARSER("type_specifier -> FLOAT");
-		$$ = createASTNode($1); 
-		if(flag2){currentDataType+=" float";flag2=0;}else{currentDataType="float";}
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}
-	| DOUBLE		{
-        DEBUG_PARSER("type_specifier -> DOUBLE");
-		$$ = createASTNode($1); 
-		if(flag2){currentDataType+=" double";flag2=0;}else{currentDataType="double";}
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}
-	| SIGNED		{
-        DEBUG_PARSER("type_specifier -> SIGNED");
-		$$ = createASTNode($1); 
-		currentDataType="signed"; 
-		flag2=1;
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}
-	| UNSIGNED		{
-        DEBUG_PARSER("type_specifier -> UNSIGNED");
-		$$ = createASTNode($1); 
-		currentDataType="unsigned"; 
-		flag2=1;
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}
-	| FILE_MAN      { 
-        DEBUG_PARSER("type_specifier -> FILE_MAN");
-		$$ = createASTNode($1); 
-		currentDataType="file";
-		
-		// Semantics
-		if(type == "") type = string($1);
-		else type += " " + string($1);
-	}
-	| struct_or_union_specifier {
-        DEBUG_PARSER("type_specifier -> struct_or_union_specifier");
-        $$ = $1;
-    }	
-	| class_definition {
-        DEBUG_PARSER("type_specifier -> class_definition");
-        $$ = $1;
-    }
-	| enum_specifier {
-        DEBUG_PARSER("type_specifier -> enum_specifier");
-        $$ = $1;
-    }
-	| TYPE_NAME		{
-        DEBUG_PARSER("type_specifier -> TYPE_NAME");
-		$$ = createASTNode($1);
-		
-		// Semantics
-		string temp = getType($1);
-		type = temp;
-	}	
-	;
-
-inheritance_specifier
-	: access_specifier IDENTIFIER {
-        DEBUG_PARSER("inheritance_specifier -> access_specifier IDENTIFIER");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        /* Wrap IDENTIFIER into an AST node */
-        insertAttr(attr, createASTNode($2), "", 1);
-        $$ = createASTNode("inheritance_specifier", &attr);
-    }
-	;
-
-inheritance_specifier_list
-	: inheritance_specifier {
-        DEBUG_PARSER("inheritance_specifier_list -> inheritance_specifier");
-        $$ = $1;
-    }
-	| inheritance_specifier_list ',' inheritance_specifier{
-        DEBUG_PARSER("inheritance_specifier_list -> inheritance_specifier_list ',' inheritance_specifier");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, $3, "", 1);
-        $$ = createASTNode("inheritance_specifier_list", &attr);
-    }
-	;
-
-access_specifier 
-	: PRIVATE {
-        DEBUG_PARSER("access_specifier -> PRIVATE");
-        $$ = createASTNode($1);
-    }
-	| PUBLIC {
-        DEBUG_PARSER("access_specifier -> PUBLIC");
-        $$ = createASTNode($1);
-    }
-	| PROTECTED {
-        DEBUG_PARSER("access_specifier -> PROTECTED");
-        $$ = createASTNode($1);
-    }
-	;
-
-class
-	: CLASS {
-        DEBUG_PARSER("class -> CLASS");
-        $$ = createASTNode($1);
-    }
-	;
-
-class_definition_head 
-	: class S_C INHERITANCE_OP inheritance_specifier_list {
-        DEBUG_PARSER("class_definition_head -> class INHERITANCE_OP inheritance_specifier_list");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, $4, "", 1);
-        $$ = createASTNode("class_definition_head", &attr);
-         // Semantics: For inherited classes without an explicit name, mark as anonymous.
-        $$->type = currentDataType;
-        Anon_ClassCounter++; 
-		$$->temp_name = to_string(Anon_ClassCounter);  
-    }
-	| class G_C S_C {
-        DEBUG_PARSER("class_definition_head -> class IDENTIFIER");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, createASTNode($2), "", 1);
-        currentDataType = "Class " + std::string($2);
-        $$ = createASTNode("class_definition_head", &attr);
-		$$->temp_name = std::string($2); 
-        // Semantics: Save the class name for later symbol table insertion.
-    }
-	| class G_C S_C INHERITANCE_OP inheritance_specifier_list {
-        DEBUG_PARSER("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, createASTNode($2), "", 1);
-        insertAttr(attr, $5, "", 1);
-        currentDataType = "Class " + std::string($2);
-        $$ = createASTNode("class_definition_head", &attr);
-		$$->temp_name = std::string($2); 
-        // Semantics: Save the class name for later symbol table insertion.
-        // Process inheritance
-        // TODO: Extract parent classes from $4 and add inheritance relationships
-    }
-	;
-
-class_definition 
-	: class_definition_head '{' class_internal_definition_list '}' {
-        DEBUG_PARSER("class_definition -> class_definition_head '{' class_internal_definition_list '}'");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, $3, "", 1);
-        $$ = createASTNode("class_definition", &attr);
-		$$->temp_name = $1->temp_name;
-		// Semantics
-		if(printClassTable("CLASS_" + $1->temp_name) == 1){
-			if(type == "") type = "CLASS_" + $1->temp_name;
-			else type += " CLASS_" + $1->temp_name;
+		: VOID {
+			DBG("type_specifier -> VOID");
+			$$ = getNode($1);
+			currentDataType = "void";
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}	
+		| CHAR {
+			DBG("type_specifier -> CHAR");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " char" : "char";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}	
+		| SHORT {
+			DBG("type_specifier -> SHORT");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " short" : "short";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}	
+		| INT {
+			DBG("type_specifier -> INT");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " int" : "int";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
 		}
-		else{
-			yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
+		| LONG {
+			DBG("type_specifier -> LONG");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " long" : "long";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
 		}
+		| FLOAT {
+			DBG("type_specifier -> FLOAT");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " float" : "float";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| DOUBLE {
+			DBG("type_specifier -> DOUBLE");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " double" : "double";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| SIGNED {
+			DBG("type_specifier -> SIGNED");
+			$$ = getNode($1);
+			currentDataType = "signed";
+			flag2 = 1;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| UNSIGNED {
+			DBG("type_specifier -> UNSIGNED");
+			$$ = getNode($1);
+			currentDataType = "unsigned";
+			flag2 = 1;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| FILE_MAN {
+			DBG("type_specifier -> FILE_MAN");
+			$$ = getNode($1);
+			currentDataType = "file";
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| struct_or_union_specifier {
+			DBG("type_specifier -> struct_or_union_specifier");
+			$$ = $1;
+		}	
+		| class_definition {
+			DBG("type_specifier -> class_definition");
+			$$ = $1;
+		}
+		| enum_specifier {
+			DBG("type_specifier -> enum_specifier");
+			$$ = $1;
+		}
+		| TYPE_NAME {
+			DBG("type_specifier -> TYPE_NAME");
+			$$ = getNode($1);
+			type = getType($1);
+		}	
 		;
-    }
-	| class IDENTIFIER {
-        DEBUG_PARSER("class_definition -> class_definition_head");
-        $$ = $1;
+		inheritance_specifier
+			: access_specifier IDENTIFIER {
+				DBG("inheritance_specifier -> access_specifier IDENTIFIER");
+				$$ = getNode("inheritance_specifier", mergeAttrs($1, getNode($2)));
+			}
+			;
 
-		// Semantics
-		if(findClass("CLASS_" + string($2)) == 1){
-			if(type == "") type = "CLASS_" + string($2);
-			else type += " CLASS_" + string($2);
-		}
-		else if(className == string($2)){
-			// We are inside a class
-			type = "#INSIDE";
-		}
-		else{
-			yyerror(("Class " + string($2) + " is not defined").c_str(), "scope error");
-		}
-    }
-	;
+		inheritance_specifier_list
+			: inheritance_specifier {
+				DBG("inheritance_specifier_list -> inheritance_specifier");
+				$$ = $1;
+			}
+			| inheritance_specifier_list ',' inheritance_specifier {
+				DBG("inheritance_specifier_list -> inheritance_specifier_list ',' inheritance_specifier");
+				$$ = getNode("inheritance_specifier_list", mergeAttrs($1, $3));
+			}
+			;
 
-class_internal_definition_list
-	: class_internal_definition {
-        DEBUG_PARSER("class_internal_definition_list -> class_internal_definition");
-        $$ = $1;
-    }
-	| class_internal_definition_list class_internal_definition {
-        DEBUG_PARSER("class_internal_definition_list -> class_internal_definition_list class_internal_definition");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, $2, "", 1);
-        $$ = createASTNode("class_internal_definition_list", &attr);
-    }
-	; 
+		access_specifier 
+			: PRIVATE {
+				DBG("access_specifier -> PRIVATE");
+				$$ = getNode($1);
+			}
+			| PUBLIC {
+				DBG("access_specifier -> PUBLIC");
+				$$ = getNode($1);
+			}
+			| PROTECTED {
+				DBG("access_specifier -> PROTECTED");
+				$$ = getNode($1);
+			}
+			;
 
-class_internal_definition	
-	: access_specifier '{' class_member_list '}' ';' {
-        DEBUG_PARSER("class_internal_definition -> access_specifier '{' class_member_list '}' ';'");
-		currentAccess = $1->strVal;
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, $3, "", 1);
-        $$ = createASTNode("class_internal_definition", &attr);
-        // Semantics: Propagate the access specifier from $1 to every member in $3.
-       
-    }
-	;
+		class
+			: CLASS {
+				DBG("class -> CLASS");
+				$$ = getNode($1);
+			}
+			;
+
+		class_definition_head 
+			: class S_C INHERITANCE_OP inheritance_specifier_list {
+				DBG("class_definition_head -> class INHERITANCE_OP inheritance_specifier_list");
+				$$ = getNode("class_definition_head", mergeAttrs($1, $4));
+				$$->type = currentDataType;
+				$$->temp_name = to_string(++Anon_ClassCounter);
+			}
+			| class G_C S_C {
+				DBG("class_definition_head -> class IDENTIFIER");
+				$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2)));
+				currentDataType = "Class " + std::string($2);
+				$$->temp_name = std::string($2);
+			}
+			| class G_C S_C INHERITANCE_OP inheritance_specifier_list {
+				DBG("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
+				$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2), $5));
+				currentDataType = "Class " + std::string($2);
+				$$->temp_name = std::string($2);
+			}
+			;
+
+		class_definition 
+			: class_definition_head '{' class_internal_definition_list '}' {
+				DBG("class_definition -> class_definition_head '{' class_internal_definition_list '}'");
+				$$ = getNode("class_definition", mergeAttrs($1, $3));
+				$$->temp_name = $1->temp_name;
+				if (printClassTable("CLASS_" + $1->temp_name) == 1) {
+					type = type.empty() ? "CLASS_" + $1->temp_name : type + " CLASS_" + $1->temp_name;
+				} else {
+					yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
+				}
+			}
+			| class IDENTIFIER {
+				DBG("class_definition -> class IDENTIFIER");
+				$$ = $1;
+				
+				if (findClass("CLASS_" + string($2)) == 1) {
+					type = type.empty() ? "CLASS_" + string($2) : type + " CLASS_" + string($2);
+				} else if (className == string($2)) {
+					type = "#INSIDE";
+				} else {
+					yyerror(("Class " + string($2) + " is not defined").c_str(), "scope error");
+				}
+			}
+			;
+
+		class_internal_definition_list
+			: class_internal_definition {
+				DBG("class_internal_definition_list -> class_internal_definition");
+				$$ = $1;
+			}
+			| class_internal_definition_list class_internal_definition {
+				DBG("class_internal_definition_list -> class_internal_definition_list class_internal_definition");
+				$$ = getNode("class_internal_definition_list", mergeAttrs($1, $2));
+			}
+			; 
+
+		class_internal_definition	
+			: access_specifier '{' class_member_list '}' ';' {
+				DBG("class_internal_definition -> access_specifier '{' class_member_list '}' ';'");
+				$$ = getNode("class_internal_definition", mergeAttrs($1, $3));
+				currentAccess = $1->strVal;
+			}
+			;
 
 class_member_list
-	: class_member {
-        DEBUG_PARSER("class_member_list -> class_member");
+    : class_member {
+        DBG("class_member_list -> class_member");
         $$ = $1;
     }
-	| class_member_list class_member {
-        DEBUG_PARSER("class_member_list -> class_member_list class_member");
-        std::vector<Data> attr;
-        insertAttr(attr, $1, "", 1);
-        insertAttr(attr, $2, "", 1);
-        $$ = createASTNode("class_member_list", &attr);
+    | class_member_list class_member {
+        DBG("class_member_list -> class_member_list class_member");
+        $$ = getNode("class_member_list", mergeAttrs($1, $2));
     }
-	;
+    ;
 
 class_member
-	: function_definition { 
-        DEBUG_PARSER("class_member -> function_definition");
-		 $1->strVal = currentAccess;
-		 // Add function as a class member with proper access specifier
-		 printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
-
-        insertClassAttr($1->temp_name, "FUNC_"+$1->type, $1->size, 0);
-		 $$ = $1; 
-	}
-	| declaration { 
-        DEBUG_PARSER("class_member -> declaration");
-		$1->strVal = currentAccess;
-		// Add declaration as a class member with proper access specifier
-		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+    : function_definition { 
+        DBG("class_member -> function_definition");
+        $1->strVal = currentAccess;
+        insertClassAttr($1->temp_name, "FUNC_" + $1->type, $1->size, 0);
+    }
+    | declaration { 
+        DBG("class_member -> declaration");
+        $1->strVal = currentAccess;
         insertClassAttr($1->temp_name, $1->type, $1->size, 0);
-		$$ = $1; 
-	}
-	;
+    }
+    ;
 
 G_C 
-	: IDENTIFIER {
-        DEBUG_PARSER("G_C -> IDENTIFIER");
-		$$ = $1;
-		className = $1;
-	}
-	;
+    : IDENTIFIER {
+        DBG("G_C -> IDENTIFIER");
+        $$ = $1;
+        className = $1;
+    }
+    ;
 
 S_C 
-	: %empty {
-        DEBUG_PARSER("S_C -> %empty");
-		createClassTable();
-	}
-	;
+    : %empty {
+        DBG("S_C -> %empty");
+        createClassTable();
+    }
+    ;
+
 struct_or_union_specifier
-	: struct_or_union G S '{' struct_declaration_list '}'	{
-        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union G S '{' struct_declaration_list '}'");
-		std::vector<Data> v;
-		insertAttr(v, createASTNode($2), "", 1);
-		insertAttr(v, $5, "", 1);
-		std::string check=std::string($2);
-		$$ = createASTNode($1, &v);
-		
-		// Semantics
-		if(printStructTable("STRUCT_" + string($2)) == 1){
-			if(type == "") type = "STRUCT_" + string($2);
-			else type += " STRUCT_" + string($2);
-		}
-		else{
-			yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
-		}
-	}
-	| struct_or_union S '{' struct_declaration_list '}'		{
-        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union S '{' struct_declaration_list '}'");
-		std::vector<Data> v;
-		insertAttr(v, $4, "", 1);
-		$$ = createASTNode($1, &v);
-		
-		// Semantics
-		Anon_StructCounter++;
-		if(printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1){
-			if(type == "") type = "STRUCT_" + to_string(Anon_StructCounter);
-			else type += " STRUCT_" + to_string(Anon_StructCounter);
-		}
-		else{
-			yyerror("Struct is already defined", "scope error");
-		}
-	}
-	| struct_or_union IDENTIFIER 	{
-        DEBUG_PARSER("struct_or_union_specifier -> struct_or_union IDENTIFIER");
-		std::vector<Data> v;
-		insertAttr(v, createASTNode($2), "", 1);
-		std::string check=std::string($2);
-		currentDataType+=" ";
-		currentDataType+=check;
-		$$ = createASTNode($1, &v);
-		
-		// Semantics
-		if(findStruct("STRUCT_" + string($2)) == 1){
-			if(type == "") type = "STRUCT_" + string($2);
-			else type += " STRUCT_" + string($2);
-		}
-		else if(structName == string($2)){
-			// We are inside a struct
-			type = "#INSIDE";
-		}
-		else{
-			yyerror(("Struct " + string($2) + " is not defined").c_str(), "scope error");
-		}
-	}
-	;
+    : struct_or_union G S '{' struct_declaration_list '}' {
+        DBG("struct_or_union_specifier -> struct_or_union G S '{' struct_declaration_list '}'");
+        $$ = getNode($1, mergeAttrs(getNode($2), $5));
+        if (printStructTable("STRUCT_" + string($2)) == 1) {
+            type = type.empty() ? "STRUCT_" + string($2) : type + " STRUCT_" + string($2);
+        } else {
+            yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
+        }
+    }
+    | struct_or_union S '{' struct_declaration_list '}' {
+        DBG("struct_or_union_specifier -> struct_or_union S '{' struct_declaration_list '}'");
+        $$ = getNode($1, mergeAttrs($4, nullptr));
+        Anon_StructCounter++;
+        if (printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1) {
+            type = type.empty() ? "STRUCT_" + to_string(Anon_StructCounter) : type + " STRUCT_" + to_string(Anon_StructCounter);
+        } else {
+            yyerror("Struct is already defined", "scope error");
+        }
+    }
+    | struct_or_union IDENTIFIER {
+        DBG("struct_or_union_specifier -> struct_or_union IDENTIFIER");
+        $$ = getNode($1, mergeAttrs(getNode($2), nullptr));
+        currentDataType += " " + string($2);
+        if (findStruct("STRUCT_" + string($2)) == 1) {
+            type = type.empty() ? "STRUCT_" + string($2) : type + " STRUCT_" + string($2);
+        } else if (structName == string($2)) {
+            type = "#INSIDE";
+        } else {
+            yyerror(("Struct " + string($2) + " is not defined").c_str(), "scope error");
+        }
+    }
+    ;
 
 G 
 	: IDENTIFIER {
-        DEBUG_PARSER("G -> IDENTIFIER");
+        DBG("G -> IDENTIFIER");
 		$$ = $1;
 		structName = $1;
 	}
@@ -1557,343 +1603,297 @@ G
 
 S 
 	: %empty {
-        DEBUG_PARSER("S -> %empty");
+        DBG("S -> %empty");
 		createStructTable();
 	}
 	;
 
 struct_or_union
 	: STRUCT {
-        DEBUG_PARSER("struct_or_union -> STRUCT");
+        DBG("struct_or_union -> STRUCT");
         $$ = $1; currentDataType="struct";
     }
 	| UNION {
-        DEBUG_PARSER("struct_or_union -> UNION");
+        DBG("struct_or_union -> UNION");
         $$ = $1; currentDataType="union";
     }
 	;
+    struct_declaration_list
+        : struct_declaration {
+            DBG("struct_declaration_list -> struct_declaration");
+            $$ = getNode("struct_declaration_list", mergeAttrs($1));
+        }
+        | struct_declaration_list struct_declaration {
+            DBG("struct_declaration_list -> struct_declaration_list struct_declaration");
+            $$ = getNode("struct_declaration_list", mergeAttrs($1, $2));
+        }
+        ;
 
-struct_declaration_list
-	: struct_declaration {
-        DEBUG_PARSER("struct_declaration_list -> struct_declaration");
-        $$ = $1;
-    }
-	| struct_declaration_list struct_declaration 	{
-        DEBUG_PARSER("struct_declaration_list -> struct_declaration_list struct_declaration");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("struct_declaration_list", &v);
-	}
-	;
+    struct_declaration
+        : specifier_qualifier_list struct_declarator_list ';' {
+            DBG("struct_declaration -> specifier_qualifier_list struct_declarator_list ';'");
+            $$ = getNode("struct_declaration", mergeAttrs($1, $2));
+            
+            // Semantics
+            type = "";
+        }
+        ;
 
-struct_declaration
-	: specifier_qualifier_list struct_declarator_list ';' 	{
-        DEBUG_PARSER("struct_declaration -> specifier_qualifier_list struct_declarator_list ';'");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("struct_declaration", &v);
-		
-		// Semantics
-		type = "";
-	}
-	;
+    specifier_qualifier_list
+        : type_specifier specifier_qualifier_list {
+            DBG("specifier_qualifier_list -> type_specifier specifier_qualifier_list");
+            $$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
+        }
+        | type_specifier {
+            DBG("specifier_qualifier_list -> type_specifier");
+            $$ = $1;
+        }
+        | type_qualifier specifier_qualifier_list {
+            DBG("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
+            $$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
+        }
+        | type_qualifier {
+            DBG("specifier_qualifier_list -> type_qualifier");
+            $$ = $1;
+        }
+        ;
 
-specifier_qualifier_list
-	: type_specifier specifier_qualifier_list	{
-        DEBUG_PARSER("specifier_qualifier_list -> type_specifier specifier_qualifier_list");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("specifier_qualifier_list", &v);
-	}
-	| type_specifier {
-        DEBUG_PARSER("specifier_qualifier_list -> type_specifier");
-        $$ = $1;
-    }
-	| type_qualifier specifier_qualifier_list 	{
-        DEBUG_PARSER("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("specifier_qualifier_list", &v);
-	}
-	| type_qualifier {
-        DEBUG_PARSER("specifier_qualifier_list -> type_qualifier");
-        $$ = $1;
-    }
-	;
+    struct_declarator_list
+        : struct_declarator {
+            DBG("struct_declarator_list -> struct_declarator");
+            $$ = $1;
+        }
+        | struct_declarator_list ',' struct_declarator {
+            DBG("struct_declarator_list -> struct_declarator_list ',' struct_declarator");
+            $$ = getNode("struct_declarator_list", mergeAttrs($1, $3));
+        }
+        ;
 
-struct_declarator_list
-	: struct_declarator {
-        DEBUG_PARSER("struct_declarator_list -> struct_declarator");
-        $$ = $1;
-    }
-	| struct_declarator_list ',' struct_declarator {
-        DEBUG_PARSER("struct_declarator_list -> struct_declarator_list ',' struct_declarator");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("struct_declarator_list", &v);
-	}
-	;
+    struct_declarator
+        : declarator {
+            DBG("struct_declarator -> declarator");
+            $$ = $1;
+            
+            // Semantics
+            if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1) {
+                yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
+            }
+        }
+        | ':' constant_expression {
+            DBG("struct_declarator -> ':' constant_expression");
+            $$ = $2;
+        }
+        | declarator ':' constant_expression {
+            DBG("struct_declarator -> declarator ':' constant_expression");
+            $$ = getNode(":", mergeAttrs($1, $3));
+            
+            // Semantics
+            if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1) {
+                yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
+            }
+        }
+        ;
 
-struct_declarator
-	: declarator	{ 
-        DEBUG_PARSER("struct_declarator -> declarator");
-		$$ = $1; 
-		
-		// Semantics
-		if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1){
-			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
-		}
-	}
-	| ':' constant_expression {
-        DEBUG_PARSER("struct_declarator -> ':' constant_expression");
-        $$ = $2;
-    }
-	| declarator ':' constant_expression	{
-        DEBUG_PARSER("struct_declarator -> declarator ':' constant_expression");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode(":", &v);
-		
-		// Semantics
-		if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1){
-			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
-		}
-	}
-	;
 
 enum_specifier
-	: ENUM '{' enumerator_list '}'		{
-        DEBUG_PARSER("enum_specifier -> ENUM '{' enumerator_list '}'");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode($1, &v);
-		
+	: ENUM '{' enumerator_list '}' {
+		DBG("enum_specifier -> ENUM '{' enumerator_list '}'");
+		$$ = getNode($1, mergeAttrs($3));
 		// TODO: Add enum semantics
 	}
-	| ENUM IDENTIFIER '{' enumerator_list '}'	{
-        DEBUG_PARSER("enum_specifier -> ENUM IDENTIFIER '{' enumerator_list '}'");
-		std::vector<Data> v;
-		insertAttr(v, createASTNode($2), "", 1);
-		insertAttr(v, $4, "", 1);
-		$$ = createASTNode($1, &v);
+	| ENUM IDENTIFIER '{' enumerator_list '}' {
+		DBG("enum_specifier -> ENUM IDENTIFIER '{' enumerator_list '}'");
+		$$ = getNode($1, mergeAttrs(getNode($2), $4));
 	}
 	| ENUM IDENTIFIER {
-        DEBUG_PARSER("enum_specifier -> ENUM IDENTIFIER");
-		std::vector<Data> v;
-		insertAttr(v, createASTNode($2), "", 1);
-		currentDataType="Enum ";
-		std::string check=std::string($2);
-		currentDataType+=check;
-		$$ = createASTNode($1, &v);
+		DBG("enum_specifier -> ENUM IDENTIFIER");
+		$$ = getNode($1, mergeAttrs(getNode($2)));
+		currentDataType = "Enum " + std::string($2);
 	}
 	;
 
 enumerator_list
 	: enumerator {
-        DEBUG_PARSER("enumerator_list -> enumerator");
-        $$ = $1;
-    }
-	| enumerator_list ',' enumerator 	{
-        DEBUG_PARSER("enumerator_list -> enumerator_list ',' enumerator");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("enumerator_list", &v);
+		DBG("enumerator_list -> enumerator");
+		$$ = $1;
+	}
+	| enumerator_list ',' enumerator {
+		DBG("enumerator_list -> enumerator_list ',' enumerator");
+		$$ = getNode("enumerator_list", mergeAttrs($1, $3));
 	}
 	;
 
 enumerator
 	: IDENTIFIER {
-        DEBUG_PARSER("enumerator -> IDENTIFIER");
-        $$ = createASTNode($1);
-    }
-	| IDENTIFIER '=' constant_expression 	{
-        DEBUG_PARSER("enumerator -> IDENTIFIER '=' constant_expression");
-		std::vector<Data> v;
-		insertAttr(v, createASTNode($1), "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("=", &v);
+		DBG("enumerator -> IDENTIFIER");
+		$$ = getNode($1);
+	}
+	| IDENTIFIER '=' constant_expression {
+		DBG("enumerator -> IDENTIFIER '=' constant_expression");
+		$$ = getNode("=", mergeAttrs(getNode($1), $3));
 	}
 	;
 
 type_qualifier
-	: CONST		{ 
-        DEBUG_PARSER("type_qualifier -> CONST");
-		$$ = createASTNode($1); 
-		currentDataType="const "; 
-		flag2=1;
+	: CONST {
+		DBG("type_qualifier -> CONST");
+		$$ = getNode($1);
+		currentDataType = "const ";
+		flag2 = 1;
 	}
-	| VOLATILE	{ 
-        DEBUG_PARSER("type_qualifier -> VOLATILE");
-		$$ = createASTNode($1); 
-		currentDataType="volatile "; 
-		flag2=1;
+	| VOLATILE {
+		DBG("type_qualifier -> VOLATILE");
+		$$ = getNode($1);
+		currentDataType = "volatile ";
+		flag2 = 1;
 	}
 	;
 
-
 declarator
-	: pointer direct_declarator{
-        DEBUG_PARSER("declarator -> pointer direct_declarator");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("declarator", &v);
-		
-		//Semantics
-		if(type == "#INSIDE"){
+	: pointer direct_declarator {
+		DBG("declarator -> pointer direct_declarator");
+		$$ = getNode("declarator", mergeAttrs($1, $2));
+		// Semantics
+		if (type == "#INSIDE") {
 			$$->type = "STRUCT_" + structName + $1->type;
 			$$->temp_name = $2->temp_name;
 			$$->size = 8;
 			$$->expType = 2;
-		}
-		else{
+		} else {
 			$$->type = $2->type + $1->type;
 			$$->temp_name = $2->temp_name;
 			$$->size = 8;
 			$$->expType = 2;
 		}
+		//3AC
+		$$->place = $$->temp_name;
 	}
 	| direct_declarator {
-        DEBUG_PARSER("declarator -> direct_declarator");
-        $$ = $1 ;
-    }
+		DBG("declarator -> direct_declarator");
+		$$ = $1;
+		//3AC
+		$$->place = $$->temp_name;
+	}
 	;
-
 
 direct_declarator
 	: IDENTIFIER {
-        DEBUG_PARSER("direct_declarator -> IDENTIFIER");
-		$$ = createASTNode($1);
-		std::string check=std::string($1);
-		if(flag){
-			typedefTable.push_back(make_pair(check,currentDataType));
-			flag=0;
+		DBG("direct_declarator -> IDENTIFIER");
+		$$ = getNode($1);
+		std::string check = std::string($1);
+		if (flag) {
+			typedefTable.push_back(make_pair(check, currentDataType));
+			flag = 0;
+		} else {
+			addToSymbolTable(check, currentDataType);
 		}
-		else{
-		std::string check=std::string($1);
-		addToSymbolTable(check,currentDataType);
-		}
-		
 		// Semantics
 		$$->expType = 1; // Variable
 		$$->type = type;
 		$$->temp_name = string($1);
 		$$->size = getSize(type);
+		//3AC
+		$$->place = $$->temp_name;
 	}
 	| CONSTANT IDENTIFIER {
-        DEBUG_PARSER("direct_declarator -> CONSTANT IDENTIFIER");
+		DBG("direct_declarator -> CONSTANT IDENTIFIER");
 		yyerror("invalid identifier", "syntax error");
-		$$ = createASTNode("Invalid Identifier");
+		$$ = getNode("Invalid Identifier");
 	}
-	| '(' declarator ')'  {
-        DEBUG_PARSER("direct_declarator -> '(' declarator ')'");
-        $$ = $2 ;
-    }
-	| direct_declarator '[' constant_expression ']'{
-        DEBUG_PARSER("direct_declarator -> direct_declarator '[' constant_expression ']'");
-		std::vector<Data> v, v2;
-		insertAttr(v2, $3, "", 1);
-		Node* node = createASTNode("[ ]", &v2);
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, node, "", 1);
-		$$ = createASTNode("direct_declarator", &v);
-		updateLastSymbolEntry();
+	| '(' declarator ')' {
+		DBG("direct_declarator -> '(' declarator ')'");
+		$$ = $2;  // Just pass through the declarator node
+		//3AC
+		$$->place = $$->temp_name;
+	}
+	| direct_declarator '[' constant_expression ']' {
+		DBG("direct_declarator -> direct_declarator '[' constant_expression ']'");
+		Node* node = getNode("[ ]", mergeAttrs($3));
+		$$ = getNode("direct_declarator[..]", mergeAttrs($1, node));
 
+		updateLastSymbolEntry();
 		// Semantics
-		if($1->expType == 1 || $1->expType == 2) {
+		if ($1->expType == 1 || $1->expType == 2) {
 			$$->expType = 2;
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
 			$$->size = $1->size * $3->intVal;
-		}
-		else{
+			//3AC
+			$$->place = $$->temp_name;
+		} else {
 			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
-	| direct_declarator '[' ']'{
-        DEBUG_PARSER("direct_declarator -> direct_declarator '[' ']'");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, NULL, "[ ]", 0);
-		updateLastSymbolEntry();
-		$$ = createASTNode("direct_declarator", &v);
+	| direct_declarator '[' ']' {
+		DBG("direct_declarator -> direct_declarator '[' ']'");
+		std::vector<Data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, NULL, "[ ]", 0);
+		$$ = getNode("direct_declarator[]", &attr);
 
+		updateLastSymbolEntry();
 		// Semantics
-		if($1->expType <=2 ) {
+		if ($1->expType <= 2) {
 			$$->expType = 2;
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
 			$$->size = 8;
-		}
-		else{
+			//3AC
+			$$->place = $$->temp_name;
+		} else {
 			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
-	| direct_declarator '(' A parameter_type_list ')'{
-        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A parameter_type_list ')'");
-		std::vector<Data> v, v2;
-		insertAttr(v2, $4, "", 1);
-		Node* node = createASTNode("( )", &v2);
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, node, "", 1);
-		$$ = createASTNode("direct_declarator", &v);
-		updateFuncSymbolEntry(noArgs);
-		noArgs=0;
+	| direct_declarator '(' A parameter_type_list ')' NEXT_QUAD {
+		DBG("direct_declarator -> direct_declarator '(' A parameter_type_list ')'");
+		Node *node = getNode("( )", mergeAttrs($4));
+		$$ = getNode("direct_declarator", mergeAttrs($1, node));
 
+		updateFuncSymbolEntry(noArgs);
+		noArgs = 0;
 		// Semantics
-		if($1->expType == 1) {
+		string argMapKey = $1->temp_name;
+		if (!className.empty()) {
+			argMapKey = className + "_" + argMapKey;
+		}
+		if ($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
 			$$->expType = 3;
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
-
-			vector<string> temp = getFuncArgs($1->temp_name);
-			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
-				insertFuncArg($$->temp_name, funcArgs);
+			vector<string> temp = getFuncArgs(argMapKey);
+			if (temp.size() == 1 && temp[0] == "#NO_FUNC") {
+				insertFuncArg(argMapKey, funcArgs);
 				funcArgs.clear();
-				funcName = string($1->temp_name);
+				funcName = string(argMapKey);
 				funcType = $1->type;
-			}
-			else{
-				// Check if temp is correct
-				if(temp == funcArgs){
+			} else {
+				if (temp == funcArgs) {
 					funcArgs.clear();
-					funcName = string($1->temp_name);
+					funcName = string(argMapKey);
 					funcType = $1->type;
-				}
-				else{
-					yyerror(("Conflicting types for " + $1->temp_name).c_str(), "type error");
+				} else {
+					yyerror(("Conflicting types for " + argMapKey).c_str(), "type error");
 				}
 			}
-		}
-		else{
-			if($1->expType == 2){
-				yyerror( ($1->temp_name + "declared as array of function").c_str(), "type error");
-			}
-			else{
-				yyerror( ($1->temp_name + "declared as function of function").c_str(), "type error");
+			//3 AC
+			$$->place =$$->temp_name;
+			backpatch($4->nextlist,$6);
+			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
+		} else {
+			if ($1->expType == 2) {
+				yyerror((argMapKey + " declared as array of function").c_str(), "type error");
+			} else {
+				yyerror((argMapKey + " declared as function of function").c_str(), "type error");
 			}
 		}
 	}
-	| direct_declarator '(' A identifier_list ')'{
-        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A identifier_list ')'");
-		std::vector<Data> v, v2;
-		insertAttr(v2, $4, "", 1);
-		Node* node = createASTNode("( )", &v2);
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, node, "", 1);
-		$$ = createASTNode("direct_declarator", &v);
+	| direct_declarator '(' A identifier_list ')' {
+		DBG("direct_declarator -> direct_declarator '(' A identifier_list ')'");
+		Node *node = getNode("( )", mergeAttrs($4));
+		$$ = getNode("direct_declarator", mergeAttrs($1, node));
 
 		// Semantics
-		// ToDo : check if A is needed
-		// ToDo : Check if func declaration exists and args match
 		fn_decl = 1;
 		$$->temp_name = $1->temp_name;
 		$$->expType = 3;
@@ -1901,194 +1901,173 @@ direct_declarator
 		$$->size = getSize($$->type);
 		funcType = $1->type;
 		funcName = string($1->temp_name);
-
 		vector<string> args = getFuncArgs($$->temp_name);
-		if(args.size() == 1 && args[0] == "#NO_FUNC"){
+		if (args.size() == 1 && args[0] == "#NO_FUNC") {
 			args.clear();
-			for(int i = 0; i < idList.size(); i++){
+			for (int i = 0; i < idList.size(); i++) {
 				insertSymbol(*curr_table, idList[i], "int", 4, 1, NULL);
 				args.push_back("int");
 			}
 			insertFuncArg($1->temp_name, args);
 		}
-
-		if(args.size() == idList.size()) {
-			for(int i = 0; i < args.size(); i++) {
-				if(args[i] == "..."){
+		if (args.size() == idList.size()) {
+			for (int i = 0; i < args.size(); i++) {
+				if (args[i] == "...") {
 					yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 					break;
 				}
 				insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
 			}
 			idList.clear();
-		}
-		else{
+			//3 AC
+			$$->place =$$->temp_name;
+			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
+		} else {
 			yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 			idList.clear();
 		}
 	}
-	| direct_declarator '(' A ')'{
-        DEBUG_PARSER("direct_declarator -> direct_declarator '(' A ')'");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, NULL, "( )", 0);
-		$$ = createASTNode("direct_declarator", &v);
+	| direct_declarator '(' A ')' {
+		DBG("direct_declarator -> direct_declarator '(' A ')'");
+		std::vector<Data> attr;
+		insertAttr(attr, $1, "", 1);
+		insertAttr(attr, NULL, "( )", 0);
+		$$ = getNode("direct_declarator", &attr);
 		updateFuncSymbolEntry(0);
-
 		// Semantics
-		if($1->expType == 1) {
+		if ($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
 			$$->expType = 3;
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
-
 			vector<string> temp = getFuncArgs($1->temp_name);
-			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
+			if (temp.size() == 1 && temp[0] == "#NO_FUNC") {
 				insertFuncArg($$->temp_name, funcArgs);
 				funcArgs.clear();
 				funcName = string($1->temp_name);
 				funcType = $1->type;
-			}
-			else{
+			} else {
 				yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 			}
-		}
-		else{
-			if($1->expType == 2){
-				yyerror( ($1->temp_name + "declared as array of function").c_str(), "type error");
-			}
-			else{
-				yyerror( ($1->temp_name + "declared as function of function").c_str(), "type error");
+			//3 AC
+			$$->place =$$->temp_name;
+			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
+		} else {
+			if ($1->expType == 2) {
+				yyerror(($1->temp_name + " declared as array of function").c_str(), "type error");
+			} else {
+				yyerror(($1->temp_name + " declared as function of function").c_str(), "type error");
 			}
 		}
 	}
 	;
 
-A 
-	: %empty	{
-        DEBUG_PARSER("A -> %empty");
-		type ="";
+A
+	: %empty {
+		DBG("A -> %empty");
+		type = "";
 		func_flag = 0;
 		funcArgs.clear();
 		createParamList();
+		//3AC
+		gotolablelist.clear();
+		gotolabel.clear();
 	}
+	;
 
 pointer
 	: '*' {
-        DEBUG_PARSER("pointer -> '*'");
-		currentDataType+="*";
-		$$ = createASTNode("*(Pointer)");
+		DBG("pointer -> '*'");
+		$$ = getNode("*(Pointer)");
 		$$->type = "*";
+		currentDataType += "*";
 	}
-	| '*' type_qualifier_list{
-        DEBUG_PARSER("pointer -> '*' type_qualifier_list");
-		currentDataType+="*";
-		std::vector<Data> v;
-		insertAttr(v,$2,"",1);
-		$$ = createASTNode("*(Pointer)",&v);
+	| '*' type_qualifier_list {
+		DBG("pointer -> '*' type_qualifier_list");
+		$$ = getNode("*(Pointer)", mergeAttrs($2));
 		$$->type = "*";
+		currentDataType += "*";
 	}
-	| '*' pointer{
-        DEBUG_PARSER("pointer -> '*' pointer");
-		currentDataType+="*";
-		std::vector<Data> v;
-		insertAttr(v,$2,"",1);
-		$$ = createASTNode("*(Pointer)",&v);
+	| '*' pointer {
+		DBG("pointer -> '*' pointer");
+		$$ = getNode("*(Pointer)", mergeAttrs($2));
 		$$->type = "*" + $2->type;
+		currentDataType += "*";
 	}
-	| '*' type_qualifier_list pointer{
-        DEBUG_PARSER("pointer -> '*' type_qualifier_list pointer");
-		currentDataType+="*";
-		std::vector<Data> v;
-		insertAttr(v,$2,"",1);
-		insertAttr(v,$3,"",1);
-		$$ = createASTNode("*(Pointer)",&v);
+	| '*' type_qualifier_list pointer {
+		DBG("pointer -> '*' type_qualifier_list pointer");
+		$$ = getNode("*(Pointer)", mergeAttrs($2, $3));
 		$$->type = "*" + $3->type;
+		currentDataType += "*";
 	}
 	;
 
 type_qualifier_list
 	: type_qualifier {
-        DEBUG_PARSER("type_qualifier_list -> type_qualifier");
-        $$ = $1 ;
-    }
-	| type_qualifier_list type_qualifier{
-        DEBUG_PARSER("type_qualifier_list -> type_qualifier_list type_qualifier");
-		std::vector<Data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$2,"",1);
-		$$ = createASTNode("type_qualifier_list",&v);
+		DBG("type_qualifier_list -> type_qualifier");
+		$$ = $1;
+	}
+	| type_qualifier_list type_qualifier {
+		DBG("type_qualifier_list -> type_qualifier_list type_qualifier");
+		$$ = getNode("type_qualifier_list", mergeAttrs($1, $2));
 	}
 	;
 
-
 parameter_type_list
 	: parameter_list {
-        DEBUG_PARSER("parameter_type_list -> parameter_list");
-        $$ = $1 ;
-    }
-	| parameter_list ',' ELLIPSIS{
-        DEBUG_PARSER("parameter_type_list -> parameter_list ',' ELLIPSIS");
-		std::vector<Data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v, createASTNode($3), "", 1);
-		$$ = createASTNode("parameter_type_list",&v);
-		
+		DBG("parameter_type_list -> parameter_list");
+		$$ = $1;
+	}
+	| parameter_list ',' ELLIPSIS {
+		DBG("parameter_type_list -> parameter_list ',' ELLIPSIS");
+		$$ = getNode("parameter_type_list", mergeAttrs($1, getNode($3)));
 		// Semantics - add ellipsis to function argument list
 		funcArgs.push_back("...");
+		//3AC
+		$$->nextlist = $1->nextlist;
 	}
 	;
 
 parameter_list
-	: parameter_declaration{
-        DEBUG_PARSER("parameter_list -> parameter_declaration");
+	: parameter_declaration {
+		DBG("parameter_list -> parameter_declaration");
 		noArgs++;
 		$$ = $1;
 	}
-	| parameter_list ',' parameter_declaration{
-        DEBUG_PARSER("parameter_list -> parameter_list ',' parameter_declaration");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
+	| parameter_list ',' NEXT_QUAD parameter_declaration {
+		DBG("parameter_list -> parameter_list ',' parameter_declaration");
+		$$ = getNode("parameter_list", mergeAttrs($1, $4));
 		noArgs++;
-		$$ = createASTNode("parameter_list",&v);
+		//3AC
+		backpatch($1->nextlist, $3);
+		$$->nextlist = $4->nextlist;
 	}
 	;
 
 parameter_declaration
-	: declaration_specifiers declarator{
-        DEBUG_PARSER("parameter_declaration -> declaration_specifiers declarator");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("parameter_declaration",&v);
-		
+	: declaration_specifiers declarator {
+		DBG("parameter_declaration -> declaration_specifiers declarator");
+		$$ = getNode("parameter_declaration", mergeAttrs($1, $2));
 		// Semantics
 		type = "";
-		if($2->expType == 1 || $2->expType == 2) {
-			if(currLookup($2->temp_name)) {
+		if ($2->expType == 1 || $2->expType == 2) {
+			if (currLookup($2->temp_name)) {
 				yyerror(("Redeclaration of Parameter " + $2->temp_name).c_str(), "scope error");
-			}
-			else {
+			} else {
 				insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
 			}
 			funcArgs.push_back($2->type);
 		}
 	}
-	| declaration_specifiers abstract_declarator{
-        DEBUG_PARSER("parameter_declaration -> declaration_specifiers abstract_declarator");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("parameter_declaration",&v);
-		
+	| declaration_specifiers abstract_declarator {
+		DBG("parameter_declaration -> declaration_specifiers abstract_declarator");
+		$$ = getNode("parameter_declaration", mergeAttrs($1, $2));
 		// Semantics
 		type = "";
 	}
 	| declaration_specifiers {
-        DEBUG_PARSER("parameter_declaration -> declaration_specifiers");
-        $$ = $1;
-		
+		DBG("parameter_declaration -> declaration_specifiers");
+		$$ = $1;
 		// Semantics
 		funcArgs.push_back(type);
 		type = "";
@@ -2097,245 +2076,233 @@ parameter_declaration
 
 identifier_list
 	: IDENTIFIER {
-        DEBUG_PARSER("identifier_list -> IDENTIFIER");
-		$$ = createASTNode($1);
-		
-		// Semantics - add identifier to list for old-style function declarations
-		idList.push_back($1);
+		DBG("identifier_list -> IDENTIFIER");
+		$$ = getNode($1);
+		idList.push_back($1); // Semantics
 	}
-	| identifier_list ',' IDENTIFIER{
-        DEBUG_PARSER("identifier_list -> identifier_list ',' IDENTIFIER");
-		std::vector<Data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,createASTNode($3),"",1);
-		$$ = createASTNode("identifier_list",&v);
-		
-		// Semantics
-		idList.push_back($3);
+	| identifier_list ',' IDENTIFIER {
+		DBG("identifier_list -> identifier_list ',' IDENTIFIER");
+		$$ = getNode("identifier_list", mergeAttrs($1, getNode($3)));
+		idList.push_back($3); // Semantics
 	}
 	;
 
 type_name
-	: specifier_qualifier_list{
-        DEBUG_PARSER("type_name -> specifier_qualifier_list");
-        $$ = $1;
-    }
-	| specifier_qualifier_list abstract_declarator{
-        DEBUG_PARSER("type_name -> specifier_qualifier_list abstract_declarator");
-		std::vector<Data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$2,"",1);
-		$$ = createASTNode("type_name",&v);
+	: specifier_qualifier_list {
+		DBG("type_name -> specifier_qualifier_list");
+		$$ = $1;
+	}
+	| specifier_qualifier_list abstract_declarator {
+		DBG("type_name -> specifier_qualifier_list abstract_declarator");
+		$$ = getNode("type_name", mergeAttrs($1, $2));
 	}
 	;
 
 abstract_declarator
 	: pointer {
-        DEBUG_PARSER("abstract_declarator -> pointer");
-        $$ = $1;
-    }
-	| direct_abstract_declarator{
-        DEBUG_PARSER("abstract_declarator -> direct_abstract_declarator");
-        $$ = $1;
-    }
-	| pointer direct_abstract_declarator{
-        DEBUG_PARSER("abstract_declarator -> pointer direct_abstract_declarator");
-		std::vector<Data> v;
-		insertAttr(v,$1,"",1);
-		insertAttr(v,$2,"",1);
-		$$ = createASTNode("abstract_declarator",&v);
+		DBG("abstract_declarator -> pointer");
+		$$ = $1;
+	}
+	| direct_abstract_declarator {
+		DBG("abstract_declarator -> direct_abstract_declarator");
+		$$ = $1;
+	}
+	| pointer direct_abstract_declarator {
+		DBG("abstract_declarator -> pointer direct_abstract_declarator");
+		$$ = getNode("abstract_declarator", mergeAttrs($1, $2));
 	}
 	;
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')' {
-        DEBUG_PARSER("direct_abstract_declarator -> '(' abstract_declarator ')'");
-        $$ = $2;
-    }
-	| '[' ']'{
-        DEBUG_PARSER("direct_abstract_declarator -> '[' ']'");
-		$$ = createASTNode("[ ]");
-		
-		// Semantics
-		$$->type = type + "*"; // Array type
-		$$->size = 8; // Default size for a pointer
+		DBG("direct_abstract_declarator -> '(' abstract_declarator ')'");
+		$$ = $2;
+	}
+	| '[' ']' {
+		DBG("direct_abstract_declarator -> '[' ']'");
+		$$ = getNode("[ ]");
+		$$->type = type + "*"; // Semantics
+		$$->size = 8;
 	}
 	| '[' constant_expression ']' {
-        DEBUG_PARSER("direct_abstract_declarator -> '[' constant_expression ']'");
-		std::vector<Data> v;
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("[ ]", &v);
-		
-		// Semantics
-		$$->type = type + "*"; 
+		DBG("direct_abstract_declarator -> '[' constant_expression ']'");
+		$$ = getNode("[ ]", mergeAttrs($2));
+		$$->type = type + "*"; // Semantics
 		$$->size = getSize(type) * $2->intVal;
 	}
 	| direct_abstract_declarator '[' ']' {
-        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '[' ']'");
-		std::vector<Data> v;
-		insertAttr(v, NULL, "[ ]", 0);
-		insertAttr(v, $1, "", 1);
-		$$ = createASTNode("direct_abstract_declarator", &v);
-		
-		// Semantics
-		$$->type = $1->type + "*";
+		DBG("direct_abstract_declarator -> direct_abstract_declarator '[' ']'");
+		std::vector<Data> attr;
+		insertAttr(attr,NULL,"[ ]",0);
+		insertAttr(attr,$1,"",1);
+		$$ = getNode("direct_abstract_declarator",&attr);
+
+		$$->type = $1->type + "*"; // Semantics
 		$$->size = 8;
 	}
-	| direct_abstract_declarator '[' constant_expression ']'{
-        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '[' constant_expression ']'");
-		std::vector<Data> v, v2;
-		insertAttr(v2, $3, NULL, 1);
-		Node* node = createASTNode("[ ]", &v2);
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, node, "", 1);
-		$$ = createASTNode("direct_abstract_declarator", &v);
-		
-		// Semantics
-		$$->type = $1->type + "*";
+	| direct_abstract_declarator '[' constant_expression ']' {
+		DBG("direct_abstract_declarator -> direct_abstract_declarator '[' constant_expression ']'");
+		$$ = getNode("direct_abstract_declarator", mergeAttrs($1, getNode("[ ]", mergeAttrs($3))));
+		$$->type = $1->type + "*"; // Semantics
 		$$->size = $1->size * $3->intVal;
 	}
-	| '(' ')'{
-        DEBUG_PARSER("direct_abstract_declarator -> '(' ')'");
-		$$ = createASTNode("( )");
-		
-		// Semantics - function type with no parameters
-		$$->type = "FUNC_" + type;
+	| '(' ')' {
+		DBG("direct_abstract_declarator -> '(' ')'");
+		$$ = getNode("( )");
+		$$->type = "FUNC_" + type; // Semantics
 		$$->size = 0;
 	}
-	| '(' parameter_type_list ')'{
-        DEBUG_PARSER("direct_abstract_declarator -> '(' parameter_type_list ')'");
-        $$ = $2;
-		
-		// Semantics - function type with parameters
-		$$->type = "FUNC_" + type;
+	| '(' parameter_type_list ')' {
+		DBG("direct_abstract_declarator -> '(' parameter_type_list ')'");
+		$$ = $2;
+		$$->type = "FUNC_" + type; // Semantics
 		$$->size = 0;
 	}
-	| direct_abstract_declarator '(' ')'{
-        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '(' ')'");
-		std::vector<Data> v;
-		insertAttr(v, NULL, "( )", 0);
-		insertAttr(v, $1, "", 1);
-		$$ = createASTNode("direct_abstract_declarator", &v);
-		
-			// Semantics
-		$$->type = "FUNC_" + $1->type;
+	| direct_abstract_declarator '(' ')' {
+		DBG("direct_abstract_declarator -> direct_abstract_declarator '(' ')'");
+		std::vector<Data> attr;
+		insertAttr(attr, NULL, "( )", 0);
+		insertAttr(attr, $1, "", 1);
+		$$ = getNode("direct_abstract_declarator",&attr);		
+
+		$$->type = "FUNC_" + $1->type; // Semantics
 		$$->size = 0;
 	}
-	| direct_abstract_declarator '(' parameter_type_list ')'{
-        DEBUG_PARSER("direct_abstract_declarator -> direct_abstract_declarator '(' parameter_type_list ')'");
-		std::vector<Data> v, v2;
-		insertAttr(v2, $3, "", 1);
-		Node* node = createASTNode("( )", &v2);
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, node, "", 1);
-		$$ = createASTNode("direct_abstract_declarator", &v);
-		
-		// Semantics
-		$$->type = "FUNC_" + $1->type;
+	| direct_abstract_declarator '(' parameter_type_list ')' {
+		DBG("direct_abstract_declarator -> direct_abstract_declarator '(' parameter_type_list ')'");
+		$$ = getNode("direct_abstract_declarator", mergeAttrs($1, getNode("( )", mergeAttrs($3))));
+		$$->type = "FUNC_" + $1->type; // Semantics
 		$$->size = 0;
 	}
 	;
 
 initializer
-	: assignment_expression{
-        DEBUG_PARSER("initializer -> assignment_expression");
-        $$ = $1;
-    }
-	| '{' initializer_list '}' {
-        DEBUG_PARSER("initializer -> '{' initializer_list '}'");
-        $$ = $2;
-		
-		// Semantics for array initialization
-		$$->isInit = 1;
+	: assignment_expression {
+		DBG("initializer -> assignment_expression");
+		$$ = $1;
+		//3AC
+		list_values.push_back($1->place);
 	}
-	| '{' initializer_list ',' '}'{
-        DEBUG_PARSER("initializer -> '{' initializer_list ',' '}'");
-        $$ = $2;
-		
-		// Semantics
-		$$->isInit = 1;
+	| '{' initializer_list '}' {
+		DBG("initializer -> '{' initializer_list '}'");
+		$$ = $2;
+		$$->isInit = 1; // Semantics
+	}
+	| '{' initializer_list ',' '}' {
+		DBG("initializer -> '{' initializer_list ',' '}'");
+		$$ = $2;
+		$$->isInit = 1; // Semantics
+		//3AC
+		$$->place = $2->place;
+		$$->nextlist = $2->nextlist;
 	}
 	;
 
-
 initializer_list
-	: initializer	{
-        DEBUG_PARSER("initializer_list -> initializer");
-        $$ = $1;
-    }
-	| initializer_list ',' initializer	{
-        DEBUG_PARSER("initializer_list -> initializer_list ',' initializer");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("initializer_list", &v);
-		
-		// Semantics
-		$$->isInit = ($1->isInit && $3->isInit);
+	: initializer {
+		DBG("initializer_list -> initializer");
+		$$ = $1;
+	}
+	| initializer_list ',' NEXT_QUAD initializer {
+		DBG("initializer_list -> initializer_list ',' initializer");
+		$$ = getNode("initializer_list", mergeAttrs($1, $4));
+		$$->isInit = ($1->isInit && $4->isInit); // Semantics
+
+		//3AC
+		backpatch($1->nextlist, $3);
+		$$->nextlist = $4->nextlist;
 	}
 	;
 
 statement
 	: labeled_statement {
-        DEBUG_PARSER("statement -> labeled_statement");
-        $$ = $1;
-    }
+		DBG("statement -> labeled_statement");
+		$$ = $1;
+	}
 	| compound_statement {
-        DEBUG_PARSER("statement -> compound_statement");
-        $$ = $1;
-    }
+		DBG("statement -> compound_statement");
+		$$ = $1;
+	}
 	| expression_statement {
-        DEBUG_PARSER("statement -> expression_statement");
-        $$ = $1;
-    }
+		DBG("statement -> expression_statement");
+		$$ = $1;
+	}
 	| selection_statement {
-        DEBUG_PARSER("statement -> selection_statement");
-        $$ = $1;
-    }
+		DBG("statement -> selection_statement");
+		$$ = $1;
+	}
 	| iteration_statement {
-        DEBUG_PARSER("statement -> iteration_statement");
-        $$ = $1;
-    }
+		DBG("statement -> iteration_statement");
+		$$ = $1;
+	}
 	| jump_statement {
-        DEBUG_PARSER("statement -> jump_statement");
-        $$ = $1;
-    }
+		DBG("statement -> jump_statement");
+		$$ = $1;
+	}
 	;
 
 labeled_statement
-	: IDENTIFIER ':' statement	{
-        DEBUG_PARSER("labeled_statement -> IDENTIFIER ':' statement");
-		std::vector<Data> v;
-		insertAttr(v, createASTNode($1), "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("labeled_statement", &v);
+	: IDENTIFIER ':'  NEXT_QUAD statement {
+		DBG("labeled_statement -> IDENTIFIER ':' statement");
+		$$ = getNode("labeled_statement", mergeAttrs(getNode($1), $4));
+		//3AC
+		gotolabel[$1] = $3;
+
+        $$->nextlist = $4->nextlist;
+        $$->caselist = $4->caselist;
+        $$->continuelist = $4->continuelist;
+        $$->breaklist = $4->breaklist;
 	}
-	| CASE constant_expression ':' statement	{
-        DEBUG_PARSER("labeled_statement -> CASE constant_expression ':' statement");
-		std::vector<Data> v;
-		insertAttr(v, $2, "", 1);
-		insertAttr(v, $4, "", 1);
-		$$ = createASTNode("case", &v);
+	| CASE_CODE NEXT_QUAD statement {
+		DBG("labeled_statement -> CASE constant_expression ':' statement");
+		$$ = getNode("case", mergeAttrs($1, $3));
+
+		//3AC
+		backpatch($1->truelist, $2);
+		extendList($3->nextlist, $1->falselist);
+        $$->breaklist = $3->breaklist;
+        $$->nextlist = $3->nextlist;
+        $$->caselist = $1->caselist;
+        $$->continuelist = $3->continuelist;
 	}
-	| DEFAULT ':' statement	{
-        DEBUG_PARSER("labeled_statement -> DEFAULT ':' statement");
-		std::vector<Data> v;
-		insertAttr(v, NULL, "default", 0);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("case", &v);
+	| DEFAULT ':' statement {
+		DBG("labeled_statement -> DEFAULT ':' statement");
+		std::vector<Data> attr;
+        insertAttr(attr, NULL, "default", 0);
+        insertAttr(attr, $3, "", 1);
+        $$ = getNode("case", &attr);
+
+		//3AC
+		$$->breaklist = $3->breaklist;
+        $$->nextlist = $3->nextlist;
+        $$->continuelist = $3->continuelist;		
+	}
+	;
+
+CASE_CODE
+	: CASE constant_expression ':' {
+        $$ = $2;
+		std::string t = getTempVariable($$->type);
+		int a = getCurrentSize();
+		emit("==", "", $2->place, t, -1);
+		int b = getCurrentSize();
+		emit("GOTO", "IF", t, "", 0);
+		int c = getCurrentSize();
+		emit("GOTO", "", "", "", 0);
+		$$->caselist.push_back(a);
+		$$->truelist.push_back(b);
+		$$->falselist.push_back(c);
 	}
 	;
 
 compound_statement
-	: '{' '}'	{
-        DEBUG_PARSER("compound_statement -> '{' '}'");
-		$$ = createASTNode("{ }");
+	: '{' '}' {
+		DBG("compound_statement -> '{' '}'");
+		$$ = getNode("{ }");
 	}
-	| '{' CHANGE_TABLE statement_list '}'	{
-        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE statement_list '}'");
+	| '{' CHANGE_TABLE statement_list '}' {
+		DBG("compound_statement -> '{' CHANGE_TABLE statement_list '}'");
 		$$ = $3;
-		
-		// Semantics - clean up block scope
 		if(func_flag >= 2){
 			int bc = block_stack.top();
 			block_stack.pop();
@@ -2346,11 +2313,9 @@ compound_statement
 			func_flag--;
 		}
 	}
-	| '{' CHANGE_TABLE declaration_list '}'	{
-        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE declaration_list '}'");
+	| '{' CHANGE_TABLE declaration_list '}' {
+		DBG("compound_statement -> '{' CHANGE_TABLE declaration_list '}'");
 		$$ = $3;
-		
-		// Semantics - clean up block scope
 		if(func_flag >= 2){
 			int bc = block_stack.top();
 			block_stack.pop();
@@ -2361,14 +2326,9 @@ compound_statement
 			func_flag--;
 		}
 	}
-	| '{' CHANGE_TABLE declaration_list statement_list '}'	{
-        DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $4, "", 1);
-		$$ = createASTNode("compound_statement", &v);
-		
-		// Semantics - clean up block scope
+	| '{' CHANGE_TABLE declaration_list NEXT_QUAD statement_list '}' {
+		DBG("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
+		$$ = getNode("compound_statement", mergeAttrs($3, $5));
 		if(func_flag >= 2){
 			int bc = block_stack.top();
 			block_stack.pop();
@@ -2378,12 +2338,19 @@ compound_statement
 			updSymbolTable(str);
 			func_flag--;
 		}
+
+		//3AC
+		backpatch($3->nextlist, $4);
+        $$->nextlist = $5->nextlist;
+        $$->caselist = $5->caselist;
+        $$->continuelist = $5->continuelist;
+        $$->breaklist = $5->breaklist;
 	}
 	;
 
 CHANGE_TABLE
 	: %empty {
-        DEBUG_PARSER("CHANGE_TABLE -> %empty");
+		DBG("CHANGE_TABLE -> %empty");
 		if(func_flag){
 			string str = "Block" + to_string(block_count);
 			block_stack.push(block_count);
@@ -2392,216 +2359,337 @@ CHANGE_TABLE
 			makeSymbolTable(str, "");
 		}
 		else func_flag++;
-		
 		$$ = strdup("");
 	}
 	;
 
 declaration_list
 	: declaration {
-        DEBUG_PARSER("declaration_list -> declaration");
-        $$ = $1;
-    }
-	| declaration_list declaration	{
-        DEBUG_PARSER("declaration_list -> declaration_list declaration");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("declaration_list", &v);
+		DBG("declaration_list -> declaration");
+		$$ = $1;
+	}
+	| declaration_list NEXT_QUAD declaration {
+		DBG("declaration_list -> declaration_list declaration");
+		$$ = getNode("declaration_list", mergeAttrs($1, $3));
+		//3AC
+		backpatch($1->nextlist, $2);
+        $$->nextlist = $3->nextlist;
 	}
 	;
 
 statement_list
 	: statement {
-        DEBUG_PARSER("statement_list -> statement");
-        $$ = $1;
-    }
-	| statement_list statement	{
-        DEBUG_PARSER("statement_list -> statement_list statement");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("statement_list", &v);
+		DBG("statement_list -> statement");
+		$$ = $1;
+	}
+	| statement_list NEXT_QUAD statement {
+		DBG("statement_list -> statement_list statement");
+		$$ = getNode("statement_list", mergeAttrs($1, $3));
+
+		//3AC
+		backpatch($1->nextlist, $2);
+		$$->nextlist = $3->nextlist;
+		extendList($1->caselist, $3->caselist);
+		$$->caselist = $1->caselist;
+		extendList($1->continuelist, $3->continuelist);
+		extendList($1->breaklist, $3->breaklist);
+		$$->continuelist = $1->continuelist;
+		$$->breaklist = $1->breaklist;
 	}
 	;
 
 expression_statement
 	: ';' {
-        DEBUG_PARSER("expression_statement -> ';'");
-        $$ = createASTNode(";");
-    }
+		DBG("expression_statement -> ';'");
+		$$ = getNode(";");
+	}
 	| expression ';' {
-        DEBUG_PARSER("expression_statement -> expression ';'");
-        $$ = $1;
+		DBG("expression_statement -> expression ';'");
+		$$ = $1;
+	}
+	;
+
+IF_CODE
+    : IF {if_found = 1;} '(' expression ')' {
+        if($4->truelist.empty() && $4->falselist.empty()) {
+            int a = getCurrentSize();
+			backpatch($4->nextlist, a);
+            emit("GOTO","IF", $4->place, "",0);
+            int b = getCurrentSize();
+            emit("GOTO","", "", "",0);
+            $4->truelist.push_back(a);
+            $4->falselist.push_back(b);
+        }
+        $$ = $4;
+		if_found = 0;
     }
 	;
+
+N
+    : %empty {
+        int a = getCurrentSize();
+		$$ = new Node;
+        emit("GOTO", "", "", "", 0);
+        $$->nextlist.push_back(a);
+    }
+    ;
 
 selection_statement
-	: IF '(' expression ')' statement	{
-        DEBUG_PARSER("selection_statement -> IF '(' expression ')' statement");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("if", &v);
+	: IF_CODE NEXT_QUAD statement {
+		DBG("selection_statement -> IF '(' expression ')' statement");
+		$$ = getNode("if", mergeAttrs($1, $3));
+		//3AC
+		backpatch($1->truelist, $2);
+		extendList($3->nextlist, $1->falselist);
+		$$->nextlist = $3->nextlist;
+		$$->continuelist = $3->continuelist;
+		$$->breaklist = $3->breaklist;
 	}
-	| IF '(' expression ')' statement ELSE statement	{
-        DEBUG_PARSER("selection_statement -> IF '(' expression ')' statement ELSE statement");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		insertAttr(v, $7, "", 1);
-		$$ = createASTNode("if-else", &v);
+	| IF_CODE NEXT_QUAD statement N ELSE NEXT_QUAD statement {
+		DBG("selection_statement -> IF '(' expression ')' statement ELSE statement");
+		$$ = getNode("if-else", mergeAttrs($1, $3, $7));
+		//3AC
+		backpatch($1->truelist, $2);
+		backpatch($1->falselist, $6);
+
+		extendList($3->nextlist, $4->nextlist);
+		extendList($3->nextlist, $7->nextlist);
+		$$->nextlist = $3->nextlist;
+
+		extendList($3->breaklist, $7->breaklist);
+		$$->breaklist = $3->breaklist;
+		extendList($3->continuelist, $7->continuelist);
+		$$->continuelist = $3->continuelist;
 	}
-	| SWITCH '(' expression ')' statement	{
-        DEBUG_PARSER("selection_statement -> SWITCH '(' expression ')' statement");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("switch", &v);
+	| SWITCH '(' expression ')' statement {
+		DBG("selection_statement -> SWITCH '(' expression ')' statement");
+		$$ = getNode("switch", mergeAttrs($3, $5));
+		//3AC
+		casepatch($5->caselist, $3->place);
+
+		extendList($5->nextlist, $5->breaklist);
+		$$->nextlist = $5->nextlist;
+		$$->continuelist = $5->continuelist;
 	}
-	| IF '(' ')' statement {
-        DEBUG_PARSER("selection_statement -> IF '(' ')' statement");
-        yyerror("missing condition in 'if' statement.", "syntax error");
-        $$ = createASTNode("error-node");
-    }
-	| SWITCH '(' ')' statement {
-        DEBUG_PARSER("selection_statement -> SWITCH '(' ')' statement");
-        yyerror("missing condition in 'switch' statement.", "syntax error");
-        $$ = createASTNode("error-node");
-    }
+	// | IF '(' ')' statement {
+	// 	DBG("selection_statement -> IF '(' ')' statement");
+	// 	yyerror("missing condition in 'if' statement.", "syntax error");
+	// 	$$ = getNode("error-node", nullptr);
+	// }
+	// | SWITCH '(' ')' statement {
+	// 	DBG("selection_statement -> SWITCH '(' ')' statement");
+	// 	yyerror("missing condition in 'switch' statement.", "syntax error");
+	// 	$$ = getNode("error-node", nullptr);
+	// }
 	;
 
+
+EXPR_CODE
+    : {if_found = 1;} expression {
+        if($2->truelist.empty() && $2->falselist.empty()) {
+            int a = getCurrentSize();
+			backpatch($2->nextlist, a);
+            emit("GOTO","IF", $2->place, "",0);
+            int b = getCurrentSize();
+            emit("GOTO","", "", "",0);
+            $2->truelist.push_back(a);
+            $2->falselist.push_back(b);
+        }
+        $$ = $2;
+		if_found = 0;
+    }
+    ;
+
+EXPR_STMT_CODE
+    : {if_found = 1;} expression_statement { 
+		if($2->truelist.empty() && $2->falselist.empty()) {
+            int a = getCurrentSize();
+			backpatch($2->nextlist, a);
+            emit("GOTO","IF", $2->place, "",0);
+            int b = getCurrentSize();
+            emit("GOTO","", "", "",0);
+            $2->truelist.push_back(a);
+            $2->falselist.push_back(b);
+        }
+        $$ = $2;
+		if_found = 0;
+	}
+    ;
+
+
 iteration_statement
-	: WHILE '(' expression ')' statement	{
-        DEBUG_PARSER("iteration_statement -> WHILE '(' expression ')' statement");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("while-loop", &v);
+    : WHILE '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement {
+		DBG("iteration_statement -> WHILE '(' expression ')' statement");
+		$$ = getNode("while-loop", mergeAttrs($4, $7));
+
+        backpatch($4->truelist, $6);
+		extendList($7->nextlist, $7->continuelist);
+        backpatch($7->nextlist, $3);
+        
+        $$->nextlist = $4->falselist;
+		extendList($$->nextlist, $7->breaklist);
+        emit("GOTO", "", "", "", $3);
 	}
-	| DO statement WHILE '(' expression ')' ';'	{
-        DEBUG_PARSER("iteration_statement -> DO statement WHILE '(' expression ')' ';'");
-		std::vector<Data> v;
-		insertAttr(v, $2, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("do-while-loop", &v);
+	| UNTIL '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement { /*** Added UNTIL grammar ***/
+		DBG("iteration_statement -> UNTIL '(' expression ')' statement");
+		$$ = getNode("until-loop", mergeAttrs($4, $7));
+
+		backpatch($4->falselist, $6);
+		extendList($7->nextlist, $7->continuelist);
+		backpatch($7->nextlist, $3);
+		
+		$$->nextlist = $4->truelist;
+		extendList($$->nextlist, $7->breaklist);
+		emit("GOTO", "", "", "", $3);
 	}
-	| FOR '(' expression_statement expression_statement ')' statement	{
-        DEBUG_PARSER("iteration_statement -> FOR '(' expression_statement expression_statement ')' statement");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $4, "", 1);
-		insertAttr(v, $6, "", 1);
-		$$ = createASTNode("for-loop(w/o update stmt)", &v);
+	| DO NEXT_QUAD statement WHILE '(' NEXT_QUAD EXPR_CODE ')' ';' {
+		DBG("iteration_statement -> DO statement WHILE '(' expression ')' ';'");
+		$$ = getNode("do-while-loop", mergeAttrs($3, $7));
+
+		backpatch($7->truelist, $2);
+		extendList($3->nextlist, $3->continuelist);
+		backpatch($3->nextlist, $6);
+
+		$$->nextlist = $7->falselist;
+		extendList($$->nextlist, $3->breaklist);
 	}
-	| FOR '(' expression_statement expression_statement expression ')' statement	{
-        DEBUG_PARSER("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $4, "", 1);
-		insertAttr(v, $5, "", 1);
-		insertAttr(v, $7, "", 1);
-		$$ = createASTNode("for-loop", &v);
+	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE ')' NEXT_QUAD statement {
+		DBG("iteration_statement -> FOR '(' expression_statement expression_statement ')' statement");
+		$$ = getNode("for-loop(w/o update stmt)", mergeAttrs($3, $5, $8));
+
+		backpatch($3->nextlist, $4);
+		backpatch($5->truelist, $7);
+
+		$$->nextlist = $5->falselist;
+		extendList($$->nextlist, $8->breaklist);
+
+		extendList($8->nextlist, $8->continuelist);
+		backpatch($8->nextlist, $4);
+
+		emit("GOTO", "", "", "", $4);
 	}
-    | UNTIL '(' expression ')' statement { /*** Added UNTIL grammar ***/
-        DEBUG_PARSER("iteration_statement -> UNTIL '(' expression ')' statement");
-		std::vector<Data> v;
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("until-loop", &v);
+	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement {
+		DBG("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
+		$$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
+
+		backpatch($3->nextlist, $4);
+		backpatch($5->truelist, $10);
+
+		$$->nextlist = $5->falselist;
+		extendList($$->nextlist, $11->breaklist);
+
+		extendList($11->nextlist, $11->continuelist);
+		backpatch($11->nextlist, $6);
+
+		extendList($7->nextlist, $8->nextlist);
+		backpatch($7->nextlist, $4);
+
+		emit("GOTO", "", "", "", $6);
 	}
 	| WHILE '[' expression ']' statement {
-        DEBUG_PARSER("iteration_statement -> WHILE '[' expression ']' statement");
-        yyerror("incorrect parentheses in while-loop.", "syntax error");
-		$$ = createASTNode("Invalid While-loop", nullptr);
-    }
-    | UNTIL '[' expression ']' statement {
-        DEBUG_PARSER("iteration_statement -> UNTIL '[' expression ']' statement");
-        yyerror("incorrect parentheses in until-loop.", "syntax error");
-		$$ = createASTNode("Invalid Until-loop", nullptr);
-    }
-    | FOR '(' expression ',' expression ',' expression ')' statement {
-        DEBUG_PARSER("iteration_statement -> FOR '(' expression ',' expression ',' expression ')' statement");
-        yyerror("comma used instead of semicolons.", "syntax error");
-        $$ = createASTNode("Invalid for-loop", nullptr);
-    }
+		DBG("iteration_statement -> WHILE '[' expression ']' statement");
+		yyerror("incorrect parentheses in while-loop.", "syntax error");
+		$$ = getNode("Invalid While-loop", nullptr);
+	}
+	| UNTIL '[' expression ']' statement {
+		DBG("iteration_statement -> UNTIL '[' expression ']' statement");
+		yyerror("incorrect parentheses in until-loop.", "syntax error");
+		$$ = getNode("Invalid Until-loop", nullptr);
+	}
+	| FOR '(' expression ',' expression ',' expression ')' statement {
+		DBG("iteration_statement -> FOR '(' expression ',' expression ',' expression ')' statement");
+		yyerror("comma used instead of semicolons.", "syntax error");
+		$$ = getNode("Invalid for-loop", nullptr);
+	}
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'	{
-        DEBUG_PARSER("jump_statement -> GOTO IDENTIFIER ';'");
-		std::string s;
-		s = (std::string)$1 + " : " + (std::string)$2;
-        $$ = createASTNode(s);
+	: GOTO IDENTIFIER ';' {
+		DBG("jump_statement -> GOTO IDENTIFIER ';'");
+		$$ = getNode(std::string($1) + " : " + std::string($2));
+		//3AC
+		int a = getCurrentSize();
+        emit("GOTO", "", "", "", 0);
+        gotolablelist[$2].push_back(a);
 	}
 	| CONTINUE ';' {
-        DEBUG_PARSER("jump_statement -> CONTINUE ';'");
-        $$ = createASTNode($1);
-    }
+		DBG("jump_statement -> CONTINUE ';'");
+		$$ = getNode($1);
+		//3AC
+		int a = getCurrentSize();
+        emit("GOTO", "", "", "", 0);
+        $$->continuelist.push_back(a);
+	}
 	| BREAK ';' {
-        DEBUG_PARSER("jump_statement -> BREAK ';'");
-        $$ = createASTNode($1);
-    }
+		DBG("jump_statement -> BREAK ';'");
+		$$ = getNode($1);
+		//3AC
+		int a = getCurrentSize();
+        emit("GOTO", "", "", "", 0);
+        $$->breaklist.push_back(a);
+	}
 	| RETURN ';' {
-        DEBUG_PARSER("jump_statement -> RETURN ';'");
-        $$ = createASTNode($1);
-    }
-	| RETURN expression ';'	{
-        DEBUG_PARSER("jump_statement -> RETURN expression ';'");
-		std::vector<Data> v;
-		insertAttr(v, createASTNode($1), "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("jump_stmt", &v);
+		DBG("jump_statement -> RETURN ';'");
+		$$ = getNode($1);
+		//3AC
+		emit("RETURN", "", "", "", -1);
+	}
+	| RETURN expression ';' {
+		DBG("jump_statement -> RETURN expression ';'");
+		$$ = getNode("jump_stmt", mergeAttrs(getNode($1), $2));
+		//3AC
+		backpatch($2->nextlist,getCurrentSize());
+        emit("RETURN", $2->place, "", "", -1);
 	}
 	;
 
 translation_unit
-	: external_declaration	{
-        DEBUG_PARSER("translation_unit -> external_declaration");
+	: external_declaration {
+		DBG("translation_unit -> external_declaration");
 		$$ = $1;
 	}
-	| translation_unit external_declaration	{
-        DEBUG_PARSER("translation_unit -> translation_unit external_declaration");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		$$ = createASTNode("program", &v);
+	| translation_unit NEXT_QUAD external_declaration {
+		DBG("translation_unit -> translation_unit external_declaration");
+		$$ = getNode("program", mergeAttrs($1, $3));
+		//3AC
+		backpatch($1->nextlist, $2);
+		$$->nextlist = $3->nextlist;
+		extendList($1->caselist, $3->caselist);
+		$$->caselist = $1->caselist;
+		extendList($1->continuelist, $3->continuelist);
+		extendList($1->breaklist, $3->breaklist);
+		$$->continuelist = $1->continuelist;
+		$$->breaklist = $1->breaklist;
 	}
 	| error ';' {
-        DEBUG_PARSER("translation_unit -> error ';'");
-		$$ = new Node; yyerrok;
+		DBG("translation_unit -> error ';'");
+		$$ = getNode("error-node", nullptr); yyerrok;
 	}
-	| error ','{
-        DEBUG_PARSER("translation_unit -> error ','");
-		$$ = new Node; yyerrok;
+	| error ',' {
+		DBG("translation_unit -> error ','");
+		$$ = getNode("error-node", nullptr); yyerrok;
 	}
-	| error{
-        DEBUG_PARSER("translation_unit -> error");
-		$$ = new Node; yyerrok;
+	| error {
+		DBG("translation_unit -> error");
+		$$ = getNode("error-node", nullptr); yyerrok;
 	}
 	;
 
 external_declaration
 	: function_definition {
-        DEBUG_PARSER("external_declaration -> function_definition");
-        $$ = $1;
-    }
+		DBG("external_declaration -> function_definition");
+		$$ = $1;
+	}
 	| declaration {
-        DEBUG_PARSER("external_declaration -> declaration");
-        $$ = $1;
-    }
+		DBG("external_declaration -> declaration");
+		$$ = $1;
+	}
 	;
 
 function_definition
-	: declaration_specifiers declarator F declaration_list compound_statement	{
-        DEBUG_PARSER("function_definition -> declaration_specifiers declarator F declaration_list compound_statement");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		insertAttr(v, $4, "", 1);
-		insertAttr(v, $5, "", 1);
-		$$ = createASTNode("function", &v);
-
+	: declaration_specifiers declarator F declaration_list compound_statement {
+		DBG("function_definition -> declaration_specifiers declarator F declaration_list compound_statement");
+		$$ = getNode("function", mergeAttrs($1, $2, $4, $5));
 		// Semantics
 		// Extract and propagate function name and return type
         $$->temp_name = $2->temp_name;  // Function name from declarator
@@ -2612,15 +2700,17 @@ function_definition
 		string fName = string($3);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
-	}
-	| declaration_specifiers declarator F compound_statement	{
-        DEBUG_PARSER("function_definition -> declaration_specifiers declarator F compound_statement");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $2, "", 1);
-		insertAttr(v, $4, "", 1);
-		$$ = createASTNode("function (w/o decl_list)", &v);
 
+		//3AC
+		for(auto i: gotolablelist){
+			backpatch(i.second, gotolabel[i.first]);
+		}
+        emit("FUNC_" + fName + " end", "", "", "", -1);
+        remainingBackpatch();
+	}
+	| declaration_specifiers declarator F compound_statement {
+		DBG("function_definition -> declaration_specifiers declarator F compound_statement");
+		$$ = getNode("function (w/o decl_list)", mergeAttrs($1, $2, $4));
 		// Semantics 
 		// Extract and propagate function name and return type
         $$->temp_name = $2->temp_name;  // Function name from declarator
@@ -2631,45 +2721,57 @@ function_definition
 		string fName = string($3);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		//3AC
+		for(auto i: gotolablelist){
+			backpatch(i.second, gotolabel[i.first]);
+		}
+        emit("FUNC_" + fName + " end", "", "", "", -1);
+        remainingBackpatch();
 	}
-	| declarator F declaration_list compound_statement	{//this rule can be constructor of classess OOPS
-        DEBUG_PARSER("function_definition -> declarator F declaration_list compound_statement");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
-		insertAttr(v, $4, "", 1);
-		$$ = createASTNode("function (w/o decl_specifiers)", &v);
-
+	| declarator F declaration_list compound_statement {
+		DBG("function_definition -> declarator F declaration_list compound_statement");
+		$$ = getNode("function (w/o decl_specifiers)", mergeAttrs($1, $3, $4));
 		// Semantics
 		type = "";
 		string fName = string($2);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		//3AC
+		for(auto i: gotolablelist){
+			backpatch(i.second, gotolabel[i.first]);
+		}
+        emit("FUNC_" + fName + " end", "", "", "", -1);
+        remainingBackpatch();
 	}
-	| declarator F compound_statement	{//this rule can be constructor of classess OOPS
-        DEBUG_PARSER("function_definition -> declarator F compound_statement");
-		std::vector<Data> v;
-		insertAttr(v, $1, "", 1);
-		insertAttr(v, $3, "", 1);
-		$$ = createASTNode("function (w/o specifiers and decl_list)", &v);
-
+	| declarator F compound_statement {
+		DBG("function_definition -> declarator F compound_statement");
+		$$ = getNode("function (w/o specifiers and decl_list)", mergeAttrs($1, $3));
 		// Semantics
 		type = "";
 		string fName = string($2);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		//3AC
+		for (auto &i : gotolablelist) {
+			backpatch(i.second, gotolabel[i.first]);
+        }
+        emit("FUNC_" + fName + " end", "", "", "", -1);
+        remainingBackpatch();
 	}
 	;
 
 F 
 	: %empty {
-        DEBUG_PARSER("F -> %empty");
-		if (gst.find(funcName) != gst.end()){
-			yyerror(("Redefinition of function " + funcName).c_str(), "scope error");
+		DBG("F -> %empty");
+		std::string qualifiedFuncName = funcName;
+		if (!className.empty() && funcName.find(className + "_") != 0) {
+			qualifiedFuncName = className + "_" + funcName;
 		}
-		else{
-			makeSymbolTable(funcName, funcType);
-			$$ = strdup(funcName.c_str());
+		if (gst.find(qualifiedFuncName) != gst.end()) {
+			yyerror(("Redefinition of function " + qualifiedFuncName).c_str(), "scope error");
+		} else {
+			makeSymbolTable(qualifiedFuncName, funcType);
+			$$ = strdup(qualifiedFuncName.c_str());
 			block_count = 1;
 			type = "";
 		}
