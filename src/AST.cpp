@@ -42,16 +42,21 @@ void insertAttr(std::vector<Data> &v, Node *node, const std::string &str, bool i
     v.push_back(Data{node, str, isNode});
 }
 
-Node *createASTNode(const std::string &str, std::vector<Data> *v)
+std::vector<Data> *mergeAttrs(Node *node1, Node *node2, Node *node3, Node *node4)
+{
+    auto *attrs = new std::vector<Data>();
+    if (node1) insertAttr(*attrs, node1, "", true);
+    if (node2) insertAttr(*attrs, node2, "", true);
+    if (node3) insertAttr(*attrs, node3, "", true);
+    if (node4) insertAttr(*attrs, node4, "", true);
+    return attrs;
+}
+
+Node *getNode(const std::string &str, std::vector<Data> *v)
 {
     Node *node = new Node;
     node->node_id = ++NodeCounter;
-    try {
-        node->node_name = str;
-    } catch (const std::exception& e) {
-        delete node;  // Clean up before re-throwing
-        throw std::runtime_error("String assignment failed: " + std::string(e.what()));
-    }
+    node->node_name = str;
 
     if (!v)
     { // Leaf Node
@@ -63,7 +68,7 @@ Node *createASTNode(const std::string &str, std::vector<Data> *v)
                 format += c;
         }
         node->node_name = format;
-        if (!str.empty() && str[0] == '"') 
+        if (str[0] == '"')
         { // String literal
             std::string s = format.substr(1, format.size() - 2);
             if (print_ast)
