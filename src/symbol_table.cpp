@@ -192,6 +192,67 @@ void insertKeywords(){
     for(auto h : op){
         insertSymbol(*curr_table, h, "operator", 8, true, nullptr);
     }
+
+    // important io functions
+	vector<string> type = {"char*", "..."};
+	insert_imp_func("printf", type, "int");
+	insert_imp_func("scanf", type, "int");
+
+	// dynamic allocation functions
+	type = {"int"};
+	insert_imp_func("malloc", type, "void*");
+	
+    type = {"int", "int"};
+	insert_imp_func("calloc", type, "void*");
+	
+    type = {"void*"};
+	insert_imp_func("free", type, "void");
+
+	// file io functions
+	type = {"char*", "char*"};
+	insert_imp_func("fopen", type, "FILE*");
+
+	type = {"char*", "FILE*"};
+	insert_imp_func("fputs", type, "int");
+	
+    type = {"char*", "int", "FILE*"};
+	insert_imp_func("fgets", type, "int");
+	
+    type = {"FILE*"};
+	insert_imp_func("fclose", type, "int");
+	
+    type = {"FILE*", "char*", "..."};
+	insert_imp_func("fprintf", type, "int");
+	
+    type = {"FILE*", "char*", "..."};
+	insert_imp_func("fscanf", type, "int");
+	
+    type = {"FILE*"};
+	insert_imp_func("fgetc", type, "char");
+	
+    type = {"char", "FILE*"};
+	insert_imp_func("fputc", type, "char");
+
+	// string Functions
+	type = {"char*"};
+	insert_imp_func("strlen", type, "int");
+	
+    type = {"char*", "char*"};
+	insert_imp_func("strcmp", type, "int");
+	
+    type = {"char*", "char*", "int"};
+	insert_imp_func("strncmp", type, "int");
+	
+    type = {"char*", "char*"};
+	insert_imp_func("strcpy", type, "char*");
+	insert_imp_func("strcat", type, "char*");
+}
+
+void insert_imp_func(string func_name, vector<string> type, string ret_type){
+	insertSymbol(*curr_table, func_name, "FUNC_"+ret_type, 4, 0, nullptr);
+	//func_arg.insert({func_name, make_pair("FUNC_"+ret_type, type)});
+    func_arg.insert({func_name, type});
+	//func_usage_map.insert({func_name, 0});
 }
 
 string getType(string id){
