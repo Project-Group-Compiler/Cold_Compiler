@@ -15,21 +15,20 @@ struct Node
     long long realVal;
     char charVal;
     std::string strVal;
-
-    int size;
-	std::string type;
-	int expType = 0;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  
-    bool is_error = false;
-    std::string place;
+    //semantics addition
+    std::string type;
+	int expType;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  			 	
+	int isInit;
     std::string temp_name;
+    long long int size;
+
+    std::string place;
     std::vector<int> truelist;
     std::vector<int> falselist;
     std::vector<int> breaklist;
     std::vector<int> continuelist;
     std::vector<int> nextlist;
     std::vector<int> caselist;
-    
-    int argCount = 0;
 };
 
 struct Data
@@ -39,10 +38,19 @@ struct Data
     bool is_node;
 };
 
+struct constants{
+	std::string str;
+	std::string type;
+	long long int intVal;
+	long double realVal;
+	std::string strVal;
+};
+
 void beginAST(const std::string &inputFile);
 void endAST();
 void insertAttr(std::vector<Data> &v, Node *node, const std::string &str, bool isNode);
 std::vector<Data> *mergeAttrs(Node *node1, Node *node2=nullptr, Node *node3 = nullptr, Node *node4 = nullptr);
 Node *getNode(const std::string &str, std::vector<Data> *v = nullptr);
 
-#endif
+
+#endif // AST_HPP

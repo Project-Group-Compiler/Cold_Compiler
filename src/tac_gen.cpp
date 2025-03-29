@@ -54,7 +54,7 @@ void casepatch(std::vector<int> &bplist, std::string target)
 std::string getTempVariable(std::string type)
 {
     std::string tempName = "_t_" + std::to_string(counter++);
-    addToSymbolTable(tempName, type);
+    insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL);
     return tempName;
 }
 

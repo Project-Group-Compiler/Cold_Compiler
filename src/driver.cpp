@@ -1,5 +1,7 @@
 #include <iostream>
 #include <filesystem>
+#include "data_structures.hpp"
+#include "symbol_table.h"
 #include "tac.hpp"
 
 extern FILE *yyin;
@@ -50,6 +52,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     inputFilename = argv[1];
+
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
     bool optimize_ir = true;
     bool lexPrint = false;
@@ -102,9 +105,13 @@ int main(int argc, char *argv[])
 
     if (!has_error || force)
     {
+        symTable_init();//mohitmo's function
         performParsing(inputFileString);
-        if (print_symtab)
-            printTables(inputFileString);
+        if (print_symtab){
+            std::cout << "Printing symbol table\n";
+            printTables(inputFileString);//meet's function
+            printSymbolTable(&gst, "#Global_Symbol_Table#.csv");//mohitmo's function
+        }
         if (!has_error || force)
         {
             generate_ir();

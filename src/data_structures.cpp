@@ -71,7 +71,7 @@ void updateFuncSymbolEntry(int args)
     }
 }
 
-void printSymbolTable(std::ofstream &out)
+void printSymbolTable_meet(std::ofstream &out)
 {
     out << "\nSymbol Table:\n\n";
     out << std::left << std::setw(60) << "Token"
@@ -147,25 +147,9 @@ void printTables(const std::string &inputFile)
         print_error("cannot open " + outputDir + inputFile + "_tables.txt");
         return;
     }
-    printSymbolTable(out);
+    printSymbolTable_meet(out);
     printConstantTable(out);
     printType(out);
-}
-
-SymbolTableEntry* lookup(std::string Token)
-{
-    for (int i = 0; i < SymbolTable.size(); i++)
-    {
-        if (SymbolTable[i].token == Token)
-            return &SymbolTable[i];
-    }
-
-    for(auto &entry : ConstantTable)
-    {
-        if(entry.token == Token)
-            return &entry;
-    }
-    return nullptr;
 }
 
 std::string getSizeOfType(const std::string& typeStr) {
@@ -177,15 +161,5 @@ std::string getSizeOfType(const std::string& typeStr) {
         return "4";
     } else {
         return "0"; // Unknown type
-    }
-}
-
-
-void debugEntry(SymbolTableEntry* entry){
-    if(entry != nullptr) {
-        std::cerr << entry->token << '\n';
-        std::cerr << entry->data_type << '\n';
-    }else{
-        std::cerr << "Entry is null\n";
     }
 }

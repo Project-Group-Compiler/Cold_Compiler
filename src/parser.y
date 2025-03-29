@@ -7,26 +7,49 @@
 #include <map>
 #include <cstring>
 #include "AST.hpp"
-#include "tac.hpp"
 #include "data_structures.hpp"
+#include "typecheck.h"
+#include "symbol_table.h"
+#include "tac.hpp"
+
+std::string currentDataType="";
+std::string currentAccess = "";//for classes
+int noArgs=0;
+bool flag=0,flag2=0;
 
 extern int yyleng;
-std::string currentDataType="";
-
-bool DEBUG = 0;
-
-int noArgs=0;
-bool flag=0,flag2=0;;
-
 extern char* yytext;
 extern int column;
 extern int line;
 extern std::string inputFilename;
 extern bool has_error;
 
-int yyerror(const char*);
+//Semantics
+string funcName = "";
+string structName = "";
+string className="";
+string funcType = "";
+int block_count = 0;
+stack<int> block_stack;
+bool fn_decl = 0;
+int func_flag = 0;
+
+string type = "";
+int Anon_StructCounter=0;
+int Anon_ClassCounter = 0;
+vector<string> funcArgs;
+vector<string> idList;
+vector<string> currArgs;
+
+bool debug_enabled = 0;
+#define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
+
+int yyerror(const char* s, const std::string &errorType = "syntax error");
 int yylex();
-int arr_rValue = 0, struct_rValue = 0;
+int warning(const char*);
+
+//3 - AC 
+int rValue = 0;
 int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
 int previous_if_found = 0; // TODO: May need later
 std::vector<std::string> list_values;
@@ -39,11 +62,12 @@ std::map<std::string, int> gotolabel;
 
 %union{
 	char* str;
-	int Int;
 	Node* ptr;
+	constants* num;
+	int Int;
 }
 
-%token<str> IDENTIFIER CONSTANT STRING_LITERAL SIZEOF
+%token<str> IDENTIFIER STRING_LITERAL SIZEOF
 %token<str> PTR_OP INC_OP DEC_OP LEFT_OP RIGHT_OP LE_OP GE_OP EQ_OP NE_OP INHERITANCE_OP
 %token<str> AND_OP OR_OP MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN ADD_ASSIGN
 %token<str> SUB_ASSIGN LEFT_ASSIGN RIGHT_ASSIGN AND_ASSIGN
@@ -56,679 +80,1000 @@ std::map<std::string, int> gotolabel;
 
 %token<str> CASE DEFAULT IF ELSE SWITCH WHILE DO FOR GOTO CONTINUE BREAK RETURN
 %token<str> UNTIL /*** Added UNTIL token ***/
+//Semantic
+%token<num> CONSTANT
+%type<str> F G G_C
+%type<str> CHANGE_TABLE 
 
-%start translation_unit
-
+//3AC 
 %type<Int> NEXT_QUAD WRITE_GOTO
 %type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
 %type<ptr> N
 
+
+%start translation_unit
+
 %type<ptr> primary_expression postfix_expression argument_expression_list unary_expression unary_operator cast_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression
 %type<str> assignment_operator 
 %type<ptr> and_expression exclusive_or_expression inclusive_or_expression logical_and_expression logical_or_expression conditional_expression 
-
 %type<ptr> assignment_expression expression constant_expression declaration declaration_specifiers init_declarator_list
 %type<ptr> declarator direct_declarator pointer type_qualifier_list parameter_type_list parameter_list parameter_declaration identifier_list type_name abstract_declarator direct_abstract_declarator initializer
 %type<ptr> init_declarator type_specifier struct_or_union_specifier	struct_declaration_list struct_declaration specifier_qualifier_list struct_declarator_list struct_declarator enum_specifier enumerator_list enumerator type_qualifier
 %type<ptr> statement labeled_statement compound_statement declaration_list statement_list expression_statement selection_statement iteration_statement jump_statement translation_unit external_declaration function_definition initializer_list
-%type<ptr> storage_class_specifier 
+%type<ptr> storage_class_specifier
 %type<str> struct_or_union
 %type<ptr> class_definition inheritance_specifier inheritance_specifier_list access_specifier class class_definition_head class_internal_definition_list class_internal_definition	class_member_list class_member
-
 
 %left ';'
 %%
 
 primary_expression
     : IDENTIFIER {
-        $$ = getNode($1);
-
-        // 3AC
-        SymbolTableEntry* entry = lookup($1);
+        DBG("primary_expression -> IDENTIFIER");
+    	$$ = getNode(std::string($1));
 		
-        if(entry) {
-			$$->type = entry->data_type;
-			$$->temp_name = entry->token;
-			$$->nextlist.clear();
-            if(entry->data_type == "Procedure") {
-                $$->place = "CALL " + std::string($1);
-            } 
-            else {
-                $$->place = std::string($1);
-            }
-        } 
-        else {
-            $$->place = "UNKNOWN";
-        }
-    }
-    | CONSTANT {
-        $$ = getNode($1);
+		// Semantics
+		string temp = primaryExpression(string($1));
+		if(temp == ""){
+			yyerror(("Undeclared Identifier " + string($1)).c_str(), "scope error");
+		}
+		else{
+			if(temp.substr(0, 5) == "FUNC_"){
+				$$->expType = 3;
+			}
+			else if(temp.back() == '*'){
+				$$->expType = 2; 
+			}
+			else $$->expType = 1;
+			$$->type = temp;
+			$$->isInit = lookup(string($1))->init;
+			$$->size = getSize(temp);
+			$$->temp_name = string($1); 
 
-        // 3AC
-		SymbolTableEntry* entry = lookup($1);
-		if(entry) {
-			$$->type = entry->data_type;
-			$$->temp_name = entry->token;
+			//3AC
+			if(temp.substr(0, 5) == "FUNC_") {
+				$$->place = "CALL " + std::string($1);
+			} 
+			else {
+				$$->place = std::string($1);
+			}
 			$$->nextlist.clear();
-			$$->place = entry->token;
-		}else {
-            $$->place = "UNKNOWN";
-        }
+		}
     }
-    | STRING_LITERAL {
-        $$ = getNode($1);
+	/* | CONSTANT IDENTIFIER {
+		DBG("primary_expression -> CONSTANT IDENTIFIER");
+		yyerror("invalid identifier", "syntax error");
+		$$ = getNode($1);
+	}
+	| CONSTANT CONSTANT {
+		DBG("primary_expression -> CONSTANT CONSTANT");
+		yyerror("invalid constant", "syntax error");
+		$$ = getNode($1);
+	} */
+	| CONSTANT {
+		std::string tp = std::string($1->str);
+		$$ = getNode(tp);
+		
+		// Semantics for constants
+		$$->type = $1->type;
+		$$->intVal = $1->intVal;
+		$$->realVal = $1->realVal;
+		$$->expType = 4;
+		$$->temp_name = $1->str;
 
-        addToConstantTable(std::string($1), "String Literal");
-        // 3AC
-        SymbolTableEntry* entry = lookup($1);
-		if(entry) {
-			$$->type = entry->data_type;
-			$$->temp_name = entry->token;
-			$$->nextlist.clear();
-			$$->place = entry->token;
-		}else {
-            $$->place = "UNKNOWN";
-        }
-    }
-    | '(' expression ')' {
-        $$ = $2; 
-    }
-;
+		//3AC
+		$$->place = $$->temp_name;
+		$$->nextlist.clear();
+
+	}
+	| STRING_LITERAL {
+        DBG("primary_expression -> STRING_LITERAL");
+		std::string check=std::string($1);
+		addToConstantTable(check,"String Literal");
+		$$ = getNode($1);
+		
+		// Semantics for string literals
+		$$->type = string("char*");
+		$$->temp_name = string($1);
+		$$->strVal = string($1);
+
+		//3AC
+		$$->place = $$->temp_name;
+		$$->nextlist.clear();
+	}
+	| '(' expression ')' {
+        DBG("primary_expression -> '(' expression ')'");
+		$$ = $2;
+	}
+	;
 
 postfix_expression
-    : primary_expression {
-        $$ = $1;
-    }
-    | postfix_expression '[' expression ']' {
-        $$ = getNode("postfix_expression", mergeAttrs($1, $3));
+	: primary_expression {
+        DBG("postfix_expression -> primary_expression");
+		$$ = $1;
+	}
+	| postfix_expression '[' expression ']' {
+        DBG("postfix_expression -> postfix_expression '[' expression ']'");
+		$$ = getNode("postfix_expression", mergeAttrs($1, $3));
+		
+		// Semantics
+		if($1->isInit && $3->isInit){
+			$$->isInit = 1;
+		}
+		string temp = postfixExpression($1->type, 1);
+		if(!temp.empty()){	
+			$$->type = temp;
+			//3AC
+			if($$->type == "int"){
+				std::string q = getTempVariable("int*");
+				emit("=", $1->place,"", q, -1);
+				std::string q2 = getTempVariable("int");
+				emit("*", $3->place, getSizeOfType("int"), q2, -1);
+				std::string q3 = getTempVariable("int*");
+				emit("ptr+", q, q2, q3, -1);
+				$$->place = "*" + q3;
+			}else{
+				std::string q = getTempVariable($$->type);
+				$$->place = q;
+				emit("[ ]", $1->place, $3->place, q, -1);
+			}
+			$$->temp_name = $1->temp_name;
+		}
+		else{
+			yyerror(("Array " + $1->temp_name +  " Index out of bound").c_str(), "semantic error");
+		}
+	}
+	| postfix_expression '(' ')' {
+        DBG("postfix_expression -> postfix_expression '(' ')'");
+		$$ = $1;
+		
+		// Semantics
+		$$->isInit = 1;
+		string temp = postfixExpression($1->type, 2);
+		if(!temp.empty()){	
+			$$->type = temp;
+			if($1->expType == 3){
+				vector<string> funcArg = getFuncArgs($1->temp_name);
+				if(!funcArg.empty()){
+					yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
+				}else{
+					//3AC_5
+					std::string q = getTempVariable($1->type);
+					$$->place = q;
+					$$->temp_name = $1->temp_name;
+					$$->nextlist.clear();
+					emit("CALL", $$->temp_name, "0", q, -1);
+				}
+			}
+		}
+		else{
+			yyerror(("Function " + $1->temp_name + " not declared in this scope").c_str(), "scope error");
+		}
+		currArgs.clear(); 
+	}
+	| postfix_expression '(' argument_expression_list ')' {
+        DBG("postfix_expression -> postfix_expression '(' argument_expression_list ')'");
+		$$ = getNode("postfix_expression", mergeAttrs($1, $3));
+		
+		// Semantics
+		$$->isInit = $3->isInit;
+		string temp = postfixExpression($1->type, 3);
+		
+		if(!temp.empty()){	
+			$$->type = temp;
+			if($1->expType == 3){
+				vector<string> funcArgs = getFuncArgs($1->temp_name);
+				
+				for(int i=0; i<funcArgs.size(); i++){
+					if(funcArgs[i]=="...")break;
+					if(currArgs.size()==i){
+						yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
+						break;
+					}
+					string msg = checkType(funcArgs[i],currArgs[i]);
+					if(msg =="warning"){
+						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
+					}
+					else if(msg.empty()){
+						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
+						break;
+					}
+					if(i==funcArgs.size()-1 && i<currArgs.size()-1){
+						yyerror(("Too many Arguments to Function " + $1->temp_name).c_str(), "semantic error");
+						break;
+					}
+				}
+				//3AC_6
+				std::string q = getTempVariable($1->type);
+				$$->temp_name = $1->temp_name;
+				$$->place = q;
+				$$->nextlist.clear();
+				emit("CALL", $$->temp_name, std::to_string(funcArgs.size()), q, -1);
+			}
+		}
+		else{
+			yyerror("Invalid function call", "semantic error");
+		}
+		currArgs.clear();
+	}
+	| postfix_expression '.' IDENTIFIER {
+    	DBG("postfix_expression -> postfix_expression '.' IDENTIFIER");
+    	$$ = getNode("expression.id", mergeAttrs($1, getNode($3)));
+	
+    	// Semantics - check if it's a class or struct
+    	string temp = string($3);
+    	string memberName = $1->temp_name;
+    	string type = $1->type;
+	
+    	// First check if it's a class
+    	if (type.substr(0, 6) == "CLASS_") {
+    	    int ret = lookupClass(type, temp);
+    	    if (ret == 1) {
+    	        // Class member found
+    	        $$->type = ClassAttrType(type, temp); 
+    	        $$->temp_name = $1->temp_name + "." + temp;
+    	    }
+    	    else if (ret == 0) {
+    	        yyerror(("Member '" + temp + "' not found in class").c_str(), "scope error");
+    	    }
+    	    else {
+    	        yyerror(("Class '" + memberName + "' not defined").c_str(), "scope error");
+    	    }
+    	}
+    	// If not a class, try struct
+    	else {
+    	    int ret = lookupStruct($1->type, temp);
+    	    if (ret == -1) {
+    	        yyerror(("Struct or class '" + memberName + "' not defined").c_str(), "scope error");
+    	    }
+    	    else if (ret == 0) {
+    	        yyerror(("Member '" + temp + "' not found in struct").c_str(), "scope error");
+    	    }
+    	    else {
+    	        $$->type = StructAttrType($1->type, temp);
+    	        $$->temp_name = $1->temp_name + "." + temp;
+    	    }
+    	}
+		//3AC
+		std::string q = getTempVariable($$->type);
+        $$->place = q;
+		$$->nextlist.clear();
+        emit("member_access", $1->place, std::string($3), q, -1);
 
-		std::cerr << "\n" << line << " Postfix Expression 144: " << $1->type << ' ' << $3->type << std::endl;
-		std::cerr << "Postfix Expression 144: " << $1->temp_name << ' ' << $3->temp_name << std::endl;
-		std::cerr << "Postfix Expression 144: " << lookup($1->temp_name)->data_type << ' ' << lookup($3->temp_name)->data_type << std::endl;
-        //3AC
-		// arr[i] -> 
-
-		//arr[][] -> arr[] -> arr as we apply [] operator
-		$$->type = $1->type;
-		$$->type.pop_back();
-		$$->type.pop_back();
-
-		if($$->type == "int"){
-			std::string q = getTempVariable("int*");
-			emit("=", $1->place,"", q, -1);
-			std::string q2 = getTempVariable("int");
-			emit("*", $3->place, getSizeOfType("int"), q2, -1);
-			std::string q3 = getTempVariable("int*");
-			emit("ptr+", q, q2, q3, -1);
-			$$->place = "*" + q3;
-		}else{
+	}
+	| postfix_expression PTR_OP IDENTIFIER {
+        DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
+		$$ = getNode($2, mergeAttrs($1, getNode($3)));
+		
+		// Semantics
+		string temp = string($3);
+		string temp1 = ($1->type);
+		if(temp1.back() != '*'){
+			yyerror(($1->node_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
+		}
+		else temp1.pop_back();
+		
+		int ret = lookupStruct(temp1, temp);
+		if(ret == -1){
+			yyerror("Struct not defined", "scope error");
+		}
+		else if (ret == 0){
+			yyerror("Attribute of Struct not defined", "scope error");
+		}
+		else{
+			$$->type = StructAttrType(temp1, temp);
+			$$->temp_name = $1->temp_name + "->" + temp;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			emit("PTR_OP", $1->place, std::string($3), q, -1);
+			$$->place = q;
+		}
+	}
+	| postfix_expression INC_OP {
+        DBG("postfix_expression -> postfix_expression INC_OP");
+		$$ = getNode($2, mergeAttrs($1, nullptr));
+		
+		// Semantics
+		$$->isInit = $1->isInit;
+		string temp = postfixExpression($1->type, 6);
+		if(!temp.empty()){
+			$$->type = temp;
+			$$->intVal = $1->intVal + 1;
+			//3AC
 			std::string q = getTempVariable($$->type);
 			$$->place = q;
-			$$->temp_name = $1->temp_name;
-			emit("[ ]", $1->place, $3->place, q, -1);
-		}
-
-		$$->nextlist.clear();
-		std::cerr << $$->place << '\n';
-		std::cerr << $$->type << '\n';
-    }
-    | postfix_expression '(' ')' {
-        $$ = $1;
-
-        //3AC
-		// Todo -> $$->type
-		std::string q = getTempVariable($1->type);
-		$$->place = q;
-		$$->temp_name = $1->temp_name;
-		$$->nextlist.clear();
-		emit("CALL", $$->temp_name, "0", q, -1);
-    }
-    | postfix_expression '(' argument_expression_list ')' {
-		$$ = getNode("postfix_expression", mergeAttrs($1, $3));
-
-        //3AC
-		// Todo -> $$->type
-		std::string q = getTempVariable($1->type);
-		$$->place = q;
-		$$->temp_name = $1->temp_name;
-		$$->nextlist.clear();
-		emit("CALL", $$->temp_name, std::to_string($3->argCount), q, -1);
-    }
-    | postfix_expression '.' IDENTIFIER { //p.x
-        $$ = getNode("expression.id", mergeAttrs($1, getNode($3)));
-
-        //3AC
-		// Todo -> $$->type
-        std::string temp_var = getTempVariable("int*"); // TODO : need to confirm type
-		// $$->nextlist.clear();
-		// TODO : replace std::string($3) with $3->offset
-		emit("unary&", $1->place, "", temp_var, -1);
-		emit("ptr+", temp_var, std::string($3), temp_var, -1);
-		temp_var = "*" + temp_var;
-        $$->place = temp_var;
-        // emit("member_access", $1->place, std::string($3), temp_var, -1); changed from this
-    }
-    | postfix_expression PTR_OP IDENTIFIER {
-        $$ = getNode($2, mergeAttrs($1, getNode($3)));
-
-        //3AC
-		// Todo $$ -> type
-		std::string temp_var = getTempVariable("int*"); // TODO : need to confirm type
-		// TODO : replace std::string($3) with $3->offset
-		emit("ptr+", $1->place, std::string($3), temp_var, -1);
-		temp_var = "*" + temp_var;
-		$$->place = temp_var;
-		//emit("PTR_OP", $1->place, std::string($3), temp_var, -1);
-    }
-	| postfix_expression '.' IDENTIFIER '(' ')' {
-		// handle ast, symtable and semantic checks
-		// $$ = $1;
-        //3AC
-		$$->temp_name = $3;
-		// $$->nextlist.clear();
-		std::string p = getTempVariable("int"); // TODO : type = CLASS *
-		emit("unary&", $1->place, "", p, -1);
-		emit("param", p, "", "", -1); // push ptr to object
-		std::string q = getTempVariable("int"); // TODO : type = type of return value
-		emit ("CALL", $$->temp_name, "1", q, -1);
-		$$->place = q;
-    }
-	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
-        // handle ast, symtable and semantic checks
-		// $$ = getNode("postfix_expression", mergeAttrs($1, $3));
-        //3AC
-		$$->temp_name = $3;
-		// $$->nextlist.clear();
-		std::string p = getTempVariable("int"); // TODO : type = CLASS *
-		emit("unary&", $1->place, "", p, -1);
-		emit("param", p, "", "", -1); // push ptr to object
-		std::string q = getTempVariable("int"); // TODO : type = type of return value
-		emit ("CALL", $$->temp_name, std::to_string($5->argCount + 1), q, -1);
-		$$->place = q;
-    }
-	| postfix_expression PTR_OP IDENTIFIER '(' ')' {
-        // handle ast, symtable and semantic checks
-		// $$ = $1;
-        //3AC
-		$$->temp_name = $3;
-		// $$->nextlist.clear();
-		emit("param", $1->place, "", "", -1); // push ptr to object
-		std::string q = getTempVariable("int"); // TODO : type = type of return value
-		emit ("CALL", $$->temp_name, "1", q, -1);
-		$$->place = q;
-    }
-	| postfix_expression PTR_OP IDENTIFIER '(' argument_expression_list ')' {
-        // handle ast and symtable
-		// $$ = getNode("postfix_expression", mergeAttrs($1, $3));
-        //3AC
-		$$->temp_name = $3;
-		// $$->nextlist.clear();
-		emit("param", $1->place, "", "", -1); // push ptr to object
-		std::string q = getTempVariable("int"); // TODO : type = type of return value
-		emit ("CALL", $$->temp_name, std::to_string($5->argCount + 1), q, -1);
-		$$->place = q;
-    }	
-    | postfix_expression INC_OP {
-        $$ = getNode($2, mergeAttrs($1, nullptr));
-
-        //3AC
-        std::string q = getTempVariable($1->type);
-        $$->place = q;
-		$$->type = $1->type;
-		$$->nextlist.clear();
-        emit("S++", $1->place, "", q, -1);
-    }
-    | postfix_expression DEC_OP {
-        $$ = getNode($2, mergeAttrs($1, nullptr));
-
-        //3AC
-        std::string q = getTempVariable($1->type);
-        $$->place = q;
-		$$->type = $1->type;
-		$$->nextlist.clear();
-        emit("S--", $1->place, "", q, -1);
-    }
-;
-
-
-argument_expression_list
-    : assignment_expression {
-        $$ = $1;
-
-        //3AC
-        $$->argCount = 1;
-		$$->nextlist.clear();
-        emit("param", $$->place, "", "", -1);
-    }
-    | argument_expression_list ',' assignment_expression {
-        $$ = getNode("argument_list", mergeAttrs($1, $3));
-
-        //3AC
-		$$->nextlist.clear();
-        $$->argCount = $1->argCount + 1;
-        int Label = emit("param", $3->place, "", "", -1);
-		backpatch($1->nextlist, Label);
-    }
-;
-
-unary_expression
-    : postfix_expression {
-        $$ = $1;
-    }
-    | INC_OP unary_expression {
-        $$ = getNode($1, mergeAttrs($2, nullptr));
-
-        //3AC
-        std::string q = getTempVariable($2->type);
-        $$->place = q;
-		$$->type = $2->type;
-        $$->nextlist.clear();
-        emit("++P", $2->place, "", q, -1);
-    }
-    | DEC_OP unary_expression {
-        $$ = getNode($1, mergeAttrs($2, nullptr));
-
-        //3AC
-        std::string q = getTempVariable($2->type);
-        $$->place = q;
-		$$->type = $2->type;
-        $$->nextlist.clear();
-        emit("--P", $2->place, "", q, -1);
-    }
-    | unary_operator cast_expression { //TODO: l value .. Here
-        $$ = getNode("unary_exp", mergeAttrs($1, $2));
-		if(DEBUG) {
-			std::cerr << '\n' << line << '\n';
-			std::cerr << "Unary Expression 260: "<< $2->type << ' ' << $1->place << ' ' << $2->place << ' ' << arr_rValue << std::endl;
-		}
-        //3AC
-		if($1->place == "unary*"){
-			// Reduce one level of pointer indirection for $$->type
-			if($2->type.back() == '*') {
-				$$->type = $2->type.substr(0, $2->type.size() - 1);
-			} else {
-				yyerror("syntax error, Invalid dereference of non-pointer type");
-				$$->type = "ERROR";
-			}
-		} else if($1->place == "unary&") {
-			// Add one level of pointer indirection for $$->type
-			$$->type = $2->type + "*";
-		}else{
-			$$->type = $2->type;
-		}
-
-		if(arr_rValue == 0 && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
-			$$->temp_name = $2->temp_name;
-			$$->place = "*" + $2->place;
 			$$->nextlist.clear();
-		}else{
-			std::string q = getTempVariable($2->type);
-			$$->temp_name = $2->temp_name;
+			emit("S++", $1->place, "", q, -1);
+		}
+		else{
+			yyerror("Increment not defined for this type", "type error");
+		}
+	}
+	| postfix_expression DEC_OP {
+        DBG("postfix_expression -> postfix_expression DEC_OP");
+		$$ = getNode($2, mergeAttrs($1, nullptr));
+		
+		// Semantics
+		$$->isInit = $1->isInit;
+		string temp = postfixExpression($1->type, 7);
+		if(!temp.empty()){
+			$$->type = temp;
+			$$->intVal = $1->intVal - 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
 			$$->place = q;
 			$$->nextlist.clear();
-			emit($1->place, $2->place, "", q, -1);
+			emit("S--", $1->place, "", q, -1);
 		}
-    }
-    | SIZEOF unary_expression {
-        $$ = getNode($1, mergeAttrs($2, nullptr));
+		else{
+			yyerror("Decrement not defined for this type", "type error");
+		}
+	}
+	;
 
-        //3AC
-        std::string q = getTempVariable("int");
+argument_expression_list
+	: assignment_expression {
+        DBG("argument_expression_list -> assignment_expression");
+		$$ = $1;
+		
+		// Semantics
+		$$->isInit = $1->isInit;
+		currArgs.push_back($1->type);
+		$$->type = "void";
+		//3AC
+		$$->nextlist.clear();
+        emit("param", $$->place, "", "", -1);
+	}
+	| argument_expression_list ',' assignment_expression {
+        DBG("argument_expression_list -> argument_expression_list ',' assignment_expression");
+		$$ = getNode("argument_list", mergeAttrs($1, $3));
+		
+		// Semantics
+		string temp = argExp($1->type, $3->type, 2);
+		
+		if($1->isInit && $3->isInit) $$->isInit=1;
+		currArgs.push_back($3->type);
+		$$->type = "void";
+		//3AC
+		$$->nextlist.clear();
+        int Label = emit("param", $3->place, "", "", -1);
+		backpatch($1->nextlist, Label);
+	}
+	;
+
+unary_expression
+	: postfix_expression {
+        DBG("unary_expression -> postfix_expression");
+		$$ = $1;
+	}
+	| INC_OP unary_expression {
+        DBG("unary_expression -> INC_OP unary_expression");
+		$$ = getNode($1, mergeAttrs($2, nullptr));
+		
+		// Semantics
+		$$->isInit = $2->isInit;
+		string temp = postfixExpression($2->type, 6);
+		if(!temp.empty()){
+			$$->type = temp;
+			$$->intVal = $2->intVal + 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("++P", $2->place, "", q, -1);
+		}
+		else{
+			yyerror("Increment not defined for this type", "type error");
+		}
+	}
+	| DEC_OP unary_expression {
+        DBG("unary_expression -> DEC_OP unary_expression");
+		$$ = getNode($1, mergeAttrs($2, nullptr));
+
+		
+		// Semantics
+		$$->isInit = $2->isInit;
+		string temp = postfixExpression($2->type, 7);
+		if(!temp.empty()){
+			$$->type = temp;
+			$$->intVal = $2->intVal - 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("--P", $2->place, "", q, -1);
+		}
+		else{
+			yyerror("Decrement not defined for this type", "type error");
+		}
+	}
+	| unary_operator cast_expression {
+        DBG("unary_expression -> unary_operator cast_expression");
+		$$ = getNode("unary_exp", mergeAttrs($1, $2));
+		
+		// Semantics
+		$$->isInit = $2->isInit;
+		string temp = unaryExp($1->node_name, $2->type);
+		if(!temp.empty()){
+			$$->type = temp;
+			$$->intVal = $2->intVal;
+			//3AC
+			//TODO : Check Later
+			if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
+				$$->temp_name = $2->temp_name;
+				$$->place = "*" + $2->place;
+				$$->nextlist.clear();
+			}else{
+				std::string q = getTempVariable($2->type);
+				$$->temp_name = $2->temp_name;
+				$$->place = q;
+				$$->nextlist.clear();
+				emit($1->place, $2->place, "", q, -1);
+			}
+		}
+		else{
+			yyerror("Type inconsistent with operator", "type error");
+		}
+	}
+	| SIZEOF unary_expression {
+        DBG("unary_expression -> SIZEOF unary_expression");
+		$$ = getNode($1, mergeAttrs($2, nullptr));
+		
+		// Semantics
 		$$->type = "int";
+		$$->isInit = 1;
+		$$->intVal = $2->size;
+		//3AC
+        std::string q = getTempVariable("int");
         $$->place = q;
         $$->nextlist.clear();
         emit("SIZEOF", $2->place, "", q, -1);
-    }
-    | SIZEOF '(' type_name ')' {
-        $$ = getNode($1, mergeAttrs($3, nullptr));
-
-        //3AC
+	}
+	| SIZEOF '(' type_name ')' {
+        DBG("unary_expression -> SIZEOF '(' type_name ')'");
+		$$ = getNode($1, mergeAttrs($3, nullptr));
+		
+		// Semantics
+		$$->type = "int";
+		$$->isInit = 1;
+		$$->intVal = $3->size;
+		//3AC
         std::string q = getTempVariable("int");
         $$->place = q;
-		$$->type = "int";
         $$->nextlist.clear();
-
         emit("SIZEOF", $3->place, "", q, -1);
-    }
-;
+	}
+	;
 
 unary_operator
-    : '&' {
-        $$ = getNode("&");
-
-        //3AC
+	: '&' {
+		DBG("unary_operator -> '&'");
+		$$ = getNode("&");
+		//3AC
         $$->place = "unary&";
-    }
-    | '*' {
-        $$ = getNode("*");
-
-        //3AC
+	}
+	| '*' {
+		DBG("unary_operator -> '*'");
+		$$ = getNode("*");
+		//3AC
         $$->place = "unary*";
-    }
-    | '+' {
-        $$ = getNode("+");
-
-        //3AC
+	}
+	| '+' {
+		DBG("unary_operator -> '+'");
+		$$ = getNode("+");
+		//3AC
         $$->place = "unary+";
-    }
-    | '-' {
-        $$ = getNode("-");
-
-        //3AC
+	}
+	| '-' {
+		DBG("unary_operator -> '-'");
+		$$ = getNode("-");
+		//3AC
         $$->place = "unary-";
-    }
-    | '~' {
-        $$ = getNode("~");
-
-        //3AC
+	}
+	| '~' {
+		DBG("unary_operator -> '~'");
+		$$ = getNode("~");
+		//3AC
         $$->place = "~";
-    }
-    | '!' {
-        $$ = getNode("!");
-
-        //3AC
+	}
+	| '!' {
+		DBG("unary_operator -> '!'");
+		$$ = getNode("!");
+		//3AC
         $$->place = "!";
-    }
-;
+	}
+	;
 
 cast_expression
-    : unary_expression {
-        $$ = $1;
-    }
-    | '(' type_name ')' cast_expression {
-        $$ = getNode("cast_expression", mergeAttrs($2, $4));
-
-        //3AC
-        std::string q = getTempVariable($2->type);
-        $$->place = q;
+	: unary_expression {
+		DBG("cast_expression -> unary_expression");
+		$$ = $1;
+	}
+	| '(' type_name ')' cast_expression {
+		DBG("cast_expression -> '(' type_name ')' cast_expression");
+		$$ = getNode("cast_expression", mergeAttrs($2, $4));
+		
+		// Semantic
 		$$->type = $2->type;
-		$4->nextlist.clear();
+		$$->isInit = $4->isInit;
+		//3AC
 		//TODO: Try to do CAST_typename
-		std::cerr << "369: CAST " << $4->place << " " << $2->place << ' ' << $2->type << std::endl;
+		std::string q = getTempVariable($2->type);
+        $$->place = q;
+		$4->nextlist.clear();
         emit("CAST", $4->place, "", q, -1);
-    }
-;
+	}
+	;
 
 multiplicative_expression
-    : cast_expression {
-        $$ = $1;
-    }
-    | multiplicative_expression '*' cast_expression {
-        $$ = getNode("*", mergeAttrs($1, $3));
-
-        //3AC
-        std::string q = getTempVariable($1->type); //TODO not always int
-		$$->type = $1->type; //TODO not always int
-        $$->place = q;
-        $$->nextlist.clear();
-        emit("*", $1->place, $3->place, q, -1);
-    }
-    | multiplicative_expression '/' cast_expression {
-        $$ = getNode("/", mergeAttrs($1, $3));
-
-        //3AC
-        std::string q = getTempVariable("int"); //TODO not always int
-		$$->type = $1->type; //TODO not always int
-        $$->place = q;
-        $$->nextlist.clear();
-        emit("/", $1->place, $3->place, q, -1);
-    }
-    | multiplicative_expression '%' cast_expression {
-        $$ = getNode("%", mergeAttrs($1, $3));
-
-        //3AC
-        std::string q = getTempVariable($1->type); //TODO not always int
-		$$->type = $1->type; //TODO not always int
-        $$->place = q;
-        $$->nextlist.clear();
-        emit("%", $1->place, $3->place, q, -1);
-    }
-;
-
+	: cast_expression {
+		DBG("multiplicative_expression -> cast_expression");
+		$$ = $1;
+	}
+	| multiplicative_expression '*' cast_expression {
+		DBG("multiplicative_expression -> multiplicative_expression '*' cast_expression");
+		$$ = getNode("*", mergeAttrs($1, $3));
+		
+		// Semantic
+		$$->intVal = $1->intVal * $3->intVal;
+		
+		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+		string temp = mulExp($1->type, $3->type, '*');
+		
+		if(!temp.empty()){
+			if(temp == "int"){
+				$$->type = "long long";
+			}
+			else if(temp == "float"){
+				$$->type = "long double";
+			}
+			//3AC
+			std::string q = getTempVariable($$->type); //TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			$$->nextlist.clear();
+			emit("*", $1->place, $3->place, q, -1);
+		}
+		else{
+			yyerror("Incompatible type for * operator", "type error");
+		}
+	}
+	| multiplicative_expression '/' cast_expression {
+		DBG("multiplicative_expression -> multiplicative_expression '/' cast_expression");
+		$$ = getNode("/", mergeAttrs($1, $3));
+		
+		// Semantic
+		if($3->intVal != 0) $$->intVal = $1->intVal / $3->intVal;
+		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+		string temp = mulExp($1->type, $3->type, '/');
+		if(!temp.empty()){
+			if(temp == "int"){
+				$$->type = "long long";
+			}
+			else if(temp == "float"){
+				$$->type = "long double";
+			}
+			//3AC
+			std::string q = getTempVariable($$->type); //TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			$$->nextlist.clear();
+			emit("/", $1->place, $3->place, q, -1);
+		}
+		else{
+			yyerror("Incompatible type for / operator", "type error");
+		}
+	}
+	| multiplicative_expression '%' cast_expression {
+		DBG("multiplicative_expression -> multiplicative_expression '%' cast_expression");
+		$$ = getNode("%", mergeAttrs($1, $3));
+		
+		// Semantic
+		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+		if($3->intVal != 0) $$->intVal = $1->intVal % $3->intVal;
+		string temp = mulExp($1->type, $3->type, '%');
+		if(temp == "int"){
+			$$->type = "long long";
+			//3AC
+			std::string q = getTempVariable($$->type); //TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			$$->nextlist.clear();
+			emit("%", $1->place, $3->place, q, -1);
+		}
+		else{
+			yyerror("Incompatible type for % operator", "type error");
+		}
+	}
+	;
 
 additive_expression
     : multiplicative_expression {
+        DBG("additive_expression -> multiplicative_expression");
         $$ = $1;
     }
     | additive_expression '+' multiplicative_expression {
+        DBG("additive_expression -> additive_expression '+' multiplicative_expression");
         $$ = getNode("+", mergeAttrs($1, $3));
-
-        //3AC
-		if(DEBUG) {
-			std::cerr<<"Additive Expression 414: "<<$1->type << ' ' << $1->place << ' ' << $3->type <<std::endl;
-		}
-
-		std::string q = getTempVariable($1->type);//TODO not always int
-		$$->type = $1->type;
-		$$->place = q;
-		if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
-			std::string q2 = getTempVariable($3->type);
-			emit("*", $3->place, getSizeOfType($1->type.substr(0, $1->type.size()-1)), q2, -1);
-			emit("ptr+", $1->place, q2, q, -1);
-		}else{
-			emit("+", $1->place, $3->place, q, -1);
-		}
-        $$->nextlist.clear();
+        
+        // Semantic
+        if($1->isInit && $3->isInit) $$->isInit = 1;
+        $$->intVal = $1->intVal + $3->intVal;
+        string temp = addExp($1->type, $3->type, '+');
+        if(!temp.empty()){
+            $$->type = (temp == "int") ? "long long" : (temp == "real") ? "long double" : temp;
+			//3AC
+			std::string q = getTempVariable($$->type);//TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
+				std::string q2 = getTempVariable($3->type);
+				emit("*", $3->place, getSizeOfType($1->type.substr(0, $1->type.size()-1)), q2, -1);
+				emit("ptr+", $1->place, q2, q, -1);
+			}else{
+				emit("+", $1->place, $3->place, q, -1);
+			}
+			$$->nextlist.clear();
+        } else {
+            yyerror("Incompatible type for + operator", "type error");
+        }
     }
     | additive_expression '-' multiplicative_expression {
+        DBG("additive_expression -> additive_expression '-' multiplicative_expression");
         $$ = getNode("-", mergeAttrs($1, $3));
-
-        //3AC
-        std::string q = getTempVariable($1->type);//TODO not always int
-		$$->type = $1->type; // TODO not always int
-        $$->place = q;
-        $$->nextlist.clear();
-
-        emit("-", $1->place, $3->place, q, -1);
+        
+        // Semantic
+        if($1->isInit && $3->isInit) $$->isInit = 1;
+        $$->intVal = $1->intVal - $3->intVal;
+        string temp = addExp($1->type, $3->type, '-');
+        if(!temp.empty()){
+            $$->type = (temp == "int") ? "long long" : (temp == "real") ? "long double" : temp;
+			//3AC
+			std::string q = getTempVariable($$->type);//TODO not always int
+			$$->place = q;
+			$$->temp_name = q;
+			$$->nextlist.clear();
+			emit("-", $1->place, $3->place, q, -1);
+        } else {
+            yyerror("Incompatible type for - operator", "type error");
+        }
     }
-;
-
+    ;
 
 shift_expression
     : additive_expression {
+        DBG("shift_expression -> additive_expression");
         $$ = $1;
     }
     | shift_expression LEFT_OP additive_expression {
+        DBG("shift_expression -> shift_expression LEFT_OP additive_expression");
         $$ = getNode($2, mergeAttrs($1, $3));
-
-        //3AC
-        std::string q = getTempVariable("int");//TODO not always int
-		$$->type = "int"; 
-        $$->place = q;
-        $$->nextlist.clear();
-
-        emit("<<", $1->place, $3->place, q, -1);
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = shiftExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = $1->type;
+			//3AC
+			std::string q = getTempVariable($$->type);//TODO not always int
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("<<", $1->place, $3->place, q, -1);
+        } else {
+            yyerror("Invalid operands to binary <<", "type error");
+        }
     }
     | shift_expression RIGHT_OP additive_expression {
+        DBG("shift_expression -> shift_expression RIGHT_OP additive_expression");
         $$ = getNode($2, mergeAttrs($1, $3));
-
-        //3AC
-        std::string q = getTempVariable("int");//TODO not always int
-		$$->type = "int"; 
-        $$->place = q;
-        $$->nextlist.clear();
-
-        emit(">>", $1->place, $3->place, q, -1);
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = shiftExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = $1->type;
+			//3AC
+			std::string q = getTempVariable($$->type);//TODO not always int
+			$$->place = q;
+			$$->nextlist.clear();
+			emit(">>", $1->place, $3->place, q, -1);
+        } else {
+            yyerror("Invalid operands to binary >>", "type error");
+        }
     }
-;
+    ;
 
 relational_expression
     : inclusive_or_expression {
-        $$ = $1; 
+        DBG("relational_expression -> inclusive_or_expression");
+        $$ = $1;
     }
     | relational_expression '<' inclusive_or_expression {
+        DBG("relational_expression -> relational_expression '<' inclusive_or_expression");
         $$ = getNode("<", mergeAttrs($1, $3));
-        // 3AC 
-        std::string q = getTempVariable("int");
-        emit("<", $1->place, $3->place, q, -1);
-        $$->place = q;
-        $$->nextlist.clear();
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = relExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = "bool";
+            if (temp == "Bool") warning("Comparison between pointer and integer");
+			// 3AC 
+			std::string q = getTempVariable($$->type);
+			emit("<", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary <", "type error");
+        }
     }
     | relational_expression '>' inclusive_or_expression {
+        DBG("relational_expression -> relational_expression '>' inclusive_or_expression");
         $$ = getNode(">", mergeAttrs($1, $3));
-
-        // 3AC
-        std::string q = getTempVariable("int");
-        emit(">", $1->place, $3->place, q, -1);
-        $$->place = q;
-        $$->nextlist.clear();
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = relExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = "bool";
+            if (temp == "Bool") warning("Comparison between pointer and integer");
+			// 3AC
+			std::string q = getTempVariable($$->type);
+			emit(">", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary >", "type error");
+        }
     }
     | relational_expression LE_OP inclusive_or_expression {
+        DBG("relational_expression -> relational_expression LE_OP inclusive_or_expression");
         $$ = getNode("<=", mergeAttrs($1, $3));
-
-        // 3AC
-        std::string q = getTempVariable("int");
-        emit("<=", $1->place, $3->place, q, -1);
-        $$->place = q;
-        $$->nextlist.clear();
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = relExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = "bool";
+            if (temp == "Bool") warning("Comparison between pointer and integer");
+			//3AC
+			std::string q = getTempVariable($$->type);
+			emit("<=", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary <=", "type error");
+        }
     }
     | relational_expression GE_OP inclusive_or_expression {
+        DBG("relational_expression -> relational_expression GE_OP inclusive_or_expression");
         $$ = getNode(">=", mergeAttrs($1, $3));
-
-        // 3AC
-        std::string q = getTempVariable("int");
-        emit(">=", $1->place, $3->place, q, -1);
-        $$->place = q;
-        $$->nextlist.clear();
+        // Semantic
+        if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = relExp($1->type, $3->type);
+        if (!temp.empty()) {
+            $$->type = "bool";
+            if (temp == "Bool") warning("Comparison between pointer and integer");
+			// 3AC
+			std::string q = getTempVariable($$->type);
+			emit(">=", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary >=", "type error");
+        }
     }
     ;
-
 
 equality_expression
     : relational_expression { 
+        DBG("equality_expression -> relational_expression");
         $$ = $1;
     }
     | equality_expression EQ_OP relational_expression {
+        DBG("equality_expression -> equality_expression EQ_OP relational_expression");
         $$ = getNode($2, mergeAttrs($1, $3));
-
-        //3AC
-		//TODO : No need to emit if $1 and $3 are constant. Directly store value
-
-        std::string q = getTempVariable("int");
-        emit("==", $1->place, $3->place, q, -1);
-        $$->place = q;
-        $$->nextlist.clear();
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = eqExp($1->type, $3->type);
+        if(!temp.empty()){
+            if(temp == "ok"){
+                yyerror("Comparison between pointer and integer", "type error");
+            }
+            $$->type = "bool";
+			std::string q = getTempVariable($$->type);
+			emit("==", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        }
+        else{
+            yyerror("Invalid operands to binary ==", "type error");
+        }
     }
     | equality_expression NE_OP relational_expression {
+        DBG("equality_expression -> equality_expression NE_OP relational_expression");
         $$ = getNode($2, mergeAttrs($1, $3));
-
-        //3AC
-        std::string q = getTempVariable("int");
-        emit("!=", $1->place, $3->place, q, -1);
-        $$->place = q;
-        $$->nextlist.clear();
-    }
-;
-
-and_expression
-    : shift_expression {
-        $$ = $1;
-    }
-    | and_expression '&' shift_expression {
-        $$ = getNode("&", mergeAttrs($1, $3));
-
-        // 3AC
-		//TODO : No need to emit if $1 and $3 are constant
-        std::string q = getTempVariable("int");
-        emit("&", $1->place, $3->place, q, -1);
-        $$->place = q;
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = eqExp($1->type, $3->type);
+        if(!temp.empty()){
+            if(temp == "ok"){
+                yyerror("Comparison between pointer and integer", "type error");
+            }
+            $$->type = "bool";
+			//3AC
+			std::string q = getTempVariable($$->type);
+			emit("!=", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        }
+        else{
+            yyerror("Invalid operands to binary !=", "type error");
+        }
     }
     ;
 
-
+and_expression
+    : shift_expression {	
+        DBG("and_expression -> shift_expression");
+        $$ = $1;
+    }
+    | and_expression '&' shift_expression {
+        DBG("and_expression -> and_expression '&' shift_expression");
+        $$ = getNode("&", mergeAttrs($1, $3));
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = bitExp($1->type, $3->type);
+        if(!temp.empty()){
+            if(temp == "ok"){
+                $$->type = "bool";
+            }
+            else $$->type = "long long";
+			// 3AC
+			std::string q = getTempVariable($$->type);
+			emit("&", $1->place, $3->place, q, -1);
+			$$->place = q;
+        }
+        else{
+            yyerror("Invalid operands to binary &", "type error");
+        }
+    }
+    ;
 
 exclusive_or_expression
     : and_expression {
+        DBG("exclusive_or_expression -> and_expression");
         $$ = $1;
     }
     | exclusive_or_expression '^' and_expression {
+        DBG("exclusive_or_expression -> exclusive_or_expression '^' and_expression");
         $$ = getNode("^", mergeAttrs($1, $3));
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = bitExp($1->type, $3->type);
+        if(!temp.empty()){
+            $$->type = (temp == "ok") ? "bool" : "long long";
 
-        // -3AC ---
-        std::string temp = getTempVariable("int");  
-        emit("^", $1->place, $3->place, temp, -1);
-        $$->place = temp;
-
-        $$->nextlist.clear();
+			// -3AC ---
+			std::string q = getTempVariable($$->type);  
+			emit("^", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary ^", "type error");
+        }
     }
-;
-
+    ;
 
 inclusive_or_expression
-    : exclusive_or_expression { 
-        $$ = $1; 
+    : exclusive_or_expression {
+        DBG("inclusive_or_expression -> exclusive_or_expression");
+        $$ = $1;
     }
     | inclusive_or_expression '|' exclusive_or_expression {
+        DBG("inclusive_or_expression -> inclusive_or_expression '|' exclusive_or_expression");
         $$ = getNode("|", mergeAttrs($1, $3));
-
-        // -3AC ---
-        std::string temp = getTempVariable("int"); 
-        emit("|", $1->place, $3->place, temp, -1);
-        $$->place = temp;
-
-        $$->nextlist.clear();
+        
+        // Semantics
+        if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+        string temp = bitExp($1->type, $3->type);
+        if(!temp.empty()){
+            $$->type = (temp == "ok") ? "bool" : "long long";
+			// -3AC ---
+			std::string q = getTempVariable($$->type); 
+			emit("|", $1->place, $3->place, q, -1);
+			$$->place = q;
+			$$->nextlist.clear();
+        } else {
+            yyerror("Invalid operands to binary |", "type error");
+        }
     }
-;
-//TODO : Define token also
-logical_and_expression
-	: equality_expression { $$ = $1; }
-	| logical_and_expression AND_OP equality_expression {
-		$$ = getNode("&&", mergeAttrs($1, $3));
+    ;
 
+logical_and_expression
+    : equality_expression {
+        DBG("logical_and_expression -> equality_expression");
+        $$ = $1;
+    }
+    | logical_and_expression AND_OP equality_expression {
+        DBG("logical_and_expression -> logical_and_expression AND_OP equality_expression");
+        $$ = getNode("&&", mergeAttrs($1, $3));
+
+        // Semantics
+        $$->type = "bool";
+        $$->isInit = ($1->isInit & $3->isInit);   
+        $$->intVal = $1->intVal && $3->intVal;
 		// 3AC
-		std::string q = getTempVariable("int");
+		std::string q = getTempVariable($$->type);
 		emit("&&", $1->place, $3->place, q, -1);
 		$$->place = q;
 		$$->nextlist.clear();
-	}
-	;
+    }
+    ;
 
 logical_or_expression
-	: logical_and_expression { $$ = $1; }
-	| logical_or_expression OR_OP logical_and_expression {
-		$$ = getNode("||", mergeAttrs($1, $3));
-
+    : logical_and_expression {
+        DBG("logical_or_expression -> logical_and_expression");
+        $$ = $1;
+    }
+    | logical_or_expression OR_OP logical_and_expression {
+        DBG("logical_or_expression -> logical_or_expression OR_OP logical_and_expression");
+        $$ = getNode("||", mergeAttrs($1, $3));
+        
+        // Semantics
+        $$->type = "bool";
+        $$->isInit = $1->isInit & $3->isInit;
+        $$->intVal = $1->intVal || $3->intVal;
 		// 3AC
-		std::string q = getTempVariable("int");
+		std::string q = getTempVariable($$->type);
 		emit("||", $1->place, $3->place, q, -1);
 		$$->place = q;
 		$$->nextlist.clear();
-	}
-	;
-
+    }
+    ;
 NEXT_QUAD
 	: %empty {
 		$$ = getCurrentSize();
 	}
 	;
 
-
 conditional_expression
-	: logical_or_expression { $$ = $1; }
+    : logical_or_expression {
+        DBG("conditional_expression -> logical_or_expression");
+        $$ = $1;
+    }
 	| GOTO_COND NEXT_QUAD expression WRITE_GOTO ':' NEXT_QUAD conditional_expression {
-		$$ = getNode("ternary operator", mergeAttrs($1, $3, $7));
+        DBG("conditional_expression -> logical_or_expression '?' expression ':' conditional_expression");
+        $$ = getNode("ternary operator", mergeAttrs($1, $3, $7));
+        
+        // Semantics
+        string temp = condExp($3->type, $7->type);
+        if (!temp.empty()) {
+            $$->type = "int";
+			// 3AC
+			std::string q = getTempVariable($$->type);
 
-		// 3AC
-		std::string temp1 = getTempVariable("int");
+			backpatch($1->truelist, $2);
+			backpatch($1->falselist, $6);
+			backpatch($3->nextlist, $4-1);
+			backpatch($3->truelist, $4-1);
+			backpatch($3->falselist, $4-1);
 
-		backpatch($1->truelist, $2);
-		backpatch($1->falselist, $6);
-		backpatch($3->nextlist, $4-1);
-		backpatch($3->truelist, $4-1);
-		backpatch($3->falselist, $4-1);
+			setArg1($4-1,$3->place);
+			setResult($4-1,q);
 
-		setArg1($4-1,$3->place);
-		setResult($4-1,temp1);
+			backpatch($7->nextlist, getCurrentSize());
+			backpatch($7->falselist, getCurrentSize());
+			backpatch($7->truelist, getCurrentSize());
 
-		backpatch($7->nextlist, getCurrentSize());
-		backpatch($7->falselist, getCurrentSize());
-		backpatch($7->truelist, getCurrentSize());
-
-		emit("=", $7->place, "", temp1, -1);
-		$$->nextlist.push_back($4);
-		$$->place = temp1;
-	}
-	;
+			emit("=", $7->place, "", q, -1);
+			$$->nextlist.push_back($4);
+			$$->place = q;
+        } else {
+            yyerror("Type mismatch in Conditional Expression", "type error");
+        }
+        $$->isInit = $1->isInit & $3->isInit & $7->isInit;
+    }
+    ;
 
 GOTO_COND
 	: logical_or_expression '?' {
@@ -758,46 +1103,63 @@ WRITE_GOTO
 
 
 assignment_expression
-    : conditional_expression { $$ = $1; }
-    | unary_expression assignment_operator { if_found = 0; arr_rValue = 1; struct_rValue = 1;} assignment_expression {
+    : conditional_expression {
+        DBG("assignment_expression -> conditional_expression");
+        $$ = $1;
+    }
+    | unary_expression assignment_operator { if_found = 0; rValue = 1;} assignment_expression {
+        DBG("assignment_expression -> unary_expression assignment_operator assignment_expression");
         $$ = getNode($2, mergeAttrs($1, $4));
-
-        // 3AC
-		$$->type = $1->type;
-		if(DEBUG) {
-			std::cerr<<"Assignment Expression 656: "<<$1->type << ' ' << $1->place <<std::endl;
-		}
-		int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
-        // int num = emit(qid($2, NULL), $1->place, $4->place, qid("", NULL), -1);
-        $$->place = $1->place;
-        backpatch($4->nextlist, num);
-		arr_rValue = 0;
-		struct_rValue = 0;
+        
+        // Semantics
+        string temp = assignExp($1->type, $4->type, string($2));
+        if (!temp.empty()) {
+            if (temp == "ok") {
+                $$->type = $1->type;
+            } else if (temp == "warning") {
+                $$->type = $1->type;
+                warning("Assignment with incompatible pointer type");
+            }
+			// 3AC
+			int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
+			$$->place = $1->place;
+			backpatch($4->nextlist, num);
+			rValue = 0;
+        } else {
+            yyerror("Incompatible types when assigning type", "type error");
+        }
+        if ($1->expType == 3 && $4->isInit) {
+            updInit($1->temp_name);
+        }
     }
     ;
 
-
 assignment_operator
-	: '='	{
-		$$ = strdup("=");
-	}
-	| MUL_ASSIGN		{$$ = $1;}
-	| DIV_ASSIGN		{$$ = $1;}
-	| MOD_ASSIGN		{$$ = $1;}
-	| ADD_ASSIGN		{$$ = $1;}
-	| SUB_ASSIGN		{$$ = $1;}
-	| LEFT_ASSIGN		{$$ = $1;}
-	| RIGHT_ASSIGN		{$$ = $1;}
-	| AND_ASSIGN		{$$ = $1;}
-	| XOR_ASSIGN		{$$ = $1;}
-	| OR_ASSIGN			{$$ = $1;}
-	;
-
+    : '=' {
+        $$ = strdup("=");
+    }
+    | MUL_ASSIGN { $$ = $1; }
+    | DIV_ASSIGN { $$ = $1; }
+    | MOD_ASSIGN { $$ = $1; }
+    | ADD_ASSIGN { $$ = $1; }
+    | SUB_ASSIGN { $$ = $1; }
+    | LEFT_ASSIGN { $$ = $1; }
+    | RIGHT_ASSIGN { $$ = $1; }
+    | AND_ASSIGN { $$ = $1; }
+    | XOR_ASSIGN { $$ = $1; }
+    | OR_ASSIGN { $$ = $1; }
+    ;
 expression
-	: assignment_expression{$$ = $1;}
+	: assignment_expression {
+		DBG("expression -> assignment_expression");
+		$$ = $1;
+	}
 	| expression ',' NEXT_QUAD assignment_expression {
+		DBG("expression -> expression ',' assignment_expression");
 		$$ = getNode("expression", mergeAttrs($1, $4));
+		$$->type = "void"; // Semantic
 
+		//3AC
 		backpatch($1->nextlist, $3);
         backpatch($1->truelist, $3);
         backpatch($1->falselist, $3);
@@ -807,252 +1169,544 @@ expression
 	;
 
 constant_expression
-	: conditional_expression{$$ = $1;}
+	: conditional_expression {
+		DBG("constant_expression -> conditional_expression");
+		$$ = $1;
+	}
 	;
 
 declaration
-	: declaration_specifiers ';'{ $$ = $1; }
-	| declaration_specifiers init_declarator_list ';'{
+	: declaration_specifiers ';' {
+		DBG("declaration -> declaration_specifiers ';'");
+		$$ = $1;
+	}
+	| declaration_specifiers init_declarator_list ';' {
+		DBG("declaration -> declaration_specifiers init_declarator_list ';'");
 		$$ = getNode("declaration", mergeAttrs($1, $2));
-
+		$$->temp_name = $2->temp_name;
+		$$->type = $2->type;
+		$$->size = $2->size;
+		type = ""; // Reset type
 		// 3AC
 		$$->nextlist = $2->nextlist;
 	}
 	;
 
 declaration_specifiers
-	: storage_class_specifier { $$ = $1; }
-	| storage_class_specifier declaration_specifiers{
+	: storage_class_specifier {
+		DBG("declaration_specifiers -> storage_class_specifier");
+		$$ = $1;
+	}
+	| storage_class_specifier declaration_specifiers {
+		DBG("declaration_specifiers -> storage_class_specifier declaration_specifiers");
 		$$ = getNode("declaration_specifiers", mergeAttrs($1, $2));
 	}
-	| type_specifier{ $$ = $1; }
-	| type_specifier declaration_specifiers{
+	| type_specifier {
+		DBG("declaration_specifiers -> type_specifier");
+		$$ = $1;
+	}
+	| type_specifier declaration_specifiers {
+		DBG("declaration_specifiers -> type_specifier declaration_specifiers");
 		$$ = getNode("declaration_specifiers", mergeAttrs($1, $2));
 	}
-	| type_qualifier{ $$ = $1; }
-	| type_qualifier declaration_specifiers{
+	| type_qualifier {
+		DBG("declaration_specifiers -> type_qualifier");
+		$$ = $1;
+	}
+	| type_qualifier declaration_specifiers {
+		DBG("declaration_specifiers -> type_qualifier declaration_specifiers");
 		$$ = getNode("declaration_specifiers", mergeAttrs($1, $2));
 	}
 	;
 
 init_declarator_list
-    : init_declarator { $$ = $1; }
-    | init_declarator_list ',' NEXT_QUAD init_declarator {
+	: init_declarator {
+		DBG("init_declarator_list -> init_declarator");
+		$$ = $1;
+	}
+	| init_declarator_list ',' NEXT_QUAD init_declarator {
+		DBG("init_declarator_list -> init_declarator_list ',' init_declarator");
 		$$ = getNode("init_declarator_list", mergeAttrs($1, $4));
-
-        // 3AC
+		// 3AC
         backpatch($1->nextlist, $3);
         $$->nextlist = $4->nextlist;
-    }
-    ;
-
+	}
+	;
 init_declarator
-    : declarator {
-        $$ = $1;
-        $$->place = $1->temp_name;
-		if(DEBUG) {
-			std::cerr<<"Init Declarator 737: "<<$1->temp_name<<std::endl;
+	: declarator {
+		DBG("init_declarator -> declarator");
+		//$$=getNode($1);
+		//
+		$$ = $1;  // Just pass the node directly
+		
+		// Semantics
+		if(currLookup($1->temp_name)){
+			yyerror(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
-    }
-    | declarator '=' {arr_rValue = 1; struct_rValue = 1;} NEXT_QUAD initializer {
-		$$ = getNode("=", mergeAttrs($1, $5));
-
-        // 3AC
-		//TODO: Handle other things like arrays...etc .(void case also)
-		// for(auto i:list_values){
-		// 	std::cerr << "Init Declarator 808: " << i << std::endl;
-		// }
-		if(DEBUG){
-		}
-		std::cerr<<"Init Declarator 746: "<<$1->temp_name<< ' ' << $1->place << ' ' << $1->type <<std::endl;
-		std::string type = lookup($1->temp_name)->data_type;
-		if(type.find("int[]") != std::string::npos){
-			for(int i = 0; i<list_values.size();i++){
-				emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
+		else if($1->expType == 3){
+			if(fn_decl){
+				yyerror("A parameter list without types is only allowed in a function definition", "syntax error");
+				fn_decl = 0;
 			}
-		}else{
-			assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+			removeFuncProto();
 		}
-
+		else{
+			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+		}
+		//3AC
 		$$->place = $1->temp_name;
-        $$->nextlist = $5->nextlist;
-        backpatch($1->nextlist, $4);
+	}
+	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
+		DBG("init_declarator -> declarator '=' initializer");
+		$$ = getNode("=", mergeAttrs($1, $5));
+		
+		// Semantics
+		if(currLookup($1->temp_name)){
+			yyerror(($1->temp_name + " is already declared").c_str(), "scope error");
+		}
+		else{
+			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
+			//3AC
+			std::string type = $1->type;
+			if(type.find("int[]") != std::string::npos){
+				for(int i = 0; i<list_values.size();i++){
+					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
+				}
+			}else{
+				assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+			}
 
-		arr_rValue = 0;
-		struct_rValue = 0;
-		list_values.clear();
-    }
-    ;
+			$$->place = $1->temp_name;
+			$$->nextlist = $5->nextlist;
+			backpatch($1->nextlist, $4);
 
+			rValue = 0;
+			list_values.clear();
+		}
+	}
+	;
 
 storage_class_specifier
-	: TYPEDEF	{ $$ = getNode($1); flag=1;}
-	| EXTERN	{ $$ = getNode($1); currentDataType="extern "; flag2=1;}
-	| STATIC	{ $$ = getNode($1); currentDataType="static "; flag2=1;}
-	| AUTO		{ $$ = getNode($1); currentDataType="auto "; flag2=1;}
-	| REGISTER	{ $$ = getNode($1); currentDataType="register "; flag2=1;}
+	: TYPEDEF {
+		DBG("storage_class_specifier -> TYPEDEF");
+		$$ = getNode($1);
+		flag = 1;
+	}
+	| EXTERN {
+		DBG("storage_class_specifier -> EXTERN");
+		$$ = getNode($1);
+		currentDataType = "extern ";
+		flag2 = 1;
+	}
+	| STATIC {
+		DBG("storage_class_specifier -> STATIC");
+		$$ = getNode($1);
+		currentDataType = "static ";
+		flag2 = 1;
+	}
+	| AUTO {
+		DBG("storage_class_specifier -> AUTO");
+		$$ = getNode($1);
+		currentDataType = "auto ";
+		flag2 = 1;
+	}
+	| REGISTER {
+		DBG("storage_class_specifier -> REGISTER");
+		$$ = getNode($1);
+		currentDataType = "register ";
+		flag2 = 1;
+	}
 	;
 
 type_specifier
-	: VOID			{$$ = getNode($1); currentDataType="void";}	
-	| CHAR			{$$ = getNode($1); if(flag2){currentDataType+=" char";flag2=0;}else{currentDataType="char";}; }	
-	| SHORT			{$$ = getNode($1); if(flag2){currentDataType+=" short";flag2=0;}else{currentDataType="short";}; }	
-	| INT			{$$ = getNode($1); if(flag2){currentDataType+=" int";flag2=0;}else{currentDataType="int";} }
-	| LONG			{$$ = getNode($1); if(flag2){currentDataType+=" long";flag2=0;}else{currentDataType="long";}; }
-	| FLOAT			{$$ = getNode($1); if(flag2){currentDataType+=" float";flag2=0;}else{currentDataType="float";}; }
-	| DOUBLE		{$$ = getNode($1); if(flag2){currentDataType+=" double";flag2=0;}else{currentDataType="double";}; }
-	| SIGNED		{$$ = getNode($1); currentDataType="signed"; flag2=1; }
-	| UNSIGNED		{$$ = getNode($1); currentDataType="unsigned"; flag2=1; }
-	| FILE_MAN          { $$ = getNode($1); currentDataType="file";  }
-	| struct_or_union_specifier	{$$ = $1;}	
-	| class_definition 			{$$ = $1;}
-	| enum_specifier			{$$ = $1;}
-	| TYPE_NAME		{$$ = getNode($1);}	
-	;
+		: VOID {
+			DBG("type_specifier -> VOID");
+			$$ = getNode($1);
+			currentDataType = "void";
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}	
+		| CHAR {
+			DBG("type_specifier -> CHAR");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " char" : "char";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}	
+		| SHORT {
+			DBG("type_specifier -> SHORT");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " short" : "short";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}	
+		| INT {
+			DBG("type_specifier -> INT");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " int" : "int";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| LONG {
+			DBG("type_specifier -> LONG");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " long" : "long";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| FLOAT {
+			DBG("type_specifier -> FLOAT");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " float" : "float";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| DOUBLE {
+			DBG("type_specifier -> DOUBLE");
+			$$ = getNode($1);
+			currentDataType = flag2 ? currentDataType + " double" : "double";
+			flag2 = 0;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| SIGNED {
+			DBG("type_specifier -> SIGNED");
+			$$ = getNode($1);
+			currentDataType = "signed";
+			flag2 = 1;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| UNSIGNED {
+			DBG("type_specifier -> UNSIGNED");
+			$$ = getNode($1);
+			currentDataType = "unsigned";
+			flag2 = 1;
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| FILE_MAN {
+			DBG("type_specifier -> FILE_MAN");
+			$$ = getNode($1);
+			currentDataType = "file";
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| struct_or_union_specifier {
+			DBG("type_specifier -> struct_or_union_specifier");
+			$$ = $1;
+		}	
+		| class_definition {
+			DBG("type_specifier -> class_definition");
+			$$ = $1;
+		}
+		| enum_specifier {
+			DBG("type_specifier -> enum_specifier");
+			$$ = $1;
+		}
+		| TYPE_NAME {
+			DBG("type_specifier -> TYPE_NAME");
+			$$ = getNode($1);
+			type = getType($1);
+		}	
+		;
+		inheritance_specifier
+			: access_specifier IDENTIFIER {
+				DBG("inheritance_specifier -> access_specifier IDENTIFIER");
+				$$ = getNode("inheritance_specifier", mergeAttrs($1, getNode($2)));
+			}
+			;
 
-inheritance_specifier
-	: access_specifier IDENTIFIER {
-		$$ = getNode("inheritance_specifier", mergeAttrs($1, getNode($2)));
-    }
-	;
+		inheritance_specifier_list
+			: inheritance_specifier {
+				DBG("inheritance_specifier_list -> inheritance_specifier");
+				$$ = $1;
+			}
+			| inheritance_specifier_list ',' inheritance_specifier {
+				DBG("inheritance_specifier_list -> inheritance_specifier_list ',' inheritance_specifier");
+				$$ = getNode("inheritance_specifier_list", mergeAttrs($1, $3));
+			}
+			;
 
-inheritance_specifier_list
-	: inheritance_specifier { $$ = $1; }
-	| inheritance_specifier_list ',' inheritance_specifier{
-		$$ = getNode("inheritance_specifier_list", mergeAttrs($1, $3));
-    }
-	;
+		access_specifier 
+			: PRIVATE {
+				DBG("access_specifier -> PRIVATE");
+				$$ = getNode($1);
+			}
+			| PUBLIC {
+				DBG("access_specifier -> PUBLIC");
+				$$ = getNode($1);
+			}
+			| PROTECTED {
+				DBG("access_specifier -> PROTECTED");
+				$$ = getNode($1);
+			}
+			;
 
-access_specifier 
-	: PRIVATE { $$ = getNode($1); }
-	| PUBLIC { $$ = getNode($1); }
-	| PROTECTED { $$ = getNode($1); }
-	;
+		class
+			: CLASS {
+				DBG("class -> CLASS");
+				$$ = getNode($1);
+			}
+			;
 
-class
-	: CLASS { $$ = getNode($1); }
-	;
+		class_definition_head 
+			: class S_C INHERITANCE_OP inheritance_specifier_list {
+				DBG("class_definition_head -> class INHERITANCE_OP inheritance_specifier_list");
+				$$ = getNode("class_definition_head", mergeAttrs($1, $4));
+				$$->type = currentDataType;
+				$$->temp_name = to_string(++Anon_ClassCounter);
+			}
+			| class G_C S_C {
+				DBG("class_definition_head -> class IDENTIFIER");
+				$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2)));
+				currentDataType = "Class " + std::string($2);
+				$$->temp_name = std::string($2);
+			}
+			| class G_C S_C INHERITANCE_OP inheritance_specifier_list {
+				DBG("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
+				$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2), $5));
+				currentDataType = "Class " + std::string($2);
+				$$->temp_name = std::string($2);
+			}
+			;
 
-class_definition_head 
-	: class INHERITANCE_OP inheritance_specifier_list{
-		$$ = getNode("class_definition_head", mergeAttrs($1, $3));
-    }
-	| class IDENTIFIER {
-		$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2)));
+		class_definition 
+			: class_definition_head '{' class_internal_definition_list '}' {
+				DBG("class_definition -> class_definition_head '{' class_internal_definition_list '}'");
+				$$ = getNode("class_definition", mergeAttrs($1, $3));
+				$$->temp_name = $1->temp_name;
+				if (printClassTable("CLASS_" + $1->temp_name) == 1) {
+					type = type.empty() ? "CLASS_" + $1->temp_name : type + " CLASS_" + $1->temp_name;
+				} else {
+					yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
+				}
+			}
+			| class IDENTIFIER {
+				DBG("class_definition -> class IDENTIFIER");
+				$$ = $1;
+				
+				if (findClass("CLASS_" + string($2)) == 1) {
+					type = type.empty() ? "CLASS_" + string($2) : type + " CLASS_" + string($2);
+				} else if (className == string($2)) {
+					type = "#INSIDE";
+				} else {
+					yyerror(("Class " + string($2) + " is not defined").c_str(), "scope error");
+				}
+			}
+			;
 
-		currentDataType="Class ";
-		std::string check=std::string($2);
-		currentDataType+=check;
-    }
-	| class IDENTIFIER  INHERITANCE_OP inheritance_specifier_list{
-		$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2), $4));
-    }
-	;
+		class_internal_definition_list
+			: class_internal_definition {
+				DBG("class_internal_definition_list -> class_internal_definition");
+				$$ = $1;
+			}
+			| class_internal_definition_list class_internal_definition {
+				DBG("class_internal_definition_list -> class_internal_definition_list class_internal_definition");
+				$$ = getNode("class_internal_definition_list", mergeAttrs($1, $2));
+			}
+			; 
 
-class_definition 
-	: class_definition_head '{' class_internal_definition_list '}'{
-		$$ = getNode("class_definition", mergeAttrs($1, $3));
-    }
-	| class_definition_head { $$ = $1; }
-	;
-
-class_internal_definition_list
-	: class_internal_definition { $$ = $1; }
-	| class_internal_definition_list class_internal_definition {
-		$$ = getNode("class_internal_definition_list", mergeAttrs($1, $2));
-    }
-	; 
-
-class_internal_definition	
-	: access_specifier '{' class_member_list '}' ';'{
-		$$ = getNode("class_internal_definition", mergeAttrs($1, $3));
-    }
-	;
+		class_internal_definition	
+			: access_specifier '{' class_member_list '}' ';' {
+				DBG("class_internal_definition -> access_specifier '{' class_member_list '}' ';'");
+				$$ = getNode("class_internal_definition", mergeAttrs($1, $3));
+				currentAccess = $1->strVal;
+			}
+			;
 
 class_member_list
-	: class_member{ $$ = $1; }
-	| class_member_list class_member{
-		$$ = getNode("class_member_list", mergeAttrs($1, $2));
+    : class_member {
+        DBG("class_member_list -> class_member");
+        $$ = $1;
     }
-	;
+    | class_member_list class_member {
+        DBG("class_member_list -> class_member_list class_member");
+        $$ = getNode("class_member_list", mergeAttrs($1, $2));
+    }
+    ;
 
 class_member
-	: function_definition { $$ = $1; }
-	| declaration { $$ = $1; }
-	;
+    : function_definition { 
+        DBG("class_member -> function_definition");
+        $1->strVal = currentAccess;
+        insertClassAttr($1->temp_name, "FUNC_" + $1->type, $1->size, 0);
+    }
+    | declaration { 
+        DBG("class_member -> declaration");
+        $1->strVal = currentAccess;
+        insertClassAttr($1->temp_name, $1->type, $1->size, 0);
+    }
+    ;
+
+G_C 
+    : IDENTIFIER {
+        DBG("G_C -> IDENTIFIER");
+        $$ = $1;
+        className = $1;
+    }
+    ;
+
+S_C 
+    : %empty {
+        DBG("S_C -> %empty");
+        createClassTable();
+    }
+    ;
 
 struct_or_union_specifier
-	: struct_or_union IDENTIFIER '{' struct_declaration_list '}'	{
-		$$ = getNode($1, mergeAttrs(getNode($2), $4));
-		std::string check=std::string($2); //Use ?
+    : struct_or_union G S '{' struct_declaration_list '}' {
+        DBG("struct_or_union_specifier -> struct_or_union G S '{' struct_declaration_list '}'");
+        $$ = getNode($1, mergeAttrs(getNode($2), $5));
+        if (printStructTable("STRUCT_" + string($2)) == 1) {
+            type = type.empty() ? "STRUCT_" + string($2) : type + " STRUCT_" + string($2);
+        } else {
+            yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
+        }
+    }
+    | struct_or_union S '{' struct_declaration_list '}' {
+        DBG("struct_or_union_specifier -> struct_or_union S '{' struct_declaration_list '}'");
+        $$ = getNode($1, mergeAttrs($4, nullptr));
+        Anon_StructCounter++;
+        if (printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1) {
+            type = type.empty() ? "STRUCT_" + to_string(Anon_StructCounter) : type + " STRUCT_" + to_string(Anon_StructCounter);
+        } else {
+            yyerror("Struct is already defined", "scope error");
+        }
+    }
+    | struct_or_union IDENTIFIER {
+        DBG("struct_or_union_specifier -> struct_or_union IDENTIFIER");
+        $$ = getNode($1, mergeAttrs(getNode($2), nullptr));
+        currentDataType += " " + string($2);
+        if (findStruct("STRUCT_" + string($2)) == 1) {
+            type = type.empty() ? "STRUCT_" + string($2) : type + " STRUCT_" + string($2);
+        } else if (structName == string($2)) {
+            type = "#INSIDE";
+        } else {
+            yyerror(("Struct " + string($2) + " is not defined").c_str(), "scope error");
+        }
+    }
+    ;
+
+G 
+	: IDENTIFIER {
+        DBG("G -> IDENTIFIER");
+		$$ = $1;
+		structName = $1;
 	}
-	| struct_or_union '{' struct_declaration_list '}'		{
-		$$ = getNode($1, mergeAttrs($3));
-	}
-	| struct_or_union IDENTIFIER 	{
-		$$ = getNode($1, mergeAttrs(getNode($2)));
-		currentDataType += " " + std::string($2);
-	}
-	| struct_or_union IDENTIFIER '{' '}'	{
-		yyerror("syntax error, struct must be non-empty");
-		$$ = getNode("Invalid Struct",nullptr);
+	;
+
+S 
+	: %empty {
+        DBG("S -> %empty");
+		createStructTable();
 	}
 	;
 
 struct_or_union
-	: STRUCT	{$$ = $1; currentDataType="struct";}
-	| UNION		{$$ = $1; currentDataType="union";}
+	: STRUCT {
+        DBG("struct_or_union -> STRUCT");
+        $$ = $1; currentDataType="struct";
+    }
+	| UNION {
+        DBG("struct_or_union -> UNION");
+        $$ = $1; currentDataType="union";
+    }
 	;
+    struct_declaration_list
+        : struct_declaration {
+            DBG("struct_declaration_list -> struct_declaration");
+            $$ = getNode("struct_declaration_list", mergeAttrs($1));
+        }
+        | struct_declaration_list struct_declaration {
+            DBG("struct_declaration_list -> struct_declaration_list struct_declaration");
+            $$ = getNode("struct_declaration_list", mergeAttrs($1, $2));
+        }
+        ;
 
-struct_declaration_list
-	: struct_declaration { 
-		$$ = getNode("struct_declaration_list", mergeAttrs($1)); 
-	}
-	| struct_declaration_list struct_declaration {
-		$$ = getNode("struct_declaration_list", mergeAttrs($1, $2));
-	}
-	;
+    struct_declaration
+        : specifier_qualifier_list struct_declarator_list ';' {
+            DBG("struct_declaration -> specifier_qualifier_list struct_declarator_list ';'");
+            $$ = getNode("struct_declaration", mergeAttrs($1, $2));
+            
+            // Semantics
+            type = "";
+        }
+        ;
 
-struct_declaration
-	: specifier_qualifier_list struct_declarator_list ';' 	{
-		$$ = getNode("struct_declaration", mergeAttrs($1, $2));
-	}
-	;
+    specifier_qualifier_list
+        : type_specifier specifier_qualifier_list {
+            DBG("specifier_qualifier_list -> type_specifier specifier_qualifier_list");
+            $$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
+        }
+        | type_specifier {
+            DBG("specifier_qualifier_list -> type_specifier");
+            $$ = $1;
+        }
+        | type_qualifier specifier_qualifier_list {
+            DBG("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
+            $$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
+        }
+        | type_qualifier {
+            DBG("specifier_qualifier_list -> type_qualifier");
+            $$ = $1;
+        }
+        ;
 
-specifier_qualifier_list
-	: type_specifier specifier_qualifier_list	{
-		$$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
-	}
-	| type_specifier	{ $$ = $1; }
-	| type_qualifier specifier_qualifier_list 	{
-		$$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
-	}
-	| type_qualifier	{ $$ = $1; }
-	;
+    struct_declarator_list
+        : struct_declarator {
+            DBG("struct_declarator_list -> struct_declarator");
+            $$ = $1;
+        }
+        | struct_declarator_list ',' struct_declarator {
+            DBG("struct_declarator_list -> struct_declarator_list ',' struct_declarator");
+            $$ = getNode("struct_declarator_list", mergeAttrs($1, $3));
+        }
+        ;
 
-struct_declarator_list
-	: struct_declarator { $$ = $1; }
-	| struct_declarator_list ',' struct_declarator {
-		$$ = getNode("struct_declarator_list", mergeAttrs($1, $3));
-	}
-	;
+    struct_declarator
+        : declarator {
+            DBG("struct_declarator -> declarator");
+            $$ = $1;
+            
+            // Semantics
+            if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1) {
+                yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
+            }
+        }
+        | ':' constant_expression {
+            DBG("struct_declarator -> ':' constant_expression");
+            $$ = $2;
+        }
+        | declarator ':' constant_expression {
+            DBG("struct_declarator -> declarator ':' constant_expression");
+            $$ = getNode(":", mergeAttrs($1, $3));
+            
+            // Semantics
+            if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1) {
+                yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
+            }
+        }
+        ;
 
-struct_declarator
-	: declarator	{ $$ = $1; }
-	| ':' constant_expression	{ $$ = $2; }
-	| declarator ':' constant_expression	{
-		$$ = getNode(":", mergeAttrs($1, $3));
-	}
-	;
 
 enum_specifier
 	: ENUM '{' enumerator_list '}' {
+		DBG("enum_specifier -> ENUM '{' enumerator_list '}'");
 		$$ = getNode($1, mergeAttrs($3));
+		// TODO: Add enum semantics
 	}
 	| ENUM IDENTIFIER '{' enumerator_list '}' {
+		DBG("enum_specifier -> ENUM IDENTIFIER '{' enumerator_list '}'");
 		$$ = getNode($1, mergeAttrs(getNode($2), $4));
 	}
 	| ENUM IDENTIFIER {
+		DBG("enum_specifier -> ENUM IDENTIFIER");
 		$$ = getNode($1, mergeAttrs(getNode($2)));
 		currentDataType = "Enum " + std::string($2);
 	}
@@ -1060,29 +1714,35 @@ enum_specifier
 
 enumerator_list
 	: enumerator {
+		DBG("enumerator_list -> enumerator");
 		$$ = $1;
 	}
 	| enumerator_list ',' enumerator {
+		DBG("enumerator_list -> enumerator_list ',' enumerator");
 		$$ = getNode("enumerator_list", mergeAttrs($1, $3));
 	}
 	;
 
 enumerator
 	: IDENTIFIER {
+		DBG("enumerator -> IDENTIFIER");
 		$$ = getNode($1);
 	}
 	| IDENTIFIER '=' constant_expression {
+		DBG("enumerator -> IDENTIFIER '=' constant_expression");
 		$$ = getNode("=", mergeAttrs(getNode($1), $3));
 	}
 	;
 
 type_qualifier
 	: CONST {
+		DBG("type_qualifier -> CONST");
 		$$ = getNode($1);
 		currentDataType = "const ";
 		flag2 = 1;
 	}
 	| VOLATILE {
+		DBG("type_qualifier -> VOLATILE");
 		$$ = getNode($1);
 		currentDataType = "volatile ";
 		flag2 = 1;
@@ -1091,317 +1751,533 @@ type_qualifier
 
 declarator
 	: pointer direct_declarator {
+		DBG("declarator -> pointer direct_declarator");
 		$$ = getNode("declarator", mergeAttrs($1, $2));
-		$$->temp_name = $2->temp_name;
-		$$->place = $$->temp_name;
-		if(DEBUG) {
-			std::cerr<<"Declarator 963: "<<$2->temp_name<<std::endl;
+		// Semantics
+		if (type == "#INSIDE") {
+			$$->type = "STRUCT_" + structName + $1->type;
+			$$->temp_name = $2->temp_name;
+			$$->size = 8;
+			$$->expType = 2;
+		} else {
+			$$->type = $2->type + $1->type;
+			$$->temp_name = $2->temp_name;
+			$$->size = 8;
+			$$->expType = 2;
 		}
+		//3AC
+		$$->place = $$->temp_name;
 	}
 	| direct_declarator {
+		DBG("declarator -> direct_declarator");
 		$$ = $1;
+		//3AC
 		$$->place = $$->temp_name;
 	}
 	;
 
-
 direct_declarator
 	: IDENTIFIER {
+		DBG("direct_declarator -> IDENTIFIER");
 		$$ = getNode($1);
-		std::string check=std::string($1);
-		if(flag){
-			typedefTable.push_back(make_pair(check,currentDataType));
-			flag=0;
+		std::string check = std::string($1);
+		if (flag) {
+			typedefTable.push_back(make_pair(check, currentDataType));
+			flag = 0;
+		} else {
+			addToSymbolTable(check, currentDataType);
 		}
-		else{
-		std::string check=std::string($1);
-		addToSymbolTable(check,currentDataType);
-		}
-
+		// Semantics
+		$$->expType = 1; // Variable
+		$$->type = type;
+		$$->temp_name = string($1);
+		$$->size = getSize(type);
 		//3AC
-		$$->temp_name = $1;
 		$$->place = $$->temp_name;
 	}
 	| CONSTANT IDENTIFIER {
-		yyerror("syntax error, invalid identifier");
+		DBG("direct_declarator -> CONSTANT IDENTIFIER");
+		yyerror("invalid identifier", "syntax error");
 		$$ = getNode("Invalid Identifier");
 	}
-	| '(' declarator ')'  {
-		$$ = $2 ;
-
+	| '(' declarator ')' {
+		DBG("direct_declarator -> '(' declarator ')'");
+		$$ = $2;  // Just pass through the declarator node
 		//3AC
 		$$->place = $$->temp_name;
-		
 	}
-	| direct_declarator '[' constant_expression ']'{
+	| direct_declarator '[' constant_expression ']' {
+		DBG("direct_declarator -> direct_declarator '[' constant_expression ']'");
 		Node* node = getNode("[ ]", mergeAttrs($3));
 		$$ = getNode("direct_declarator[..]", mergeAttrs($1, node));
 
 		updateLastSymbolEntry();
-
-		// if(DEBUG){
-			std::cerr << "Direct Declarator 1052: " << $1->temp_name << ' ' << lookup($1->temp_name)->data_type << ' ' << $3->place << std::endl;
-		// }
-		//3AC
-		$$->temp_name = $1->temp_name;
-		$$->place = $$->temp_name;
-
+		// Semantics
+		if ($1->expType == 1 || $1->expType == 2) {
+			$$->expType = 2;
+			$$->type = $1->type + "*";
+			$$->temp_name = $1->temp_name;
+			$$->size = $1->size * $3->intVal;
+			//3AC
+			$$->place = $$->temp_name;
+		} else {
+			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
+		}
 	}
-	| direct_declarator '[' ']'{
+	| direct_declarator '[' ']' {
+		DBG("direct_declarator -> direct_declarator '[' ']'");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, NULL, "[ ]", 0);
 		$$ = getNode("direct_declarator[]", &attr);
 
 		updateLastSymbolEntry();
-		//3AC
-		$$->temp_name = $1->temp_name;
-		$$->place = $$->temp_name;
+		// Semantics
+		if ($1->expType <= 2) {
+			$$->expType = 2;
+			$$->type = $1->type + "*";
+			$$->temp_name = $1->temp_name;
+			$$->size = 8;
+			//3AC
+			$$->place = $$->temp_name;
+		} else {
+			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
+		}
 	}
 	| direct_declarator '(' A parameter_type_list ')' NEXT_QUAD {
+		DBG("direct_declarator -> direct_declarator '(' A parameter_type_list ')'");
 		Node *node = getNode("( )", mergeAttrs($4));
 		$$ = getNode("direct_declarator", mergeAttrs($1, node));
 
 		updateFuncSymbolEntry(noArgs);
-		noArgs=0;
-		//3 AC
-		$$->temp_name = $1->temp_name;
-        $$->place =$$->temp_name;
-		backpatch($4->nextlist,$6);
-        emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
-
+		noArgs = 0;
+		// Semantics
+		string argMapKey = $1->temp_name;
+		if (!className.empty()) {
+			argMapKey = className + "_" + argMapKey;
+		}
+		if ($1->expType == 1) {
+			$$->temp_name = $1->temp_name;
+			$$->expType = 3;
+			$$->type = $1->type;
+			$$->size = getSize($$->type);
+			vector<string> temp = getFuncArgs(argMapKey);
+			if (temp.size() == 1 && temp[0] == "#NO_FUNC") {
+				insertFuncArg(argMapKey, funcArgs);
+				funcArgs.clear();
+				funcName = string(argMapKey);
+				funcType = $1->type;
+			} else {
+				if (temp == funcArgs) {
+					funcArgs.clear();
+					funcName = string(argMapKey);
+					funcType = $1->type;
+				} else {
+					yyerror(("Conflicting types for " + argMapKey).c_str(), "type error");
+				}
+			}
+			//3 AC
+			$$->place =$$->temp_name;
+			backpatch($4->nextlist,$6);
+			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
+		} else {
+			if ($1->expType == 2) {
+				yyerror((argMapKey + " declared as array of function").c_str(), "type error");
+			} else {
+				yyerror((argMapKey + " declared as function of function").c_str(), "type error");
+			}
+		}
 	}
-	| direct_declarator '(' A identifier_list ')'{
+	| direct_declarator '(' A identifier_list ')' {
+		DBG("direct_declarator -> direct_declarator '(' A identifier_list ')'");
 		Node *node = getNode("( )", mergeAttrs($4));
 		$$ = getNode("direct_declarator", mergeAttrs($1, node));
 
-		//3 AC
+		// Semantics
+		fn_decl = 1;
 		$$->temp_name = $1->temp_name;
-        $$->place =$$->temp_name;
-        emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
-
+		$$->expType = 3;
+		$$->type = $1->type;
+		$$->size = getSize($$->type);
+		funcType = $1->type;
+		funcName = string($1->temp_name);
+		vector<string> args = getFuncArgs($$->temp_name);
+		if (args.size() == 1 && args[0] == "#NO_FUNC") {
+			args.clear();
+			for (int i = 0; i < idList.size(); i++) {
+				insertSymbol(*curr_table, idList[i], "int", 4, 1, NULL);
+				args.push_back("int");
+			}
+			insertFuncArg($1->temp_name, args);
+		}
+		if (args.size() == idList.size()) {
+			for (int i = 0; i < args.size(); i++) {
+				if (args[i] == "...") {
+					yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
+					break;
+				}
+				insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
+			}
+			idList.clear();
+			//3 AC
+			$$->place =$$->temp_name;
+			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
+		} else {
+			yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
+			idList.clear();
+		}
 	}
-	| direct_declarator '(' A ')'{
+	| direct_declarator '(' A ')' {
+		DBG("direct_declarator -> direct_declarator '(' A ')'");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, NULL, "( )", 0);
 		$$ = getNode("direct_declarator", &attr);
 		updateFuncSymbolEntry(0);
-
-		//3 AC
-		$$->temp_name = $1->temp_name;
-        $$->place =$$->temp_name;
-        emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
-
+		// Semantics
+		if ($1->expType == 1) {
+			$$->temp_name = $1->temp_name;
+			$$->expType = 3;
+			$$->type = $1->type;
+			$$->size = getSize($$->type);
+			vector<string> temp = getFuncArgs($1->temp_name);
+			if (temp.size() == 1 && temp[0] == "#NO_FUNC") {
+				insertFuncArg($$->temp_name, funcArgs);
+				funcArgs.clear();
+				funcName = string($1->temp_name);
+				funcType = $1->type;
+			} else {
+				yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
+			}
+			//3 AC
+			$$->place =$$->temp_name;
+			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
+		} else {
+			if ($1->expType == 2) {
+				yyerror(($1->temp_name + " declared as array of function").c_str(), "type error");
+			} else {
+				yyerror(($1->temp_name + " declared as function of function").c_str(), "type error");
+			}
+		}
 	}
 	;
 
 A
-	: %empty	{
+	: %empty {
+		DBG("A -> %empty");
+		type = "";
+		func_flag = 0;
+		funcArgs.clear();
+		createParamList();
+		//3AC
 		gotolablelist.clear();
 		gotolabel.clear();
 	}
+	;
 
 pointer
 	: '*' {
-		currentDataType+="*";
+		DBG("pointer -> '*'");
 		$$ = getNode("*(Pointer)");
+		$$->type = "*";
+		currentDataType += "*";
 	}
-	| '*' type_qualifier_list{
-		currentDataType+="*";
+	| '*' type_qualifier_list {
+		DBG("pointer -> '*' type_qualifier_list");
 		$$ = getNode("*(Pointer)", mergeAttrs($2));
+		$$->type = "*";
+		currentDataType += "*";
 	}
-	| '*' pointer{
-		currentDataType+="*";
+	| '*' pointer {
+		DBG("pointer -> '*' pointer");
 		$$ = getNode("*(Pointer)", mergeAttrs($2));
+		$$->type = "*" + $2->type;
+		currentDataType += "*";
 	}
-	| '*' type_qualifier_list pointer{
-		currentDataType+="*";
+	| '*' type_qualifier_list pointer {
+		DBG("pointer -> '*' type_qualifier_list pointer");
 		$$ = getNode("*(Pointer)", mergeAttrs($2, $3));
+		$$->type = "*" + $3->type;
+		currentDataType += "*";
 	}
 	;
 
 type_qualifier_list
 	: type_qualifier {
-		$$ = $1 ;
+		DBG("type_qualifier_list -> type_qualifier");
+		$$ = $1;
 	}
-	| type_qualifier_list type_qualifier{
+	| type_qualifier_list type_qualifier {
+		DBG("type_qualifier_list -> type_qualifier_list type_qualifier");
 		$$ = getNode("type_qualifier_list", mergeAttrs($1, $2));
 	}
 	;
 
-
 parameter_type_list
 	: parameter_list {
-		$$ = $1 ;
+		DBG("parameter_type_list -> parameter_list");
+		$$ = $1;
 	}
-	| parameter_list ',' ELLIPSIS{
+	| parameter_list ',' ELLIPSIS {
+		DBG("parameter_type_list -> parameter_list ',' ELLIPSIS");
 		$$ = getNode("parameter_type_list", mergeAttrs($1, getNode($3)));
+		// Semantics - add ellipsis to function argument list
+		funcArgs.push_back("...");
+		//3AC
 		$$->nextlist = $1->nextlist;
 	}
 	;
 
 parameter_list
-	: parameter_declaration{
+	: parameter_declaration {
+		DBG("parameter_list -> parameter_declaration");
 		noArgs++;
 		$$ = $1;
 	}
-	| parameter_list ',' NEXT_QUAD parameter_declaration{
-		noArgs++;
+	| parameter_list ',' NEXT_QUAD parameter_declaration {
+		DBG("parameter_list -> parameter_list ',' parameter_declaration");
 		$$ = getNode("parameter_list", mergeAttrs($1, $4));
+		noArgs++;
+		//3AC
 		backpatch($1->nextlist, $3);
 		$$->nextlist = $4->nextlist;
 	}
 	;
 
 parameter_declaration
-	: declaration_specifiers declarator{
+	: declaration_specifiers declarator {
+		DBG("parameter_declaration -> declaration_specifiers declarator");
 		$$ = getNode("parameter_declaration", mergeAttrs($1, $2));
+		// Semantics
+		type = "";
+		if ($2->expType == 1 || $2->expType == 2) {
+			if (currLookup($2->temp_name)) {
+				yyerror(("Redeclaration of Parameter " + $2->temp_name).c_str(), "scope error");
+			} else {
+				insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
+			}
+			funcArgs.push_back($2->type);
+		}
 	}
-	| declaration_specifiers abstract_declarator{
+	| declaration_specifiers abstract_declarator {
+		DBG("parameter_declaration -> declaration_specifiers abstract_declarator");
 		$$ = getNode("parameter_declaration", mergeAttrs($1, $2));
+		// Semantics
+		type = "";
 	}
 	| declaration_specifiers {
+		DBG("parameter_declaration -> declaration_specifiers");
 		$$ = $1;
+		// Semantics
+		funcArgs.push_back(type);
+		type = "";
 	}
 	;
 
 identifier_list
 	: IDENTIFIER {
+		DBG("identifier_list -> IDENTIFIER");
 		$$ = getNode($1);
+		idList.push_back($1); // Semantics
 	}
-	| identifier_list ',' IDENTIFIER{
+	| identifier_list ',' IDENTIFIER {
+		DBG("identifier_list -> identifier_list ',' IDENTIFIER");
 		$$ = getNode("identifier_list", mergeAttrs($1, getNode($3)));
+		idList.push_back($3); // Semantics
 	}
 	;
 
 type_name
-	: specifier_qualifier_list{
+	: specifier_qualifier_list {
+		DBG("type_name -> specifier_qualifier_list");
 		$$ = $1;
 	}
-	| specifier_qualifier_list abstract_declarator{
+	| specifier_qualifier_list abstract_declarator {
+		DBG("type_name -> specifier_qualifier_list abstract_declarator");
 		$$ = getNode("type_name", mergeAttrs($1, $2));
 	}
 	;
 
 abstract_declarator
 	: pointer {
-		$$ =$1;
-	}
-	| direct_abstract_declarator{
+		DBG("abstract_declarator -> pointer");
 		$$ = $1;
 	}
-	| pointer direct_abstract_declarator{
+	| direct_abstract_declarator {
+		DBG("abstract_declarator -> direct_abstract_declarator");
+		$$ = $1;
+	}
+	| pointer direct_abstract_declarator {
+		DBG("abstract_declarator -> pointer direct_abstract_declarator");
 		$$ = getNode("abstract_declarator", mergeAttrs($1, $2));
 	}
 	;
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')' {
+		DBG("direct_abstract_declarator -> '(' abstract_declarator ')'");
 		$$ = $2;
 	}
-	| '[' ']'{
-		$$ = getNode("[ ]") ;
+	| '[' ']' {
+		DBG("direct_abstract_declarator -> '[' ']'");
+		$$ = getNode("[ ]");
+		$$->type = type + "*"; // Semantics
+		$$->size = 8;
 	}
 	| '[' constant_expression ']' {
-		$$ = $2;
+		DBG("direct_abstract_declarator -> '[' constant_expression ']'");
+		$$ = getNode("[ ]", mergeAttrs($2));
+		$$->type = type + "*"; // Semantics
+		$$->size = getSize(type) * $2->intVal;
 	}
 	| direct_abstract_declarator '[' ']' {
+		DBG("direct_abstract_declarator -> direct_abstract_declarator '[' ']'");
 		std::vector<Data> attr;
 		insertAttr(attr,NULL,"[ ]",0);
 		insertAttr(attr,$1,"",1);
 		$$ = getNode("direct_abstract_declarator",&attr);
+
+		$$->type = $1->type + "*"; // Semantics
+		$$->size = 8;
 	}
-	| direct_abstract_declarator '[' constant_expression ']'{
+	| direct_abstract_declarator '[' constant_expression ']' {
+		DBG("direct_abstract_declarator -> direct_abstract_declarator '[' constant_expression ']'");
 		$$ = getNode("direct_abstract_declarator", mergeAttrs($1, getNode("[ ]", mergeAttrs($3))));
+		$$->type = $1->type + "*"; // Semantics
+		$$->size = $1->size * $3->intVal;
 	}
-	| '(' ')'{
-		$$ = getNode("( )") ;
+	| '(' ')' {
+		DBG("direct_abstract_declarator -> '(' ')'");
+		$$ = getNode("( )");
+		$$->type = "FUNC_" + type; // Semantics
+		$$->size = 0;
 	}
-	| '(' parameter_type_list ')'{
-		$$ = $2 ;
+	| '(' parameter_type_list ')' {
+		DBG("direct_abstract_declarator -> '(' parameter_type_list ')'");
+		$$ = $2;
+		$$->type = "FUNC_" + type; // Semantics
+		$$->size = 0;
 	}
-	| direct_abstract_declarator '(' ')'{
+	| direct_abstract_declarator '(' ')' {
+		DBG("direct_abstract_declarator -> direct_abstract_declarator '(' ')'");
 		std::vector<Data> attr;
 		insertAttr(attr, NULL, "( )", 0);
 		insertAttr(attr, $1, "", 1);
 		$$ = getNode("direct_abstract_declarator",&attr);		
+
+		$$->type = "FUNC_" + $1->type; // Semantics
+		$$->size = 0;
 	}
-	| direct_abstract_declarator '(' parameter_type_list ')'{
+	| direct_abstract_declarator '(' parameter_type_list ')' {
+		DBG("direct_abstract_declarator -> direct_abstract_declarator '(' parameter_type_list ')'");
 		$$ = getNode("direct_abstract_declarator", mergeAttrs($1, getNode("( )", mergeAttrs($3))));
+		$$->type = "FUNC_" + $1->type; // Semantics
+		$$->size = 0;
 	}
 	;
 
 initializer
-	: assignment_expression{
-		$$ = $1 ;
+	: assignment_expression {
+		DBG("initializer -> assignment_expression");
+		$$ = $1;
+		//3AC
 		list_values.push_back($1->place);
 	}
 	| '{' initializer_list '}' {
-		$$ = $2 ;
-	}
-	| '{' initializer_list ',' '}'{
+		DBG("initializer -> '{' initializer_list '}'");
 		$$ = $2;
-
+		$$->isInit = 1; // Semantics
+	}
+	| '{' initializer_list ',' '}' {
+		DBG("initializer -> '{' initializer_list ',' '}'");
+		$$ = $2;
+		$$->isInit = 1; // Semantics
+		//3AC
 		$$->place = $2->place;
 		$$->nextlist = $2->nextlist;
 	}
 	;
 
-
 initializer_list
-	: initializer	{
+	: initializer {
+		DBG("initializer_list -> initializer");
 		$$ = $1;
 	}
-	| initializer_list ',' NEXT_QUAD initializer	{
+	| initializer_list ',' NEXT_QUAD initializer {
+		DBG("initializer_list -> initializer_list ',' initializer");
 		$$ = getNode("initializer_list", mergeAttrs($1, $4));
+		$$->isInit = ($1->isInit && $4->isInit); // Semantics
 
+		//3AC
 		backpatch($1->nextlist, $3);
 		$$->nextlist = $4->nextlist;
 	}
 	;
 
 statement
-	: labeled_statement	{$$ = $1;}
-	| compound_statement	{$$ = $1;}
-	| expression_statement	{$$ = $1;}
-	| selection_statement	{$$ = $1;}
-	| iteration_statement	{$$ = $1;}
-	| jump_statement	{$$ = $1;}
+	: labeled_statement {
+		DBG("statement -> labeled_statement");
+		$$ = $1;
+	}
+	| compound_statement {
+		DBG("statement -> compound_statement");
+		$$ = $1;
+	}
+	| expression_statement {
+		DBG("statement -> expression_statement");
+		$$ = $1;
+	}
+	| selection_statement {
+		DBG("statement -> selection_statement");
+		$$ = $1;
+	}
+	| iteration_statement {
+		DBG("statement -> iteration_statement");
+		$$ = $1;
+	}
+	| jump_statement {
+		DBG("statement -> jump_statement");
+		$$ = $1;
+	}
 	;
 
 labeled_statement
-    : IDENTIFIER ':' NEXT_QUAD statement {
-        $$ = getNode("labeled_statement", mergeAttrs(getNode($1), $4));
-
-        gotolabel[$1] = $3;
+	: IDENTIFIER ':'  NEXT_QUAD statement {
+		DBG("labeled_statement -> IDENTIFIER ':' statement");
+		$$ = getNode("labeled_statement", mergeAttrs(getNode($1), $4));
+		//3AC
+		gotolabel[$1] = $3;
 
         $$->nextlist = $4->nextlist;
         $$->caselist = $4->caselist;
         $$->continuelist = $4->continuelist;
         $$->breaklist = $4->breaklist;
-    }
-    | CASE_CODE NEXT_QUAD statement {
-        $$ = getNode("case", mergeAttrs($1, $3));
+	}
+	| CASE_CODE NEXT_QUAD statement {
+		DBG("labeled_statement -> CASE constant_expression ':' statement");
+		$$ = getNode("case", mergeAttrs($1, $3));
 
-        backpatch($1->truelist, $2);
+		//3AC
+		backpatch($1->truelist, $2);
 		extendList($3->nextlist, $1->falselist);
         $$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
         $$->caselist = $1->caselist;
         $$->continuelist = $3->continuelist;
-    }
-    | DEFAULT ':' statement {
+	}
+	| DEFAULT ':' statement {
+		DBG("labeled_statement -> DEFAULT ':' statement");
 		std::vector<Data> attr;
         insertAttr(attr, NULL, "default", 0);
         insertAttr(attr, $3, "", 1);
         $$ = getNode("case", &attr);
 
-        $$->breaklist = $3->breaklist;
+		//3AC
+		$$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
-        $$->continuelist = $3->continuelist;
-    }
-    ;
+        $$->continuelist = $3->continuelist;		
+	}
+	;
 
 CASE_CODE
 	: CASE constant_expression ':' {
@@ -1419,36 +2295,83 @@ CASE_CODE
 	}
 	;
 
-
 compound_statement
 	: '{' '}' {
-        $$ = getNode("{ }");
-    }
-	| '{' statement_list '}' {
-        $$ = $2;
-    }
-	| '{' declaration_list '}' {
-        $$ = $2;
-    }
-	| '{' declaration_list NEXT_QUAD statement_list '}' {
-        $$ = getNode("compound_statement", mergeAttrs($2, $4));
+		DBG("compound_statement -> '{' '}'");
+		$$ = getNode("{ }");
+	}
+	| '{' CHANGE_TABLE statement_list '}' {
+		DBG("compound_statement -> '{' CHANGE_TABLE statement_list '}'");
+		$$ = $3;
+		if(func_flag >= 2){
+			int bc = block_stack.top();
+			block_stack.pop();
+			string str = "Block" + to_string(bc);
+			string name = funcName + str + ".csv";
+			printSymbolTable(curr_table, name);
+			updSymbolTable(str);
+			func_flag--;
+		}
+	}
+	| '{' CHANGE_TABLE declaration_list '}' {
+		DBG("compound_statement -> '{' CHANGE_TABLE declaration_list '}'");
+		$$ = $3;
+		if(func_flag >= 2){
+			int bc = block_stack.top();
+			block_stack.pop();
+			string str = "Block" + to_string(bc);
+			string name = funcName + str + ".csv";
+			printSymbolTable(curr_table, name);
+			updSymbolTable(str);
+			func_flag--;
+		}
+	}
+	| '{' CHANGE_TABLE declaration_list NEXT_QUAD statement_list '}' {
+		DBG("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
+		$$ = getNode("compound_statement", mergeAttrs($3, $5));
+		if(func_flag >= 2){
+			int bc = block_stack.top();
+			block_stack.pop();
+			string str = "Block" + to_string(bc);
+			string name = funcName + str + ".csv";
+			printSymbolTable(curr_table, name);
+			updSymbolTable(str);
+			func_flag--;
+		}
 
-		//TODO : Testing 
-		backpatch($2->nextlist, $3);
-        $$->nextlist = $4->nextlist;
-        $$->caselist = $4->caselist;
-        $$->continuelist = $4->continuelist;
-        $$->breaklist = $4->breaklist;
+		//3AC
+		backpatch($3->nextlist, $4);
+        $$->nextlist = $5->nextlist;
+        $$->caselist = $5->caselist;
+        $$->continuelist = $5->continuelist;
+        $$->breaklist = $5->breaklist;
+	}
+	;
+
+CHANGE_TABLE
+	: %empty {
+		DBG("CHANGE_TABLE -> %empty");
+		if(func_flag){
+			string str = "Block" + to_string(block_count);
+			block_stack.push(block_count);
+			block_count++;
+			func_flag++;
+			makeSymbolTable(str, "");
+		}
+		else func_flag++;
+		$$ = strdup("");
 	}
 	;
 
 declaration_list
 	: declaration {
-        $$ = $1;
-    }
+		DBG("declaration_list -> declaration");
+		$$ = $1;
+	}
 	| declaration_list NEXT_QUAD declaration {
-        $$ = getNode("declaration_list", mergeAttrs($1, $3));
-
+		DBG("declaration_list -> declaration_list declaration");
+		$$ = getNode("declaration_list", mergeAttrs($1, $3));
+		//3AC
 		backpatch($1->nextlist, $2);
         $$->nextlist = $3->nextlist;
 	}
@@ -1456,11 +2379,14 @@ declaration_list
 
 statement_list
 	: statement {
+		DBG("statement_list -> statement");
 		$$ = $1;
 	}
 	| statement_list NEXT_QUAD statement {
+		DBG("statement_list -> statement_list statement");
 		$$ = getNode("statement_list", mergeAttrs($1, $3));
 
+		//3AC
 		backpatch($1->nextlist, $2);
 		$$->nextlist = $3->nextlist;
 		extendList($1->caselist, $3->caselist);
@@ -1473,8 +2399,14 @@ statement_list
 	;
 
 expression_statement
-	: ';'	{$$ = getNode(";");}
-	| expression ';'	{$$ = $1;}
+	: ';' {
+		DBG("expression_statement -> ';'");
+		$$ = getNode(";");
+	}
+	| expression ';' {
+		DBG("expression_statement -> expression ';'");
+		$$ = $1;
+	}
 	;
 
 IF_CODE
@@ -1502,21 +2434,21 @@ N
     }
     ;
 
-
 selection_statement
 	: IF_CODE NEXT_QUAD statement {
+		DBG("selection_statement -> IF '(' expression ')' statement");
 		$$ = getNode("if", mergeAttrs($1, $3));
-
+		//3AC
 		backpatch($1->truelist, $2);
 		extendList($3->nextlist, $1->falselist);
-
 		$$->nextlist = $3->nextlist;
 		$$->continuelist = $3->continuelist;
 		$$->breaklist = $3->breaklist;
 	}
 	| IF_CODE NEXT_QUAD statement N ELSE NEXT_QUAD statement {
+		DBG("selection_statement -> IF '(' expression ')' statement ELSE statement");
 		$$ = getNode("if-else", mergeAttrs($1, $3, $7));
-
+		//3AC
 		backpatch($1->truelist, $2);
 		backpatch($1->falselist, $6);
 
@@ -1530,15 +2462,27 @@ selection_statement
 		$$->continuelist = $3->continuelist;
 	}
 	| SWITCH '(' expression ')' statement {
+		DBG("selection_statement -> SWITCH '(' expression ')' statement");
 		$$ = getNode("switch", mergeAttrs($3, $5));
-
+		//3AC
 		casepatch($5->caselist, $3->place);
 
 		extendList($5->nextlist, $5->breaklist);
 		$$->nextlist = $5->nextlist;
 		$$->continuelist = $5->continuelist;
 	}
+	// | IF '(' ')' statement {
+	// 	DBG("selection_statement -> IF '(' ')' statement");
+	// 	yyerror("missing condition in 'if' statement.", "syntax error");
+	// 	$$ = getNode("error-node", nullptr);
+	// }
+	// | SWITCH '(' ')' statement {
+	// 	DBG("selection_statement -> SWITCH '(' ')' statement");
+	// 	yyerror("missing condition in 'switch' statement.", "syntax error");
+	// 	$$ = getNode("error-node", nullptr);
+	// }
 	;
+
 
 EXPR_CODE
     : {if_found = 1;} expression {
@@ -1572,9 +2516,11 @@ EXPR_STMT_CODE
 	}
     ;
 
+
 iteration_statement
     : WHILE '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement {
-        $$ = getNode("while-loop", mergeAttrs($4, $7));
+		DBG("iteration_statement -> WHILE '(' expression ')' statement");
+		$$ = getNode("while-loop", mergeAttrs($4, $7));
 
         backpatch($4->truelist, $6);
 		extendList($7->nextlist, $7->continuelist);
@@ -1583,8 +2529,9 @@ iteration_statement
         $$->nextlist = $4->falselist;
 		extendList($$->nextlist, $7->breaklist);
         emit("GOTO", "", "", "", $3);
-    }
+	}
 	| UNTIL '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement { /*** Added UNTIL grammar ***/
+		DBG("iteration_statement -> UNTIL '(' expression ')' statement");
 		$$ = getNode("until-loop", mergeAttrs($4, $7));
 
 		backpatch($4->falselist, $6);
@@ -1596,6 +2543,7 @@ iteration_statement
 		emit("GOTO", "", "", "", $3);
 	}
 	| DO NEXT_QUAD statement WHILE '(' NEXT_QUAD EXPR_CODE ')' ';' {
+		DBG("iteration_statement -> DO statement WHILE '(' expression ')' ';'");
 		$$ = getNode("do-while-loop", mergeAttrs($3, $7));
 
 		backpatch($7->truelist, $2);
@@ -1606,6 +2554,7 @@ iteration_statement
 		extendList($$->nextlist, $3->breaklist);
 	}
 	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE ')' NEXT_QUAD statement {
+		DBG("iteration_statement -> FOR '(' expression_statement expression_statement ')' statement");
 		$$ = getNode("for-loop(w/o update stmt)", mergeAttrs($3, $5, $8));
 
 		backpatch($3->nextlist, $4);
@@ -1620,6 +2569,7 @@ iteration_statement
 		emit("GOTO", "", "", "", $4);
 	}
 	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement {
+		DBG("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
 		$$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
 
 		backpatch($3->nextlist, $4);
@@ -1636,50 +2586,72 @@ iteration_statement
 
 		emit("GOTO", "", "", "", $6);
 	}
+	| WHILE '[' expression ']' statement {
+		DBG("iteration_statement -> WHILE '[' expression ']' statement");
+		yyerror("incorrect parentheses in while-loop.", "syntax error");
+		$$ = getNode("Invalid While-loop", nullptr);
+	}
+	| UNTIL '[' expression ']' statement {
+		DBG("iteration_statement -> UNTIL '[' expression ']' statement");
+		yyerror("incorrect parentheses in until-loop.", "syntax error");
+		$$ = getNode("Invalid Until-loop", nullptr);
+	}
+	| FOR '(' expression ',' expression ',' expression ')' statement {
+		DBG("iteration_statement -> FOR '(' expression ',' expression ',' expression ')' statement");
+		yyerror("comma used instead of semicolons.", "syntax error");
+		$$ = getNode("Invalid for-loop", nullptr);
+	}
 	;
 
 jump_statement
-	: GOTO IDENTIFIER ';'	{
+	: GOTO IDENTIFIER ';' {
+		DBG("jump_statement -> GOTO IDENTIFIER ';'");
 		$$ = getNode(std::string($1) + " : " + std::string($2));
-
+		//3AC
 		int a = getCurrentSize();
         emit("GOTO", "", "", "", 0);
         gotolablelist[$2].push_back(a);
 	}
-	| CONTINUE ';'	{
+	| CONTINUE ';' {
+		DBG("jump_statement -> CONTINUE ';'");
 		$$ = getNode($1);
-
+		//3AC
 		int a = getCurrentSize();
         emit("GOTO", "", "", "", 0);
         $$->continuelist.push_back(a);
 	}
-	| BREAK ';'		{
+	| BREAK ';' {
+		DBG("jump_statement -> BREAK ';'");
 		$$ = getNode($1);
-
+		//3AC
 		int a = getCurrentSize();
         emit("GOTO", "", "", "", 0);
         $$->breaklist.push_back(a);
 	}
-	| RETURN ';'	{
+	| RETURN ';' {
+		DBG("jump_statement -> RETURN ';'");
 		$$ = getNode($1);
-
+		//3AC
 		emit("RETURN", "", "", "", -1);
 	}
-	| RETURN expression ';'	{
+	| RETURN expression ';' {
+		DBG("jump_statement -> RETURN expression ';'");
 		$$ = getNode("jump_stmt", mergeAttrs(getNode($1), $2));
-
+		//3AC
 		backpatch($2->nextlist,getCurrentSize());
         emit("RETURN", $2->place, "", "", -1);
 	}
 	;
 
 translation_unit
-	: external_declaration	{
+	: external_declaration {
+		DBG("translation_unit -> external_declaration");
 		$$ = $1;
 	}
-	| translation_unit NEXT_QUAD external_declaration	{
+	| translation_unit NEXT_QUAD external_declaration {
+		DBG("translation_unit -> translation_unit external_declaration");
 		$$ = getNode("program", mergeAttrs($1, $3));
-
+		//3AC
 		backpatch($1->nextlist, $2);
 		$$->nextlist = $3->nextlist;
 		extendList($1->caselist, $3->caselist);
@@ -1690,72 +2662,122 @@ translation_unit
 		$$->breaklist = $1->breaklist;
 	}
 	| error ';' {
-		$$ = new Node; yyerrok;
+		DBG("translation_unit -> error ';'");
+		$$ = getNode("error-node", nullptr); yyerrok;
 	}
-	| error ','{
-		$$ = new Node; yyerrok;
+	| error ',' {
+		DBG("translation_unit -> error ','");
+		$$ = getNode("error-node", nullptr); yyerrok;
 	}
-	| error{
-		$$ = new Node; yyerrok;
+	| error {
+		DBG("translation_unit -> error");
+		$$ = getNode("error-node", nullptr); yyerrok;
 	}
 	;
 
 external_declaration
-	: function_definition	{ $$ = $1;}
-	| declaration	{ $$ = $1;}
+	: function_definition {
+		DBG("external_declaration -> function_definition");
+		$$ = $1;
+	}
+	| declaration {
+		DBG("external_declaration -> declaration");
+		$$ = $1;
+	}
 	;
 
 function_definition
-    : declaration_specifiers declarator declaration_list compound_statement {
-		$$ = getNode("function", mergeAttrs($1, $2, $3, $4));
+	: declaration_specifiers declarator F declaration_list compound_statement {
+		DBG("function_definition -> declaration_specifiers declarator F declaration_list compound_statement");
+		$$ = getNode("function", mergeAttrs($1, $2, $4, $5));
+		// Semantics
+		// Extract and propagate function name and return type
+        $$->temp_name = $2->temp_name;  // Function name from declarator
+        $$->type = funcType;            // Return type from declaration_specifiers
+        $$->size = $2->size;            // Size if applicable
 
-        std::string fName = $2->temp_name;  // Moved from F
+		type = "";
+		string fName = string($3);
+		printSymbolTable(curr_table, fName + ".csv");
+		updSymbolTable(fName);
 
+		//3AC
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
 		}
-
         emit("FUNC_" + fName + " end", "", "", "", -1);
         remainingBackpatch();
-    }
+	}
+	| declaration_specifiers declarator F compound_statement {
+		DBG("function_definition -> declaration_specifiers declarator F compound_statement");
+		$$ = getNode("function (w/o decl_list)", mergeAttrs($1, $2, $4));
+		// Semantics 
+		// Extract and propagate function name and return type
+        $$->temp_name = $2->temp_name;  // Function name from declarator
+        $$->type = funcType;            // Return type from declaration_specifiers
+        $$->size = $2->size;            // Size if applicable
 
-    | declaration_specifiers declarator compound_statement {
-		$$ = getNode("function (w/o decl_list)", mergeAttrs($1, $2, $3));
-
-        std::string fName = $2->temp_name;
-
+		type = "";
+		string fName = string($3);
+		printSymbolTable(curr_table, fName + ".csv");
+		updSymbolTable(fName);
+		//3AC
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
 		}
-
         emit("FUNC_" + fName + " end", "", "", "", -1);
         remainingBackpatch();
-    }
-
-    | declarator declaration_list compound_statement {
-		$$ = getNode("function (w/o decl_specifiers)", mergeAttrs($1, $2, $3));
-        
-		std::string fName = $1->temp_name; 
-
+	}
+	| declarator F declaration_list compound_statement {
+		DBG("function_definition -> declarator F declaration_list compound_statement");
+		$$ = getNode("function (w/o decl_specifiers)", mergeAttrs($1, $3, $4));
+		// Semantics
+		type = "";
+		string fName = string($2);
+		printSymbolTable(curr_table, fName + ".csv");
+		updSymbolTable(fName);
+		//3AC
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
 		}
-
         emit("FUNC_" + fName + " end", "", "", "", -1);
         remainingBackpatch();
-    }
-
-    | declarator compound_statement {
-		$$ = getNode("function (w/o specifiers and decl_list)", mergeAttrs($1, $2));
-
-        for (auto &i : gotolablelist) {
+	}
+	| declarator F compound_statement {
+		DBG("function_definition -> declarator F compound_statement");
+		$$ = getNode("function (w/o specifiers and decl_list)", mergeAttrs($1, $3));
+		// Semantics
+		type = "";
+		string fName = string($2);
+		printSymbolTable(curr_table, fName + ".csv");
+		updSymbolTable(fName);
+		//3AC
+		for (auto &i : gotolablelist) {
 			backpatch(i.second, gotolabel[i.first]);
         }
-
-        std::string fName = $1->temp_name;
         emit("FUNC_" + fName + " end", "", "", "", -1);
         remainingBackpatch();
-    };
+	}
+	;
+
+F 
+	: %empty {
+		DBG("F -> %empty");
+		std::string qualifiedFuncName = funcName;
+		if (!className.empty() && funcName.find(className + "_") != 0) {
+			qualifiedFuncName = className + "_" + funcName;
+		}
+		if (gst.find(qualifiedFuncName) != gst.end()) {
+			yyerror(("Redefinition of function " + qualifiedFuncName).c_str(), "scope error");
+		} else {
+			makeSymbolTable(qualifiedFuncName, funcType);
+			$$ = strdup(qualifiedFuncName.c_str());
+			block_count = 1;
+			type = "";
+		}
+	}
+	;
+
 %%
 
 void performParsing(const std::string &inputFile)
@@ -1766,23 +2788,21 @@ void performParsing(const std::string &inputFile)
     endAST();
 }
 
-int yyerror(const char* s) 
-{
-	yyclearin;
-	has_error = true;
-    std::ifstream file(inputFilename);  
+int yyerror(const char* s, const std::string &errorType) {
+    yyclearin;  // clear the input token stream (if applicable)
+    has_error = true;
+    std::ifstream file(inputFilename);
     std::string curr_line;
     int count = 1;
-	std::string heading("syntax error");
-	std::string error_line(s);
-	int pos = error_line.find_first_of(heading);
-	if (pos != std::string::npos)
-		error_line.erase(pos, heading.length() + 2);
-
-    while (std::getline(file, curr_line)) 
-	{
+    std::string error_line(s);
+    // Read through the file to find the line where the error occurred.
+    while (std::getline(file, curr_line)) {
         if (count == line) {
-            std::cerr << "\033[1;31merror: \033[0m" << heading << "::" << line << ":" << column - yyleng << ": " << error_line << "\n\n";
+            // Print error in a C/C++ style error message format.
+            std::cerr << "\033[1;31merror: \033[0m" 
+                      << errorType << "::" 
+                      << line << ":" << (column - yyleng) 
+                      << ": " << error_line << "\n\n";
             std::cerr << line << " | " << curr_line << "\n";
             std::cerr << std::string(column - yyleng + 4, ' ') << "^\n";
             break;
@@ -1791,4 +2811,24 @@ int yyerror(const char* s)
     }
     file.close();
     return -1;
+}
+
+// Add the warning function for issueing warnings
+int warning(const char* s) { 
+	std::ifstream file(inputFilename);  
+	std::string curr_line;
+	int count = 1;
+	std::string heading("warning");
+	
+	while (std::getline(file, curr_line)) {
+		if (count == line) {
+			std::cerr << "\033[1;33mwarning: \033[0m" << heading << "::" << line << ":" << column - yyleng << ": " << s << "\n\n";
+			std::cerr << line << " | " << curr_line << "\n";
+			std::cerr << std::string(column - yyleng + 4, ' ') << "^\n";
+			break;
+		}
+		count++;
+	}
+	file.close();
+	return 0;
 }

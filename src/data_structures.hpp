@@ -28,7 +28,7 @@ void addToSymbolTable(std::string Token, std::string Data_type);
 void addStandardProceduresToSymbolTable();
 void updateLastSymbolEntry();
 void updateFuncSymbolEntry(int args);
-void printSymbolTable(std::ofstream &out);
+void printSymbolTable_meet(std::ofstream &out);
 
 void addToConstantTable(std::string constnt, std::string const_type);
 void printConstantTable(std::ofstream &out);
@@ -37,7 +37,4 @@ std::string searchTypedefTable(std::string Token);
 void printType(std::ofstream &out);
 
 void printTables(const std::string &inputFile);
-
-SymbolTableEntry* lookup(std::string Token);
 std::string getSizeOfType(const std::string& typeStr);
-void debugEntry(SymbolTableEntry* entry);
