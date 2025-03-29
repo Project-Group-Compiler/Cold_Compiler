@@ -2143,8 +2143,11 @@ direct_declarator
 		// Semantics
 		string baseName = $1->temp_name;//just function name -> don't change to funcName will cause issues as it is global
         	// If inside a class definition, use qualified name
+		std::string mangledName;
         if (!className.empty()) {
-            	baseName = className + "_" + baseName;
+            	mangledName=mangleFunctionName(baseName, funcArgs);
+				mangledName="FUNC_" + std::to_string(className.size()) + className + "_" + mangledName.substr(5);
+				std::cout<<baseName<<" "<<mangledName<<std::endl;
         		// Add implicit 'this' pointer as first parameter
         		string thisType = "CLASS_" + className + "*";
         		vector<string> newFuncArgs;
@@ -2163,7 +2166,7 @@ direct_declarator
         		// Insert 'this' parameter into symbol table
         		insertSymbol(*curr_table, "this", thisType, 4, true, NULL);
         }
-		std::string mangledName = mangleFunctionName(baseName, funcArgs);//to change for clases
+		else mangledName = mangleFunctionName(baseName, funcArgs);
 		std::cout<<mangledName<<std::endl;
 		if($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
@@ -3005,13 +3008,13 @@ F
 		if (!className.empty()) {//will modify class methods seperately later
 		    // Check if funcName already has className prefix to avoid duplication
 		    if (funcName.find(className + "_") == 0) {
-		        qualifiedFuncName = funcName;  // Already prefixed
-		    } else {
-		        qualifiedFuncName = className + "_" + funcName;
-		    }
+				funcName=funcName.substr(className.size()+1);
+		    } 
+		    qualifiedFuncName=mangleFunctionName(funcName, std::vector<string>(funcArgs.begin() + 1, funcArgs.end()));//need to skip 'this'
+			qualifiedFuncName="FUNC_" + std::to_string(className.size()) + className + "_" + qualifiedFuncName.substr(5);
+		    
 		}
-
-		qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
+		else qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
 		funcArgs.clear();
 		std::cout<<qualifiedFuncName<<std::endl;
 		if (gst.find(qualifiedFuncName) != gst.end()){
