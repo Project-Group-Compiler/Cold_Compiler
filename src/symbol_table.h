@@ -70,6 +70,7 @@ int insertClassAttr(string attr, string type, ull size, bool init, string access
 int printClassTable(string class_name);
 string ClassAttrType(string class_name, string id);
 string ClassAttrAccess(string className, string attr) ;
+int inheritFromClass(string childClass, string parentClass);
 int findClass(string class_name);
 int lookupClass(string class_name, string id);
 

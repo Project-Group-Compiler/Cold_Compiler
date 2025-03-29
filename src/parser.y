@@ -1434,8 +1434,8 @@ type_specifier
 		$$ = createASTNode($1); 
 		currentDataType="void";
 		
-		// Semantics
-		if(type == "") type = string($1);
+		// Semantics ->can remove
+		if(type == "") type = string($1); 
 		else type += " " + string($1);
 	}	
 	| CHAR			{
@@ -1443,7 +1443,7 @@ type_specifier
 		$$ = createASTNode($1); 
 		if(flag2){currentDataType+=" char";flag2=0;}else{currentDataType="char";}
 		
-		// Semantics
+		// Semantics ->can remove
 		if(type == "") type = string($1);
 		else type += " " + string($1);
 	}	
@@ -1463,7 +1463,7 @@ type_specifier
 		
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else type += " " + string($1);  //added this for unsigned int type
 	}
 	| LONG			{
         DEBUG_PARSER("type_specifier -> LONG");
@@ -1550,6 +1550,7 @@ inheritance_specifier
         /* Wrap IDENTIFIER into an AST node */
         insertAttr(attr, createASTNode($1), "", 1);
         $$ = createASTNode("inheritance_specifier", &attr);
+		$$->temp_name=string($1); //to propagate the class name of parent
     }
 	;
 
@@ -1564,6 +1565,7 @@ inheritance_specifier_list
         insertAttr(attr, $1, "", 1);
         insertAttr(attr, $3, "", 1);
         $$ = createASTNode("inheritance_specifier_list", &attr);
+		yyerror("Multiple inheritance is not supported","syntax error");
     }
 	;
 
@@ -1625,7 +1627,16 @@ class_definition_head
 		$$->temp_name = std::string($2); 
         // Semantics: Save the class name for later symbol table insertion.
         // Process inheritance
-        // TODO: Extract parent classes from $4 and add inheritance relationships
+		Node* inheritanceNode = $5;
+        // Extract parent class name(s)
+		if (inheritanceNode->node_name == "inheritance_specifier") {
+            // Single parent
+            string parentClassName = "CLASS_" + inheritanceNode->temp_name;
+            if (!inheritFromClass("CLASS_" + std::string($2), parentClassName)) {
+                yyerror(("Cannot inherit from undefined class " + 
+                        parentClassName.substr(6)).c_str(), "inheritance error");
+            }
+        }
     }
 	;
 
@@ -1758,13 +1769,14 @@ struct_or_union_specifier
 		else{
 			yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
 		}
+		type = ""; //clearing after definition of struct
 	}
 	| struct_or_union S '{' struct_declaration_list '}'		{
         DEBUG_PARSER("struct_or_union_specifier -> struct_or_union S '{' struct_declaration_list '}'");
 		std::vector<Data> v;
 		insertAttr(v, $4, "", 1);
 		$$ = createASTNode($1, &v);
-		
+
 		// Semantics
 		Anon_StructCounter++;
 		if(printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1){
@@ -1774,6 +1786,7 @@ struct_or_union_specifier
 		else{
 			yyerror("Struct is already defined", "scope error");
 		}
+		type = ""; //clearing after definition of struct
 	}
 	| struct_or_union IDENTIFIER 	{
         DEBUG_PARSER("struct_or_union_specifier -> struct_or_union IDENTIFIER");
@@ -1784,13 +1797,15 @@ struct_or_union_specifier
 		currentDataType+=check;
 		$$ = createASTNode($1, &v);
 		
+		// Clear type before processing struct members
+        type = "";
 		// Semantics
 		if(findStruct("STRUCT_" + string($2)) == 1){
 			if(type == "") type = "STRUCT_" + string($2);
 			else type += " STRUCT_" + string($2);
 		}
 		else if(structName == string($2)){
-			// We are inside a struct
+			// We are inside a struct to handle declaration of structs in structs
 			type = "#INSIDE";
 		}
 		else{
@@ -1848,7 +1863,7 @@ struct_declaration
 		$$ = createASTNode("struct_declaration", &v);
 		
 		// Semantics
-		type = "";
+		type = "";// Reset the type after each struct member declaration
 	}
 	;
 
@@ -2894,6 +2909,10 @@ function_definition
 
 		type = "";
 		string fName = string($3);
+		std::cout<<funcName<<" "<<funcType<<" "<<fn_decl<<" "<<func_flag<<std::endl;
+		for(auto i:funcArgs)std::cout<<i<<" ";
+		for(auto i:currArgs)std::cout<<i<<" ";
+		std::cout<<std::endl;
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
 	}

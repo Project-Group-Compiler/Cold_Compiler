@@ -20,13 +20,26 @@ class Person
     
         
 };
-
+class Person2 { 
+   // data members of person 
+    private{
+        long aadhar_number;
+    };  
+    private{
+        char* name;
+    }; 
+    public{ 
+        char* returnName()  { return (*this).name;} 
+    };
+}; 
 int main()
 {
     int c;
 	class Person p1;
+    class Person2 p2;
     //p1.age=5;
-	p1.returnAge(c);//p1.returnAge(c,this) ->this to added in 3AC
+	//p1.returnAge(c);//p1.returnAge(c,this) ->this to added in 3AC
     p1.solve();
+    p2.returnName();
 	return 0;
 }

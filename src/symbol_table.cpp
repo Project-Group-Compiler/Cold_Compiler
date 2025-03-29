@@ -499,7 +499,46 @@ ull getClassSize(string class_name)
     }
     return 0;
 }
-
+int inheritFromClass(string childClassName, string parentClassName) {
+    // Find the parent class symbol table
+    class_sym_table* temp = curr_class_table;
+    sym_table* parentClassTable = nullptr;
+    
+    // Search for parent class in the class hierarchy
+    while (temp) {
+        if ((*temp).find(parentClassName) != (*temp).end()) {
+            parentClassTable = (*temp)[parentClassName].second;
+            break;
+        }
+        
+        if (class_parent_table.find(temp) == class_parent_table.end()) {
+            break;
+        }
+        temp = class_parent_table[temp];
+    }
+    
+    // If parent class not found, report error
+    if (!parentClassTable) {
+        return 0; // Parent class not found
+    }
+    
+    // Copy public members from parent to child class
+    for (auto it : (*parentClassTable)) {
+        string memberName = it.first;
+        sym_entry* member = it.second;
+        
+        // Only inherit public members
+        if (member->access == "public" || member->access == "protected") {
+            // Copy the member to the current class structure
+            // Avoid duplicating 'this' pointers happens by itself as this is in function not in class symbol table
+            if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end()) { //if child function has same name as parent this check is needed
+                insertClassAttr(memberName, member->type, member->size, member->init, member->access);
+            }
+        }
+    }
+    
+    return 1; // Success
+}
 void createParamList()
 {
     if (!Goffset.empty())
