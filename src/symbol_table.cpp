@@ -246,6 +246,16 @@ void insertKeywords(){
     type = {"char*", "char*"};
 	insert_imp_func("strcpy", type, "char*");
 	insert_imp_func("strcat", type, "char*");
+
+    // variable arguments functions
+    type = {"va_list", "int"};
+    insert_imp_func("va_start", type, "void");
+
+    type = {"va_list", "char*"};
+    insert_imp_func("va_arg", type, "int");
+    
+    type = {"va_list"};
+    insert_imp_func("va_end", type, "void");
 }
 
 void insert_imp_func(string func_name, vector<string> type, string ret_type){
@@ -604,5 +614,6 @@ ull getSize(string id){
     if(id == "unsigned long int") return sizeof(unsigned long int);
     if(id == "unsigned long long") return sizeof(unsigned long long);
     if(id == "unsigned long long int") return sizeof(unsigned long long int);
+    if(id == "va_list") return sizeof(va_list);
     return 8; // for any pointer type
 }

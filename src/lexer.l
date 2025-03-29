@@ -78,7 +78,7 @@ std::string current_token_type;
 "private"        { count(); yylval.str = strdup(yytext); current_token_type="PRIVATE"; return(PRIVATE); }
 "protected"      { count(); yylval.str = strdup(yytext); current_token_type="PROTECTED"; return(PROTECTED); }
 "FILE"          { count(); yylval.str = strdup(yytext); current_token_type="FILE_MAN"; return(FILE_MAN); }
-
+"va_list"       { count(); yylval.str = strdup(yytext); current_token_type="VA_LIST"; return(VA_LIST); }
 
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(yytext); current_token_type="IDENTIFIER"; return(check_type()); }

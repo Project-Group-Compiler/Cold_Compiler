@@ -74,7 +74,7 @@ std::map<std::string, int> gotolabel;
 %token<str> XOR_ASSIGN OR_ASSIGN TYPE_NAME
 
 %token<str> TYPEDEF EXTERN STATIC AUTO REGISTER
-%token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID FILE_MAN
+%token<str> CHAR SHORT INT LONG SIGNED UNSIGNED FLOAT DOUBLE CONST VOLATILE VOID FILE_MAN VA_LIST
 %token<str> STRUCT UNION ENUM ELLIPSIS
 %token<str> CLASS PUBLIC PRIVATE PROTECTED
 
@@ -1394,6 +1394,13 @@ type_specifier
 			DBG("type_specifier -> FILE_MAN");
 			$$ = getNode($1);
 			currentDataType = "file";
+			if(type.empty()) type = $1;
+			else type += " " + std::string($1);
+		}
+		| VA_LIST {
+			DBG("type_specifier -> VA_LIST");
+			$$ = getNode($1);
+			currentDataType = "va_list";
 			if(type.empty()) type = $1;
 			else type += " " + std::string($1);
 		}
