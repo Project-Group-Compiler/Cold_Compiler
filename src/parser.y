@@ -336,10 +336,14 @@ postfix_expression
     	}
 		//3AC
 		std::string q = getTempVariable($$->type);
+		// TODO : change type to ptr of class/struct
+
+		// TODO : replace std::string($3) with $3->offset
+		emit("unary&", $1->place, "", q, -1);
+		emit("ptr+", q, std::string($3), q, -1);
+		q = "*" + q;
         $$->place = q;
 		$$->nextlist.clear();
-        emit("member_access", $1->place, std::string($3), q, -1);
-
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
         DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
@@ -365,10 +369,60 @@ postfix_expression
 			$$->temp_name = $1->temp_name + "->" + temp;
 			//3AC
 			std::string q = getTempVariable($$->type);
-			emit("PTR_OP", $1->place, std::string($3), q, -1);
+			// TODO : replace std::string($3) with $3->offset
+			emit("ptr+", $1->place, std::string($3), q, -1);
+			q = "*" + q;
 			$$->place = q;
 		}
 	}
+	| postfix_expression '.' IDENTIFIER '(' ')' {
+		// handle ast, symtable and semantic checks
+		// $$ = $1;
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		std::string p = getTempVariable("int"); // TODO : type = CLASS *
+		emit("unary&", $1->place, "", p, -1);
+		emit("param", p, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, "1", q, -1);
+		$$->place = q;
+    }
+	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
+        // handle ast, symtable and semantic checks
+		// $$ = getNode("postfix_expression", mergeAttrs($1, $3));
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		std::string p = getTempVariable("int"); // TODO : type = CLASS *
+		emit("unary&", $1->place, "", p, -1);
+		emit("param", p, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, std::to_string($5->argCount + 1), q, -1);
+		$$->place = q;
+    }
+	| postfix_expression PTR_OP IDENTIFIER '(' ')' {
+        // handle ast, symtable and semantic checks
+		// $$ = $1;
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		emit("param", $1->place, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, "1", q, -1);
+		$$->place = q;
+    }
+	| postfix_expression PTR_OP IDENTIFIER '(' argument_expression_list ')' {
+        // handle ast and symtable
+		// $$ = getNode("postfix_expression", mergeAttrs($1, $3));
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		emit("param", $1->place, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, std::to_string($5->argCount + 1), q, -1);
+		$$->place = q;
+    }	
 	| postfix_expression INC_OP {
         DBG("postfix_expression -> postfix_expression INC_OP");
 		$$ = getNode($2, mergeAttrs($1, nullptr));
