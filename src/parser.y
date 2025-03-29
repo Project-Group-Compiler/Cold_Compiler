@@ -219,10 +219,10 @@ postfix_expression
 						yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
-					string msg = checkType(funcArgs[i],currArgs[i-1]);
+					string msg = checkType(funcArgs[i],currArgs[i]);
 					
 					if(msg =="warning"){
-						warning(("Incompatible conversion of " +  currArgs[i-1] + " to parameter of type " + funcArgs[i]).c_str());
+						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
 					}
 					else if(msg.empty()){
 						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
@@ -1472,7 +1472,7 @@ type_specifier
 		
 		// Semantics
 		if(type == "") type = string($1);
-		else type += " " + string($1);
+		else type += " " + string($1);//for long long, long double etc..
 	}
 	| FLOAT			{
         DEBUG_PARSER("type_specifier -> FLOAT");

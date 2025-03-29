@@ -24,14 +24,3 @@ void solve(){
     p.age = 25;
 
 }
-// int func1(int x,int y ,char z){
-//     return 42;
-// }
-
-// void solve(){
-//     int x=1;
-//     float b=x;
-//     int y;
-//     char z;
-//     func1(x,y,z);
-// }
