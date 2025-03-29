@@ -197,7 +197,7 @@ postfix_expression
 		}
 		currArgs.clear(); 
 	}
-	| postfix_expression '(' argument_expression_list ')' {
+	| postfix_expression '(' argument_expression_list ')' {//for function calls
         DEBUG_PARSER("postfix_expression -> postfix_expression '(' argument_expression_list ')'");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
@@ -206,7 +206,7 @@ postfix_expression
 		
 		// Semantics
 		$$->isInit = $3->isInit;
-		string temp = postfixExpression($1->type, 3);
+		string temp = postfixExpression($1->type, 2);
 		
 		if(!temp.empty()){	
 			$$->type = temp;
@@ -1657,6 +1657,7 @@ class_definition
 			yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
 		}
 		className = "";
+		type = ""; //clearing after definition of class
     }
 	| class IDENTIFIER {
         DEBUG_PARSER("class_definition -> class_definition_head");
@@ -2115,11 +2116,10 @@ direct_declarator
 		noArgs=0;
 
 		// Semantics
-		string argMapKey = $1->temp_name;
-        
+		string baseName = $1->temp_name;//just function name -> don't change to funcName will cause issues as it is global
         	// If inside a class definition, use qualified name
         if (!className.empty()) {
-            	argMapKey = className + "_" + argMapKey;
+            	baseName = className + "_" + baseName;
         		// Add implicit 'this' pointer as first parameter
         		string thisType = "CLASS_" + className + "*";
         		vector<string> newFuncArgs;
@@ -2138,41 +2138,51 @@ direct_declarator
         		// Insert 'this' parameter into symbol table
         		insertSymbol(*curr_table, "this", thisType, 4, true, NULL);
         }
+		std::string mangledName = mangleFunctionName(baseName, funcArgs);//to change for clases
+		std::cout<<mangledName<<std::endl;
 		if($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
 			$$->expType = 3;
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
 			
-			vector<string> temp = getFuncArgs(argMapKey);
+			vector<string> temp = getFuncArgs(mangledName);
+			for(auto i:temp){
+				std::cout<<i<<std::endl;
+			}
+			for(auto i:funcArgs){
+				std::cout<<i<<std::endl;
+			}
 			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
-				insertFuncArg(argMapKey, funcArgs);
-				funcArgs.clear();
-				funcName = string(argMapKey);
+				insertFuncArg(mangledName, funcArgs);
+				funcName = string(baseName);
 				funcType = $1->type;
 			}
 			else{
 				// Check if temp is correct
 				if(temp == funcArgs){
-					funcArgs.clear();
-					funcName = string(argMapKey);
+					funcName = string(baseName);
 					funcType = $1->type;
 				}
 				else{
-					yyerror(("Conflicting types for " + argMapKey).c_str(), "type error");
+					// This isn't an error anymore - it's overloading!
+                	// Just create a new entry with different parameter types
+                	insertFuncArg(mangledName, funcArgs);
+                	funcName = string(baseName);
+                	funcType = $1->type;
 				}
 			}
 		}
 		else{
 			if($1->expType == 2){
-				yyerror( (argMapKey + "declared as array of function").c_str(), "type error");
+				yyerror( (baseName + "declared as array of function").c_str(), "type error");
 			}
 			else{
-				yyerror( (argMapKey + "declared as function of function").c_str(), "type error");
+				yyerror( (baseName + "declared as function of function").c_str(), "type error");
 			}
 		}
 	}
-	| direct_declarator '(' A identifier_list ')'{
+	| direct_declarator '(' A identifier_list ')'{ //useless production
         DEBUG_PARSER("direct_declarator -> direct_declarator '(' A identifier_list ')'");
 		std::vector<Data> v, v2;
 		insertAttr(v2, $4, "", 1);
@@ -2244,7 +2254,6 @@ direct_declarator
 			vector<string> temp = getFuncArgs($1->temp_name);
 			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
 				insertFuncArg($$->temp_name, funcArgs);
-				funcArgs.clear();
 				funcName = string($1->temp_name);
 				funcType = $1->type;
 			}
@@ -2968,7 +2977,7 @@ F
 	: %empty {
         DEBUG_PARSER("F -> %empty");
 		std::string qualifiedFuncName = funcName;
-		if (!className.empty()) {
+		if (!className.empty()) {//will modify class methods seperately later
 		    // Check if funcName already has className prefix to avoid duplication
 		    if (funcName.find(className + "_") == 0) {
 		        qualifiedFuncName = funcName;  // Already prefixed
@@ -2976,8 +2985,12 @@ F
 		        qualifiedFuncName = className + "_" + funcName;
 		    }
 		}
+
+		qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
+		funcArgs.clear();
+		std::cout<<qualifiedFuncName<<std::endl;
 		if (gst.find(qualifiedFuncName) != gst.end()){
-			yyerror(("Redefinition of function " + qualifiedFuncName).c_str(), "scope error");
+			yyerror(("Redefinition of function " + funcName).c_str(), "scope error");
 		}
 		else{
 			makeSymbolTable(qualifiedFuncName, funcType);

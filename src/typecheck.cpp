@@ -32,10 +32,6 @@ string postfixExpression(string type_name, int rule_num) {
             if(type_name.substr(0, 5)=="FUNC_")return type_name.substr(5, type_name.length() - 5); //TODO
             return "";
         }
-        case 3:{
-            if(type_name.substr(0, 5)=="FUNC_")return type_name.substr(5, type_name.length() - 5); //TODO
-            return "";
-        }
         case 6:{
             if(checkInt(type_name))return type_name;
             return "";

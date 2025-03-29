@@ -580,6 +580,56 @@ vector<string> getFuncArgs(string id)
     else
         return temp;
 }
+// Add to symbol_table.cpp
+string getTypeCode(const string& type) {
+    // Convert full type names to single-character codes
+    if (type == "int") return "i";
+    if (type == "float") return "f";
+    if (type == "double") return "d";
+    if (type == "char") return "c";
+    if (type == "void") return "v";
+    if (type == "bool") return "b";
+    if (type.find("*") != string::npos) return "p"; // All pointers
+    // Add more types as needed
+    return "u"; // Unknown type
+}
+
+string mangleFunctionName(const string& name, const vector<string>& paramTypes) {
+    string result = "FUNC_" + to_string(name.length()) + name + "_";
+    
+    // If no parameters, use 'v' for void
+    if (paramTypes.empty()) {
+        result += "v";
+        return result;
+    }
+    
+    // Add type codes for each parameter
+    for (const auto& type : paramTypes) {
+        result += getTypeCode(type);
+    }
+    
+    return result;
+}
+
+string demangleFunctionName(const string& mangledName) {
+    // Extract the original function name from a mangled name
+    if (mangledName.substr(0, 5) != "FUNC_") 
+        return mangledName; // Not a mangled name
+        
+    size_t pos = mangledName.find('_', 5);
+    if (pos == string::npos) 
+        return mangledName; // Invalid format
+    
+    string lengthStr = mangledName.substr(5, pos - 5);
+    int length;
+    try {
+        length = stoi(lengthStr);
+    } catch (...) {
+        return mangledName; // Invalid format
+    }
+    
+    return mangledName.substr(pos + 1, length);
+}
 
 void updInit(string id)
 {

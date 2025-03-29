@@ -1,11 +1,30 @@
-int func1(int x,int y ,char z){
-    return 42;
+// Function overloading example
+int func(int x) {
+    char c;
+    return x * x; 
+}
+int func2(int y) {
+    return y + y; 
+}
+double func(double x) {
+    return x / 2; 
+}
+int func(int x,int y) {
+    return x + y;
+}
+int func(){
+    return 0; 
+}
+void solve() {
+    int num1 = 4;
+    double num2 = 10.5;
+    // func(num1);
+    // func(num2);
+    // func(num1, num1);
+    // func();
 }
 
-void solve(){
-    int x=1;
-    float b=x;
-    int y;
-    char z;
-    func1(x,y,z);
+int main() {
+    //solve();
+    return 0;
 }

@@ -77,6 +77,10 @@ int lookupClass(string class_name, string id);
 void createParamList();
 void insertSymbol(sym_table &table, string id, string type, ull size, bool is_init, sym_table *ptr);
 vector<string> getFuncArgs(string id);
+string mangleFunctionName(const string& name, const vector<string>& paramTypes);
+string demangleFunctionName(const string& mangledName);
+string getTypeCode(const string& type);
+
 void updInit(string id);
 void updTableSize(string id);
 void insertFuncArg(string &func, vector<string> &arg);
