@@ -35,6 +35,7 @@ string type = "";
 int Anon_StructCounter=0;
 int Anon_ClassCounter = 0;
 vector<string> funcArgs;
+vector<string> classMethodArgs; 
 vector<string> idList;
 vector<string> currArgs;
 
@@ -346,9 +347,12 @@ postfix_expression
     	    ($1->type.substr(0, 6) == "CLASS_" && !className.empty() && 
     	     $1->type.substr(6) == className)) {
 			
+			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
+			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+
     	    // We're inside a class method calling another method through 'this'
-    	    if (curr_class_structure && (*curr_class_structure).find(methodName) != (*curr_class_structure).end()) {
-    	        string methodType = (*curr_class_structure)[methodName]->type;
+    	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
+    	        string methodType = (*curr_class_structure)[manglemethod]->type;
 	
     	        if (methodType.substr(0, 5) == "FUNC_") {
     	            $$->type = methodType.substr(5); // Extract return type
@@ -356,7 +360,7 @@ postfix_expression
     	            $$->isInit = 1;
 	
     	            // Check arguments
-    	            vector<string> methodArgs = getFuncArgs(className + "_" + methodName);
+    	            vector<string> methodArgs = getFuncArgs(manglemethod);
     	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
     	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
     	            }
@@ -370,10 +374,13 @@ postfix_expression
 	    // First check if it's a class
 	    else if (classType.substr(0, 6) == "CLASS_") {
 	        // Look up method in class
-	        int ret = lookupClass(classType, methodName);
-			std::cout<<classType<<" "<<methodName<<std::endl;
+			std::string manglemethod=mangleFunctionName(methodName,currArgs);
+			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
+	        int ret = lookupClass(classType, manglemethod);
+			std::cout<<classType<<" "<<methodName<<" "<<manglemethod<<std::endl;
+
 	        if (ret == 1) {
-				string memberAccess = ClassAttrAccess(classType, methodName);
+				string memberAccess = ClassAttrAccess(classType, manglemethod);
 				
         		// If outside class trying to access private/protected member
         		if ((memberAccess == "private" || memberAccess == "protected") && 
@@ -383,7 +390,7 @@ postfix_expression
         		}
 				else{
 	            	// Get method type (should be FUNC_returnType)
-	            	string methodType = ClassAttrType(classType, methodName);
+	            	string methodType = ClassAttrType(classType, manglemethod);
 
 	            	// Check if it's a function
 	            	if (methodType.substr(0, 5) == "FUNC_") {
@@ -393,7 +400,7 @@ postfix_expression
 	            	    $$->isInit = 1;
 
 	            	    // Check arguments (none for this rule)
-	            	    vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);
+	            	    vector<string> methodArgs = getFuncArgs(manglemethod);
 	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
                 	    	yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
                 		}
@@ -427,11 +434,14 @@ postfix_expression
     	if (($1->temp_name == "this") || 
     	    (classType.substr(0, 6) == "CLASS_" && !className.empty() && 
     	     classType.substr(6) == className)) {
-			
-    	    // We're inside a class method calling another method through 'this'
-    	    if (curr_class_structure && (*curr_class_structure).find(methodName) != (*curr_class_structure).end()) {
-    	        string methodType = (*curr_class_structure)[methodName]->type;
+			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
+			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+			std::cout<<manglemethod<<" "<<currArgs.size()<<std::endl;
 
+    	    // We're inside a class method calling another method through 'this'
+    	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
+    	        string methodType = (*curr_class_structure)[manglemethod]->type;
+				
     	        if (methodType.substr(0, 5) == "FUNC_") {
     	            string returnType = methodType.substr(5); // Extract return type
     	            $$->type = returnType;
@@ -439,7 +449,7 @@ postfix_expression
     	            $$->isInit = $5->isInit;
 
     	            // Check arguments
-    	            vector<string> methodArgs = getFuncArgs(className + "_" + methodName);
+    	            vector<string> methodArgs = getFuncArgs(manglemethod);
 	
     	            // Check number of arguments (account for implicit 'this')
     	            if (currArgs.size() != methodArgs.size() - 1) {
@@ -470,10 +480,12 @@ postfix_expression
 	    // First check if it's a class
 	    else if (classType.substr(0, 6) == "CLASS_") {
 	        // Look up method in class
-	        int ret = lookupClass(classType, methodName);
-			std::cout<<classType<<" "<<methodName<<std::endl;
+			std::string manglemethod=mangleFunctionName(methodName,currArgs);
+			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
+	        int ret = lookupClass(classType, manglemethod);
+			std::cout<<classType<<" "<<methodName<<" "<<manglemethod<<std::endl;
 	        if (ret == 1) {
-				string memberAccess = ClassAttrAccess(classType, methodName);
+				string memberAccess = ClassAttrAccess(classType, manglemethod);
 
         		// If outside class trying to access private/protected member
         		if ((memberAccess == "private" || memberAccess == "protected") && 
@@ -483,44 +495,20 @@ postfix_expression
         		}
 				else{
 	            	// Get method type (should be FUNC_returnType)
-	            	string methodType = ClassAttrType(classType, methodName);
+	            	string methodType = ClassAttrType(classType, manglemethod);
 
 	            	// Check if it's a function
 	            	if (methodType.substr(0, 5) == "FUNC_") {
 	            	    string returnType = methodType.substr(5); // Extract return type
 
 	            	    // Check arguments against parameter types
-	            	    vector<string> methodArgs = getFuncArgs(classType.substr(6) + "_" + methodName);//gives className_func ->className empty right now
+	            	    vector<string> methodArgs = getFuncArgs(manglemethod);//gives className_func ->className empty right now
 						if(currArgs.size() != methodArgs.size()-1)
 							yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
 					else{
 
 	            	    for (int i = 1; i < methodArgs.size(); i++) {
 	            	        if (methodArgs[i] == "...") break;
-	            	        /*if (currArgs.size() == i) {
-							
-	            	            break;
-	            	        }
-							if (i == methodArgs.size() - 1 && i < currArgs.size() - 1) {
-	            	            yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-	            	            break;
-	            	        }*/
-							// Before the for loop
-							//printf("DEBUG: Method args for %s_%s (total: %zu):\n", 
-							//       classType.substr(6).c_str(), methodName.c_str(), methodArgs.size());
-							//for (const auto& arg : methodArgs) {
-							//    printf("  - %s\n", arg.c_str());
-							//}
-							//printf("DEBUG: Current arguments passed (total: %zu):\n", currArgs.size());
-							//for (const auto& arg : currArgs) {
-							//    printf("  - %s\n", arg.c_str());
-							//}
-//	
-							//// Inside the for loop, right before checkType
-							//printf("DEBUG: Checking argument types - expected: %s, got: %s\n", 
-							//       methodArgs[i].c_str(), currArgs[i-1].c_str());
-							//printf("DEBUG: checkType result: '%s'\n", msg.c_str());
-
 							string msg = checkType(methodArgs[i], currArgs[i-1]);
 	            	        if (msg == "warning") {
 	            	            warning(("Incompatible conversion of " + currArgs[i-1] + 
@@ -1749,10 +1737,26 @@ class_member
         DEBUG_PARSER("class_member -> function_definition");
 		 $1->strVal = currentAccess;
 		 // Add function as a class member with proper access specifier
-		 //printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+		printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+		
 
-        insertClassAttr($1->temp_name, "FUNC_"+$1->type, $1->size, 0,currentAccess);
-		 $$ = $1; 
+		std::string manglemethod;
+		if (classMethodArgs.empty()) {
+			std::cout<<"EMPTY classMethodArgs"<<std::endl;
+		    // Function with no arguments - create with empty parameter types
+		    manglemethod = mangleFunctionName($1->temp_name, std::vector<string>());
+		} else {
+		    // Function with arguments - skip 'this' parameter if present
+		    manglemethod = mangleFunctionName($1->temp_name, std::vector<string>(
+		        classMethodArgs.size() > 0 ? classMethodArgs.begin() + 1 : classMethodArgs.begin(), 
+		        classMethodArgs.end()
+		    ));
+		}
+		manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+		std::cout<<manglemethod<<std::endl;
+        insertClassAttr(manglemethod, "FUNC_"+$1->type, $1->size, 0,currentAccess);
+		classMethodArgs.clear();
+		$$ = $1; 
 	}
 	| declaration { 
         DEBUG_PARSER("class_member -> declaration");
@@ -3005,7 +3009,8 @@ F
 	: %empty {
         DEBUG_PARSER("F -> %empty");
 		std::string qualifiedFuncName = funcName;
-		if (!className.empty()) {//will modify class methods seperately later
+		if (!className.empty()) {
+			classMethodArgs = funcArgs;  // Cache arguments for class methods
 		    // Check if funcName already has className prefix to avoid duplication
 		    if (funcName.find(className + "_") == 0) {
 				funcName=funcName.substr(className.size()+1);

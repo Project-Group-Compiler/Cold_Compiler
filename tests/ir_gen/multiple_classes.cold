@@ -14,7 +14,8 @@ class Person
     };
     public{
         void solve(){
-            (*this).returnAge(3);//TODO
+            int z=0;
+            (*this).returnAge(z);//don't call by (*this).returnAge(0) ->due to typecasting so renaming will happen in method
         }
     };
     
