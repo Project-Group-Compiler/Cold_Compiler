@@ -97,6 +97,7 @@ primary_expression
 		
 		// Semantics
 		string temp = primaryExpression(string($1));
+		std::cout<<string($1)<<std::endl;
 		if(temp == ""){
 			yyerror(("Undeclared Identifier " + string($1)).c_str(), "scope error");
 		}
@@ -183,10 +184,13 @@ postfix_expression
 		// Semantics
 		$$->isInit = 1;
 		string temp = postfixExpression($1->type, 2);
+		std::cout<<$1->type<<" "<<temp<<std::endl;
+		std::cout<<$1->temp_name<<std::endl;
 		if(!temp.empty()){	
 			$$->type = temp;
 			if($1->expType == 3){
-				vector<string> funcArg = getFuncArgs($1->temp_name);
+				std::string mangledName = mangleFunctionName($1->temp_name,currArgs);
+				vector<string> funcArg = getFuncArgs(mangledName);
 				if (!(funcArg.size()==1 && funcArg[0]=="#NO_FUNC")){
 					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
@@ -206,30 +210,51 @@ postfix_expression
 		
 		// Semantics
 		$$->isInit = $3->isInit;
-		string temp = postfixExpression($1->type, 2);
+		
+		std::cout<<$1->type<<std::endl; //this is wrong type 
+		std::cout<<$1->temp_name<<std::endl;
+		// Create mangled name with current arguments
+	    std::string mangledName = mangleFunctionName($1->temp_name, currArgs);
+	    std::cout << "Trying to resolve: " << mangledName << std::endl;
+
+		string temp = primaryExpression(mangledName);
+		std::cout<<"temp "<<temp<<std::endl;
+		if(temp == ""){
+			yyerror(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");
+		}
+		else{
+			if(temp.substr(0, 5) == "FUNC_"){
+				$1->expType = 3;
+			}
+			else if(temp.back() == '*'){
+				$1->expType = 2; 
+			}
+			else $1->expType = 1;
+			//printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
+			$1->type = temp;
+			$1->isInit = lookup(mangledName)->init;
+			$1->size = getSize(temp);
+		}
+
+
+		temp = postfixExpression($1->type, 2);
 		
 		if(!temp.empty()){	
 			$$->type = temp;
 			if($1->expType == 3){
-				vector<string> funcArgs = getFuncArgs($1->temp_name);
+				vector<string> funcArgs = getFuncArgs(mangledName);
 				
+				if(currArgs.size()!=funcArgs.size()){
+					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
+				}
 				for(int i=0; i<funcArgs.size(); i++){
 					if(funcArgs[i]=="...")break;
-					if(currArgs.size()==i){
-						yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
-						break;
-					}
 					string msg = checkType(funcArgs[i],currArgs[i]);
-					
 					if(msg =="warning"){
 						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
 					}
 					else if(msg.empty()){
 						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
-						break;
-					}
-					if(i==funcArgs.size()-1 && i<currArgs.size()-1){
-						yyerror(("Too many Arguments to Function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
 				}
@@ -238,7 +263,7 @@ postfix_expression
 		else{
 			yyerror("Invalid function call", "semantic error");
 		}
-		currArgs.clear();
+	    currArgs.clear();
 	}
 	| postfix_expression '.' IDENTIFIER {
     	DEBUG_PARSER("postfix_expression -> postfix_expression '.' IDENTIFIER");

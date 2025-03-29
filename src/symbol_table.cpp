@@ -188,6 +188,17 @@ sym_entry *lookup(string id)
     {
         if ((*temp).find(id) != (*temp).end())
             return (*temp)[id];
+
+        // Added code: Check for overloaded function with base name
+        if (id.find("FUNC_") != 0) { // If not already a mangled name
+            string prefix = "FUNC_" + to_string(id.length()) + id + "_";
+            for (auto& entry : (*temp)) {
+                if (entry.first.find(prefix) == 0) {
+                    // Found an overloaded function - return any version temporarily
+                    return (*temp)[entry.first];
+                }
+            }
+        }
         // Check if pointer exists in parent_table map.
         if (parent_table.find(temp) == parent_table.end())
             break;
@@ -630,7 +641,6 @@ string demangleFunctionName(const string& mangledName) {
     
     return mangledName.substr(pos + 1, length);
 }
-
 void updInit(string id)
 {
     sym_entry *entry = lookup(id);

@@ -1,15 +1,30 @@
 // Function overloading example
 int func(int x) {
-    return x * x; // Square of an integer
+    char c;
+    return x * x; 
 }
-
+int func2(int y) {
+    return y + y; 
+}
 double func(double x) {
-    return x / 2; // Half of a double
+    return x / 2; 
 }
-
+int func(int x,int y) {
+    return x + y;
+}
+int func(){
+    return 0; 
+}
 void solve() {
     int num1 = 4;
     double num2 = 10.5;
+    int z;
+    char* b="jhel";
+    func(num1);
+    func(num2);
+    func(num1, num1);
+    func2(z);
+    func(b);//gives error
 }
 
 int main() {

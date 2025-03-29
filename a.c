@@ -18,13 +18,15 @@ int func(){
 void solve() {
     int num1 = 4;
     double num2 = 10.5;
-    // func(num1);
-    // func(num2);
-    // func(num1, num1);
-    // func();
+    int z;
+    char* b="jhel";
+    func(num1);
+    func(num2);
+    func(num1, num1);
+    func2(z);
 }
 
 int main() {
-    //solve();
+    solve();
     return 0;
 }

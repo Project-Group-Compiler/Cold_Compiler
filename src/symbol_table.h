@@ -80,7 +80,6 @@ vector<string> getFuncArgs(string id);
 string mangleFunctionName(const string& name, const vector<string>& paramTypes);
 string demangleFunctionName(const string& mangledName);
 string getTypeCode(const string& type);
-
 void updInit(string id);
 void updTableSize(string id);
 void insertFuncArg(string &func, vector<string> &arg);
