@@ -542,6 +542,7 @@ unary_expression
 		}
 	}
 	| unary_operator cast_expression {
+		//TODO: l value .. Here
         DBG("unary_expression -> unary_operator cast_expression");
 		$$ = getNode("unary_exp", mergeAttrs($1, $2));
 		
@@ -553,6 +554,23 @@ unary_expression
 			$$->intVal = $2->intVal;
 			//3AC
 			//TODO : Check Later
+			/* TODO : need to add or not??
+			//3AC
+			if($1->place == "unary*"){
+			// Reduce one level of pointer indirection for $$->type
+			if($2->type.back() == '*') {
+				$$->type = $2->type.substr(0, $2->type.size() - 1);
+			} else {
+				yyerror("syntax error, Invalid dereference of non-pointer type");
+				$$->type = "ERROR";
+			}
+			*/
+		} else if($1->place == "unary&") {
+			// Add one level of pointer indirection for $$->type
+			$$->type = $2->type + "*";
+		}else{
+			$$->type = $2->type;
+		}
 			if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
 				$$->temp_name = $2->temp_name;
 				$$->place = "*" + $2->place;
