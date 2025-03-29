@@ -4,12 +4,14 @@ int main()
 	class person *ptr;
 	p1.age = 6;
 	p1.foo();
-	p1.bar(4, 6);
+	((p1.bar(4, 6)).foo()).age = 9;
+	/*
 	ptr->age = 6;
 	ptr->foo();
 	ptr->bar(4, 6);
 	(*ptr).age = 6;
 	(*ptr).foo();
 	(*ptr).bar(4, 6);
+	*/
 	return 0;
 }
