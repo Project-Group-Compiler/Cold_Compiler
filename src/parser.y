@@ -2244,7 +2244,12 @@ direct_declarator
 		$$ = createASTNode("direct_declarator", &v);
 		updateFuncSymbolEntry(0);
 
+		string baseName = $1->temp_name;
+		std::string mangledName;
+
 		if (!className.empty()) {
+				mangledName=mangleFunctionName(baseName, funcArgs);
+				mangledName="FUNC_" + std::to_string(className.size()) + className + "_" + mangledName.substr(5);
         // Add implicit 'this' pointer for class methods
         string thisType = "CLASS_" + className + "*";
         funcArgs.push_back(thisType);
@@ -2252,7 +2257,7 @@ direct_declarator
         // Insert 'this' parameter into symbol table
         insertSymbol(*curr_table, "this", thisType, 8, true, NULL);
     	}
-
+		else mangledName = mangleFunctionName(baseName, funcArgs);
 		// Semantics
 		if($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
@@ -2260,9 +2265,9 @@ direct_declarator
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
 
-			vector<string> temp = getFuncArgs($1->temp_name);
+			vector<string> temp = getFuncArgs(mangledName);
 			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
-				insertFuncArg($$->temp_name, funcArgs);
+				insertFuncArg(mangledName, funcArgs);
 				funcName = string($1->temp_name);
 				funcType = $1->type;
 			}
