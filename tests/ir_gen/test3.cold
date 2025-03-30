@@ -1,3 +1,4 @@
+//check different return types of functions
 struct a{
     int a;
 };
@@ -22,6 +23,9 @@ int* fun6(int* p){
     int* arr={1,2,3,4,5};
     return arr;
 }
+a fun7(a p){//doesn't work
+    return p;
+}
 void solve(){
     int a = 5;
     char b = 'c';
@@ -35,6 +39,7 @@ void solve(){
     a=fun2(a, b);
     fun3(c, p);
     fun4(a, d);
-    b=fun5(str);
+    b=fun5(str);//should give errror
     fun6(p);
+    fun7(p1);
 }

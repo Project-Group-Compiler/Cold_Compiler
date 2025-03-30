@@ -192,7 +192,10 @@ postfix_expression
 			if($1->expType == 3){
 				std::string mangledName = mangleFunctionName($1->temp_name,currArgs);
 				vector<string> funcArg = getFuncArgs(mangledName);
-				if (!(funcArg.size()==1 && funcArg[0]=="#NO_FUNC")){
+				std::cout<<funcArg.size()<<std::endl;
+				for(auto i:funcArg)std::cout<<i<<" ";
+				std::cout<<std::endl;
+				if(currArgs.size()!=funcArg.size()){
 					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
 			}
@@ -221,7 +224,7 @@ postfix_expression
 		string temp = primaryExpression(mangledName);
 		std::cout<<"temp "<<temp<<std::endl;
 		if(temp == ""){
-			yyerror(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");
+			//yyerror(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
 		}
 		else{
 			if(temp.substr(0, 5) == "FUNC_"){
@@ -2029,6 +2032,7 @@ declarator
 		}
 		else{
 			$$->type = $2->type + $1->type;
+			type=$$->type;
 			$$->temp_name = $2->temp_name;
 			$$->size = 4;
 			$$->expType = 2;
@@ -2154,7 +2158,7 @@ direct_declarator
 			$$->expType = 3;
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
-			
+			std::cout<<$1->type<<std::endl;
 			vector<string> temp = getFuncArgs(mangledName);
 			for(auto i:temp){
 				std::cout<<i<<std::endl;
@@ -2927,7 +2931,15 @@ function_definition
 		// Semantics
 		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
-        $$->type = funcType;            // Return type from declaration_specifiers
+        if ($2->type.find("*") != string::npos) {
+            // Use the complete type from declarator which includes pointer
+            $$->type = $2->type;
+            funcType = $2->type;
+        } else {
+            // Otherwise it's a non-pointer type
+            $$->type = funcType;
+        }
+        // Return type from declaration_specifiers
         $$->size = $2->size;            // Size if applicable
 
 		type = "";
@@ -2950,7 +2962,15 @@ function_definition
 		// Semantics 
 		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
-        $$->type = funcType;            // Return type from declaration_specifiers
+		if ($2->type.find("*") != string::npos) {
+            // Use the complete type from declarator which includes pointer
+            $$->type = $2->type;
+            funcType = $2->type;
+        } else {
+            // Otherwise it's a non-pointer type
+            $$->type = funcType;
+        }
+        // Return type from declaration_specifiers
         $$->size = $2->size;            // Size if applicable
 
 		type = "";
@@ -3008,6 +3028,9 @@ F
 			yyerror(("Redefinition of function " + funcName).c_str(), "scope error");
 		}
 		else{
+			if (type.find("*") != string::npos) {//pointers prolly can handle struct ,classes return type here too
+            	funcType = type;
+        	}
 			makeSymbolTable(qualifiedFuncName, funcType);
 			$$ = strdup(qualifiedFuncName.c_str());
 			block_count = 1;
