@@ -1,3 +1,4 @@
+//test case for multiple classes, func,structs
 int fun(){
   return 0;
 }
@@ -34,20 +35,35 @@ struct myStructure {
   int myNum;
   char myLetter;
 };
-
+class Person2 { 
+   // data members of person 
+    private{
+        long aadhar_number;
+    };  
+    private{
+        char* name;
+    }; 
+    public{ 
+        char* returnName()  { return (*this).name;} 
+    };
+}; 
 int ok() {
   struct myStructure s1;
   s1.myNum = 5;
   return 0;
 }
+int name;
 int main()
 {
     int c;
 	class Person p1;
+    class Person2 p2;
     int z=p1.age;
     p1.age=5;
 	p1.returnAge(p1.age);//p1.returnAge(c,this) ->this to added in 3AC
     p1.solve();
+
+    p2.returnName();
 	return 0;
 }
 
