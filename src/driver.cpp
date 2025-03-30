@@ -96,14 +96,13 @@ int main(int argc, char *argv[])
 
     if (!has_error || force)
     {
-        symTable_init();//mohitmo's function
+        symTable_init();
         performParsing(inputFileString);
         if (print_symtab){
             std::cout << "Printing symbol table\n";
             printTables(inputFileString);//meet's function
-            printSymbolTable(&gst, "#Global_Symbol_Table#.csv");//mohitmo's function
-        }
-            
+            printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
+        }   
     }
     else
         print_error("\nlexical errors present, use -f to force parsing");

@@ -15,6 +15,7 @@ sym_table *curr_structure;
 struct_sym_table *curr_struct_table;
 stack<ull> Goffset, Loffset, blockSz;
 
+bool inClassContext = false;  // Default: not in a class definition
 typ_table typ_gst;
 map<typ_table *, typ_table *> typ_parent_table;
 typ_table *curr_typ;
@@ -95,8 +96,8 @@ void makeSymbolTable(string name, string f_type)
         Goffset.push(0);
         blockSz.push(0);
         parent_table.insert(make_pair(new_table, curr_table));
-        struct_parent_table.insert(make_pair(new_struct_table, curr_struct_table));
-        class_parent_table.insert(make_pair(new_class_table, curr_class_table));
+        struct_parent_table.insert(make_pair(new_struct_table, curr_struct_table));//is this needed?
+        class_parent_table.insert(make_pair(new_class_table, curr_class_table));//is this needed?
         typ_parent_table.insert(make_pair(new_typ, curr_typ));
 
         curr_table = new_table;
@@ -112,8 +113,14 @@ void makeSymbolTable(string name, string f_type)
             std::cerr << "Error: curr_table not found in parent_table during makeSymbolTable.\n";
             exit(EXIT_FAILURE);
         }
+        std::cout<<"Function name: " << name << std::endl;
+        std::cout<<"Function type: " << f_type << std::endl;
         (*parent_table[curr_table]).erase("dummyF_name");
-        (*parent_table[curr_table]).insert(make_pair(name, createEntry("FUNC_" + f_type, 0, true, Loffset.top(), curr_table)));
+        // Only add to parent table if not in class context
+        if (!inClassContext) {
+            (*parent_table[curr_table]).insert(make_pair(name, createEntry("FUNC_" + f_type, 0, true, Loffset.top(), curr_table)));
+        }
+        
         Loffset.pop();
     }
 }
@@ -622,25 +629,6 @@ string mangleFunctionName(const string& name, const vector<string>& paramTypes) 
     return result;
 }
 
-string demangleFunctionName(const string& mangledName) {
-    // Extract the original function name from a mangled name
-    if (mangledName.substr(0, 5) != "FUNC_") 
-        return mangledName; // Not a mangled name
-        
-    size_t pos = mangledName.find('_', 5);
-    if (pos == string::npos) 
-        return mangledName; // Invalid format
-    
-    string lengthStr = mangledName.substr(5, pos - 5);
-    int length;
-    try {
-        length = stoi(lengthStr);
-    } catch (...) {
-        return mangledName; // Invalid format
-    }
-    
-    return mangledName.substr(pos + 1, length);
-}
 void updInit(string id)
 {
     sym_entry *entry = lookup(id);
@@ -695,28 +683,6 @@ string lookupType(string a)
         temp = typ_parent_table[temp];
     }
     return "";
-}
-
-void printFuncArg()
-{
-    FILE *file = fopen("FuncArg.csv", "w");
-    if (!file)
-    {
-        std::cerr << "Error: Cannot open FuncArg.csv for writing.\n";
-        return;
-    }
-    for (auto it : func_arg)
-    {
-        string temp = "";
-        for (auto h : it.second)
-        {
-            if (!temp.empty())
-                temp += ", ";
-            temp += h;
-        }
-        fprintf(file, "%s, %s\n", it.first.c_str(), temp.c_str());
-    }
-    fclose(file);
 }
 
 void printSymbolTable(sym_table *table, string file_name)

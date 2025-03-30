@@ -30,7 +30,7 @@ extern class_sym_table class_gst;
 extern map<sym_table *, sym_table *> parent_table;
 extern map<struct_sym_table *, struct_sym_table *> struct_parent_table;
 extern map<class_sym_table *, class_sym_table *> class_parent_table;
-
+extern bool inClassContext;  // Flag to indicate if we're in a class definition
 extern map<string, ull> struct_size;
 extern map<string, ull> class_size;
 extern map<string, vector<string>> func_arg;
@@ -78,12 +78,10 @@ void createParamList();
 void insertSymbol(sym_table &table, string id, string type, ull size, bool is_init, sym_table *ptr);
 vector<string> getFuncArgs(string id);
 string mangleFunctionName(const string& name, const vector<string>& paramTypes);
-string demangleFunctionName(const string& mangledName);
 string getTypeCode(const string& type);
 void updInit(string id);
 void updTableSize(string id);
 void insertFuncArg(string &func, vector<string> &arg);
-void printFuncArg();
 void printSymbolTable(sym_table *table, string file_name);
 ull getSize(string id);
 string lookupType(string a);

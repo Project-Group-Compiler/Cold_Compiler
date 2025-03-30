@@ -1295,36 +1295,6 @@ declaration //POTENTIAL ISSUE
         $$->size = $2->size;
         
         type = "";
-
-          // Check if this is a function declaration
-          if($2->expType == 3) {
-          //    // Remove the temporary function prototype from the symbol table.
-          //    removeFuncProto();  // Assumes a function exists to clear the dummy function entry.
-          //    
-          //    // Retrieve any previously stored argument list for this function name.
-          //    std::vector<std::string> prevArgs = getFuncArgs($2->temp_name);
-          //    
-          //    // If the function already has an entry in the FuncArgs map, validate the parameter types.
-          //    if(!prevArgs.empty() && prevArgs[0] != "#NO_FUNC") {
-          //        if(prevArgs.size() != funcArgs.size()) {
-          //            yyerror(("Function " + std::string($2->temp_name) + 
-          //                     " declared with a different number of arguments").c_str(), "semantic error");
-          //        } else {
-          //            for (size_t i = 0; i < prevArgs.size(); ++i) {
-          //                if(prevArgs[i] != funcArgs[i]) {
-          //                    yyerror(("Argument type mismatch in function " + 
-          //                             std::string($2->temp_name)).c_str(), "semantic error");
-          //                    break;
-          //                }
-          //            }
-          //        }
-          //    } else {
-          //        // This is the first declaration: insert the function's argument list.
-          //        insertFuncArg($2->temp_name, funcArgs);
-          //    }
-          //    // Clear the global argument list for the next function declaration.
-          //    funcArgs.clear();
-          }
       }
     ;
 
@@ -1397,7 +1367,8 @@ init_declarator
 			removeFuncProto();
 		}
 		else{
-			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+			//don't insert class members
+			if(className.empty())insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
 		}
 	}
 	| declarator '=' initializer{
@@ -1664,12 +1635,15 @@ class_definition
 		// Semantics
 		if(printClassTable("CLASS_" + $1->temp_name) == 1){
 			if(type == "") type = "CLASS_" + $1->temp_name;
-			else type += " CLASS_" + $1->temp_name;
+			else type += " CLASS_" + $1->temp_name; //won't occur but need to confirm
+			//size not getting registered correctly
+			insertSymbol(*curr_table, "CLASS_" + $1->temp_name, "class", getSize("CLASS_" + $1->temp_name), true, nullptr);
 		}
 		else{
 			yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
 		}
 		className = "";
+		inClassContext = false;
 		type = ""; //clearing after definition of class
     }
 	| class IDENTIFIER {
@@ -1773,6 +1747,7 @@ G_C
         DEBUG_PARSER("G_C -> IDENTIFIER");
 		$$ = $1;
 		className = $1;
+		inClassContext = true;
 	}
 	;
 
@@ -1795,6 +1770,7 @@ struct_or_union_specifier
 		if(printStructTable("STRUCT_" + string($2)) == 1){
 			if(type == "") type = "STRUCT_" + string($2);
 			else type += " STRUCT_" + string($2);
+			insertSymbol(*curr_table, "STRUCT_" + string($2), "struct", getSize("STRUCT_" + string($2)), true, nullptr);
 		}
 		else{
 			yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
@@ -1812,6 +1788,7 @@ struct_or_union_specifier
 		if(printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1){
 			if(type == "") type = "STRUCT_" + to_string(Anon_StructCounter);
 			else type += " STRUCT_" + to_string(Anon_StructCounter);
+			insertSymbol(*curr_table, "STRUCT_" + to_string(Anon_StructCounter), "struct", getSize("STRUCT_" + to_string(Anon_StructCounter)), true, nullptr);
 		}
 		else{
 			yyerror("Struct is already defined", "scope error");
