@@ -612,7 +612,7 @@ postfix_expression
 		emit("unary&", $1->place, "", q, -1);
 		emit("param", q, "", "", -1); 
 		std::string q2 = getTempVariable($$->type);
-		emit("CALL", std::string($3), stoi(currArgs.size()+1), q2, -1);
+		emit("CALL", std::string($3), std::to_string(currArgs.size()+1), q2, -1);
         $$->place = q2;
 		//$$->nextlist.clear();
 	    currArgs.clear();
@@ -1771,7 +1771,7 @@ type_specifier
 inheritance_specifier
 			: IDENTIFIER {
 				DBG("inheritance_specifier -> access_specifier IDENTIFIER");
-				$$ = getNode("inheritance_specifier", getNode($1));
+				$$ = getNode($1);
 				$$->temp_name=string($1); //to propagate the class name of parent
 			}
 			;
@@ -1799,7 +1799,7 @@ access_specifier
 		$$ = getNode($1);
 		currentAccess="public";
 	}
-	PROTECTED {
+	| PROTECTED {
 		DBG("access_specifier -> PROTECTED");
 		$$ = getNode($1);
 		currentAccess="protected";
@@ -1816,7 +1816,7 @@ class
 class_definition_head 
 	: class S_C INHERITANCE_OP inheritance_specifier_list {
         DBG("class_definition_head -> class INHERITANCE_OP inheritance_specifier_list");
-		$$ = getNode("class_definition_head", mergeAttrs($1, $4))
+		$$ = getNode("class_definition_head", mergeAttrs($1, $4));
          // Semantics: For inherited classes without an explicit name, mark as anonymous.
         $$->type = currentDataType;
         Anon_ClassCounter++; 
@@ -2849,7 +2849,7 @@ compound_statement
 			func_flag--;
 		}
 	}
-	| '{' CHANGE_TABLE declaration_list statement_list '}'	{
+	| '{' CHANGE_TABLE declaration_list NEXT_QUAD  statement_list '}'	{
         DBG("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
 		$$ = getNode("compound_statement", mergeAttrs($3, $5));
 		
