@@ -1,11 +1,11 @@
 #pragma once
 #ifndef AST_HPP
 #define AST_HPP
-
 #include <iostream>
 #include <vector>
 #include <string>
 #include <cstdio>
+#include "data_structures.hpp"
 
 struct Node
 {
@@ -29,7 +29,6 @@ struct Node
     std::vector<int> continuelist;
     std::vector<int> nextlist;
     std::vector<int> caselist;
-
 };
 
 struct Data

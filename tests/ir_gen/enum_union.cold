@@ -1,0 +1,18 @@
+enum Color { RED, GREEN, BLUE };
+
+void test_enum() 
+{
+    enum Color c = GREEN;
+}
+
+union Data {
+    int i;
+    char ch;
+};
+
+test_union() {
+    union Data data;
+    data.i = 10;
+    data.ch = 'j';
+    return 0;
+}

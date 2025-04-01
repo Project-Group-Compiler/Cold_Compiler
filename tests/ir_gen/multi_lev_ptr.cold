@@ -1,10 +1,11 @@
-void test_multi_level_pointers() {
+void test()
+{
     int val = 10;
     int *ptr = &val;
     int **ptr2 = &ptr;
     int ***ptr3 = &ptr2;
-    
-    if (***ptr3 == 10) {
-        // Test Passed
-    }
+
+    ***ptr3 = 20;
+
+    val = (*(*(ptr2 - 2) + 1)) + 3;
 }

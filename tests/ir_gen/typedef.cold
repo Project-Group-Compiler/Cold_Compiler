@@ -1,0 +1,10 @@
+typedef int integer;
+typedef char character;
+
+void test() 
+{
+    integer a;
+    character ch;
+    a = 5;
+    ch = 'c';
+}

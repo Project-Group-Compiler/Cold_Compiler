@@ -1,6 +1,6 @@
 
-extern int parent[20], size[20];
-static int comp = 0;
+int parent[20], size[20];
+int comp = 0;
 
 void init(int n) {
     int i;

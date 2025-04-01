@@ -400,223 +400,6 @@ postfix_expression
 		$$->nextlist.clear();
 
 	}
-	| postfix_expression '.' IDENTIFIER '(' ')'  {
-	    DBG("postfix_expression -> postfix_expression '.' IDENTIFIER '(' ')'");
-	    
-		$$ = getNode("method_call", mergeAttrs($1, getNode($3)));
-	
-	    // Semantics - check if it's a class method call
-	    string classType = $1->type;
-	    string methodName = string($3);
-	
-    	// Special case for 'this' pointer access within a class definition
-    	if ($1->temp_name == "this" || 
-    	    ($1->type.substr(0, 6) == "CLASS_" && !className.empty() && 
-    	     $1->type.substr(6) == className)) {
-			
-			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
-			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
-
-    	    // We're inside a class method calling another method through 'this'
-    	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
-    	        string methodType = (*curr_class_structure)[manglemethod]->type;
-	
-    	        if (methodType.substr(0, 5) == "FUNC_") {
-    	            $$->type = methodType.substr(5); // Extract return type
-    	            $$->temp_name = $1->temp_name + "." + methodName;
-    	            $$->isInit = 1;
-	
-    	            // Check arguments
-    	            vector<string> methodArgs = getFuncArgs(manglemethod);
-    	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
-    	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-    	            }
-    	        } else {
-    	            yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
-    	        }
-    	    } else {
-    	        yyerror(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
-    	    }
-    	}
-	    // First check if it's a class
-	    else if (classType.substr(0, 6) == "CLASS_") {
-	        // Look up method in class
-			std::string manglemethod=mangleFunctionName(methodName,currArgs);
-			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
-	        int ret = lookupClass(classType, manglemethod);
-			std::cout<<classType<<" "<<methodName<<" "<<manglemethod<<std::endl;
-
-	        if (ret == 1) {
-				string memberAccess = ClassAttrAccess(classType, manglemethod);
-				
-        		// If outside class trying to access private/protected member
-        		if ((memberAccess == "private" || memberAccess == "protected") && 
-        		    (className.empty() || className != classType.substr(6))) {
-        		    yyerror(("Cannot access " + memberAccess + " member '" + methodName + 
-        		            "' of class '" + classType.substr(6) + "'").c_str(), "access error");
-        		}
-				else{
-	            	// Get method type (should be FUNC_returnType)
-	            	string methodType = ClassAttrType(classType, manglemethod);
-
-	            	// Check if it's a function
-	            	if (methodType.substr(0, 5) == "FUNC_") {
-	            	    string returnType = methodType.substr(5); // Extract return type
-	            	    $$->type = returnType;
-	            	    $$->temp_name = $1->temp_name + "." + methodName;
-	            	    $$->isInit = 1;
-
-	            	    // Check arguments (none for this rule)
-	            	    vector<string> methodArgs = getFuncArgs(manglemethod);
-	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
-                	    	yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-                		}
-	            	} else {
-	            	    yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
-	            	}
-				}
-	        } else if (ret == 0) {
-	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
-	        } else {
-	            yyerror(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
-	        }
-	    } else {
-	        yyerror("Cannot call method on non-class type", "type error");
-	    }
-	    currArgs.clear();
-		//3AC
-		std::string q = getTempVariable($1->type+'*'); 
-		emit("unary&", $1->place, "", q, -1);
-		emit("param", q, "", "", -1); 
-		std::string q2 = getTempVariable($$->type);
-		emit("CALL", std::string($3), "1", q2, -1);
-        $$->place = q2;
-		//$$->nextlist.clear();
-
-	}
-	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
-	    DBG("postfix_expression -> postfix_expression '.' IDENTIFIER '(' argument_expression_list ')'");
-		$$ = getNode("method_call_args", mergeAttrs($1, getNode($3), $5));
-	
-	    // Semantics - check if it's a class method call with arguments
-	    string classType = $1->type;
-	    string methodName = string($3);
-
-    	// Special case for 'this' pointer access within a class definition
-    	if (($1->temp_name == "this") || 
-    	    (classType.substr(0, 6) == "CLASS_" && !className.empty() && 
-    	     classType.substr(6) == className)) {
-			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
-			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
-			std::cout<<manglemethod<<" "<<currArgs.size()<<std::endl;
-
-    	    // We're inside a class method calling another method through 'this'
-    	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
-    	        string methodType = (*curr_class_structure)[manglemethod]->type;
-				
-    	        if (methodType.substr(0, 5) == "FUNC_") {
-    	            string returnType = methodType.substr(5); // Extract return type
-    	            $$->type = returnType;
-    	            $$->temp_name = $1->temp_name + "." + methodName;
-    	            $$->isInit = $5->isInit;
-
-    	            // Check arguments
-    	            vector<string> methodArgs = getFuncArgs(manglemethod);
-	
-    	            // Check number of arguments (account for implicit 'this')
-    	            if (currArgs.size() != methodArgs.size() - 1) {
-    	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-    	            } else {
-    	                // Type check arguments
-    	                for (int i = 1; i < methodArgs.size(); i++) { // Start from 1 to skip 'this'
-    	                    if (methodArgs[i] == "...") break;
-	
-    	                    string msg = checkType(methodArgs[i], currArgs[i-1]);
-    	                    if (msg == "warning") {
-    	                        warning(("Incompatible conversion of " + currArgs[i-1] + 
-    	                                " to parameter of type " + methodArgs[i]).c_str());
-    	                    } else if (msg.empty()) {
-    	                        yyerror(("Incompatible argument to method " + methodName).c_str(), 
-    	                              "semantic error");
-    	                        break;
-    	                    }
-    	                }
-    	            }
-    	        } else {
-    	            yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
-    	        }
-    	    } else {
-    	        yyerror(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
-    	    }
-    	}
-	    // First check if it's a class
-	    else if (classType.substr(0, 6) == "CLASS_") {
-	        // Look up method in class
-			std::string manglemethod=mangleFunctionName(methodName,currArgs);
-			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
-	        int ret = lookupClass(classType, manglemethod);
-			std::cout<<classType<<" "<<methodName<<" "<<manglemethod<<std::endl;
-	        if (ret == 1) {
-				string memberAccess = ClassAttrAccess(classType, manglemethod);
-
-        		// If outside class trying to access private/protected member
-        		if ((memberAccess == "private" || memberAccess == "protected") && 
-        		    (className.empty() || className != classType.substr(6))) {
-        		    yyerror(("Cannot access " + memberAccess + " member '" + methodName + 
-        		            "' of class '" + classType.substr(6) + "'").c_str(), "access error");
-        		}
-				else{
-	            	// Get method type (should be FUNC_returnType)
-	            	string methodType = ClassAttrType(classType, manglemethod);
-
-	            	// Check if it's a function
-	            	if (methodType.substr(0, 5) == "FUNC_") {
-	            	    string returnType = methodType.substr(5); // Extract return type
-
-	            	    // Check arguments against parameter types
-	            	    vector<string> methodArgs = getFuncArgs(manglemethod);//gives className_func ->className empty right now
-						if(currArgs.size() != methodArgs.size()-1)
-							yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
-					else{
-
-	            	    for (int i = 1; i < methodArgs.size(); i++) {
-	            	        if (methodArgs[i] == "...") break;
-							string msg = checkType(methodArgs[i], currArgs[i-1]);
-	            	        if (msg == "warning") {
-	            	            warning(("Incompatible conversion of " + currArgs[i-1] + 
-	            	                    " to parameter of type " + methodArgs[i]).c_str());
-	            	        } else if (msg.empty()) {
-	            	            yyerror(("Incompatible argument to method " + methodName).c_str(), 
-	            	                   "semantic error");
-	            	            break;
-	            	        }
-	            	    }
-					}
-	            	    $$->type = returnType;
-	            	    $$->temp_name = $1->temp_name + "." + methodName;
-	            	    $$->isInit = $5->isInit;
-	            	} else {
-	            	    yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
-	            	}
-				}
-	        } else if (ret == 0) {
-	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
-	        } else {
-	            yyerror(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
-	        }
-	    } else {
-	        yyerror("Cannot call method on non-class type", "type error");
-	    }
-		//3AC
-		std::string q = getTempVariable($1->type+'*'); 
-		emit("unary&", $1->place, "", q, -1);
-		emit("param", q, "", "", -1); 
-		std::string q2 = getTempVariable($$->type);
-		emit("CALL", std::string($3), std::to_string(currArgs.size()+1), q2, -1);
-        $$->place = q2;
-		//$$->nextlist.clear();
-	    currArgs.clear();
-	}
 	| postfix_expression PTR_OP IDENTIFIER {
         DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
 		$$ = getNode($2, mergeAttrs($1, getNode($3)));
@@ -647,6 +430,54 @@ postfix_expression
 			//$$->nextlist.clear();
 		}
 	}
+	| postfix_expression '.' IDENTIFIER '(' ')' {
+		// handle ast, symtable and semantic checks
+		// $$ = $1;
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		std::string p = getTempVariable("int"); // TODO : type = CLASS *
+		emit("unary&", $1->place, "", p, -1);
+		emit("param", p, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, "1", q, -1);
+		$$->place = q;
+    }
+	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
+        // handle ast, symtable and semantic checks
+		// $$ = getNode("postfix_expression", mergeAttrs($1, $3));
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		std::string p = getTempVariable("int"); // TODO : type = CLASS *
+		emit("unary&", $1->place, "", p, -1);
+		emit("param", p, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, std::to_string($5->argCount + 1), q, -1);
+		$$->place = q;
+    }
+	| postfix_expression PTR_OP IDENTIFIER '(' ')' {
+        // handle ast, symtable and semantic checks
+		// $$ = $1;
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		emit("param", $1->place, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, "1", q, -1);
+		$$->place = q;
+    }
+	| postfix_expression PTR_OP IDENTIFIER '(' argument_expression_list ')' {
+        // handle ast and symtable
+		// $$ = getNode("postfix_expression", mergeAttrs($1, $3));
+        //3AC
+		$$->temp_name = $3;
+		// $$->nextlist.clear();
+		emit("param", $1->place, "", "", -1); // push ptr to object
+		std::string q = getTempVariable("int"); // TODO : type = type of return value
+		emit ("CALL", $$->temp_name, std::to_string($5->argCount + 1), q, -1);
+		$$->place = q;
+    }	
 	| postfix_expression INC_OP {
         DBG("postfix_expression -> postfix_expression INC_OP");
 		$$ = getNode($2, mergeAttrs($1, nullptr));
@@ -766,6 +597,7 @@ unary_expression
 		}
 	}
 	| unary_operator cast_expression {
+		//TODO: l value .. Here
         DBG("unary_expression -> unary_operator cast_expression");
 		$$ = getNode("unary_exp", mergeAttrs($1, $2));
 		
@@ -784,6 +616,23 @@ unary_expression
     	        $$->intVal = $2->intVal;
 				//3AC
 				//TODO : Check Later
+					/* TODO : need to add or not??
+			//3AC
+			if($1->place == "unary*"){
+			// Reduce one level of pointer indirection for $$->type
+			if($2->type.back() == '*') {
+				$$->type = $2->type.substr(0, $2->type.size() - 1);
+			} else {
+				yyerror("syntax error, Invalid dereference of non-pointer type");
+				$$->type = "ERROR";
+			}
+			*/
+		//} else if($1->place == "unary&") {
+			// Add one level of pointer indirection for $$->type
+		//	$$->type = $2->type + "*";
+		//}else{
+		//	$$->type = $2->type;
+		//}
 				if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
 					$$->temp_name = $2->temp_name;
 					$$->place = "*" + $2->place;

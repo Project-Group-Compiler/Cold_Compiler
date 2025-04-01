@@ -1,0 +1,13 @@
+struct a{
+    int x;
+};
+struct person{
+    char name;
+    int age;
+    struct a a1;
+};
+
+void solve(){
+    struct person p;
+    p.a1.x = 20;   
+}

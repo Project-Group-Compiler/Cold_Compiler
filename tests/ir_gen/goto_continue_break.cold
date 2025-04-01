@@ -1,0 +1,28 @@
+void testGoto() 
+{
+    int x = 5;
+    goto label;
+    x = 10;
+label:
+    x++;
+}
+
+void testContinue() 
+{
+    int x = 0;
+    while (x < 5) {
+        if (x == 1)
+            continue;
+        x++;
+    }
+}
+
+void testBreak() 
+{
+    int x = 0;
+    while (x < 5) {
+        if (x == 3)
+            break;
+        x++;
+    }
+}

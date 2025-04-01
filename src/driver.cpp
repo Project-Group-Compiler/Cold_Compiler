@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
                       << "  -l, --lex        Print lexical analysis table\n"
                       << "  -a, --ast        Print abstract syntax tree\n"
                       << "  -s, --symtab     Print symbol tables\n"
-                      << "  -f, --force      Force parsing even if lexical errors are present\n";
+                      // << "  -t, --tac        Print three address code\n"
+                      << "  -f, --force      Forcefully continue even if errors are present\n";
             return 0;
         }
     }
@@ -125,10 +126,9 @@ int main(int argc, char *argv[])
         }
         else
             print_error("\nsyntax or semantic errors present, use -f to forcefully continue");
-
     }
     else
-        print_error("\nlexical errors present, use -f to force parsing");
+        print_error("\nlexical errors present, use -f to forcefully continue");
 
     fclose(yyin);
     if (has_error)

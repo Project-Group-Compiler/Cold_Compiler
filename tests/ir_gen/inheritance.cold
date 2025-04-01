@@ -62,3 +62,32 @@ class Person {
      inst1.printCourses(); 
  } 
  
+    private{
+        int aadhar_number;
+        char* name;
+    }; 
+    public{ 
+        char * returnName()  { return this->name;} 
+    };
+}; 
+  
+class Employee <- public Person { 
+    private{
+        int empID;
+    };  
+    public{
+        int setEmployeeID(int id){ 
+         this->employeeID = id; 
+        }
+        int getEmployeeID(){ 
+         return this->employeeID; 
+        }
+    }; 
+}; 
+  
+  
+int main()  { 
+    class Employee emp1;
+    emp1.setEmployeeID(101);
+    emp1.getEmployeeID();
+} 
