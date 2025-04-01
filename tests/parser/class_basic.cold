@@ -6,40 +6,17 @@ class Person
     private{
         char* name;
     };
-    protected{
-        int returnAge(int x)  {
-            int y=x;
-            return (*this).age;
-        }//this->age;
+    public{
+	Person(int x) {this->age = x;}
     };
     public{
-        void solve(){
-            (*this).returnAge(3);//TODO
-        }
+        int returnAge()  { return this->age;}
     };
-    
-        
 };
-class Person2 { 
-   // data members of person 
-    private{
-        long aadhar_number;
-    };  
-    private{
-        char* name;
-    }; 
-    public{ 
-        char* returnName()  { return (*this).name;} 
-    };
-}; 
+
 int main()
 {
-    int c;
 	class Person p1;
-    class Person2 p2;
-    //p1.age=5;
-	//p1.returnAge(c);//p1.returnAge(c,this) ->this to added in 3AC
-    p1.solve();
-    p2.returnName();
+	p1.returnName();
 	return 0;
 }

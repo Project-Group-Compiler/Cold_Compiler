@@ -36,11 +36,12 @@ int Anon_StructCounter=0;
 int Anon_ClassCounter = 0;
 vector<string> funcArgs;
 vector<string> classMethodArgs; 
+bool inMethodBody = false;  // Set true when inside a method body
 vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 1; // Flag to enable or disable debugging
+bool debug_enabled = 0; // Flag to enable or disable debugging
 #define DEBUG_PARSER(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -1370,8 +1371,11 @@ init_declarator
 			removeFuncProto();
 		}
 		else{
-			//don't insert class members
-			if(className.empty())insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+			// Insert into symbol table based on context:
+            // 1. No class context - normal insertion
+            // 2. In class but not in method body - class member (handled in insertClassAttr)
+            // 3. In class and in method body - local variable
+			if(className.empty() || inMethodBody)insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
 		}
 	}
 	| declarator '=' initializer{
@@ -2294,6 +2298,7 @@ A
 	: %empty	{
         DEBUG_PARSER("A -> %empty");
 		type ="";
+		std::cout<<"func_flag "<<func_flag<<std::endl;
 		func_flag = 0;
 		funcArgs.clear();
 		createParamList();
@@ -2660,9 +2665,9 @@ compound_statement
 	| '{' CHANGE_TABLE statement_list '}'	{
         DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE statement_list '}'");
 		$$ = $3;
-		
+		std::cout<<"func_flag "<<func_flag<<std::endl;
 		// Semantics - clean up block scope
-		if(func_flag >= 2){
+		if(func_flag >= 2){  //>=2 essentially means we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
 			string str = "Block" + to_string(bc);
@@ -2675,9 +2680,9 @@ compound_statement
 	| '{' CHANGE_TABLE declaration_list '}'	{
         DEBUG_PARSER("compound_statement -> '{' CHANGE_TABLE declaration_list '}'");
 		$$ = $3;
-		
+		std::cout<<"func_flag "<<func_flag<<std::endl;
 		// Semantics - clean up block scope
-		if(func_flag >= 2){
+		if(func_flag >= 2){//>=2 essentially means we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
 			string str = "Block" + to_string(bc);
@@ -2693,9 +2698,9 @@ compound_statement
 		insertAttr(v, $3, "", 1);
 		insertAttr(v, $4, "", 1);
 		$$ = createASTNode("compound_statement", &v);
-		
+		std::cout<<"func_flag "<<func_flag<<std::endl;
 		// Semantics - clean up block scope
-		if(func_flag >= 2){
+		if(func_flag >= 2){//>=2 essentially means we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
 			string str = "Block" + to_string(bc);
@@ -2714,11 +2719,16 @@ CHANGE_TABLE
 			string str = "Block" + to_string(block_count);
 			block_stack.push(block_count);
 			block_count++;
-			func_flag++;
 			makeSymbolTable(str, "");
 		}
-		else func_flag++;
-		
+		else {
+			if (!className.empty() && funcName != "") {
+                inMethodBody = true;  // We're entering a method body in a class
+				std::cout<<"here"<<std::endl;
+            }
+		}
+		func_flag++;
+		std::cout<<"func_flag "<<func_flag<<std::endl;
 		$$ = strdup("");
 	}
 	;
@@ -2950,6 +2960,7 @@ function_definition
 		std::cout<<std::endl;
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		inMethodBody = false;
 	}
 	| declaration_specifiers declarator F compound_statement	{
         DEBUG_PARSER("function_definition -> declaration_specifiers declarator F compound_statement");
@@ -2977,6 +2988,7 @@ function_definition
 		string fName = string($3);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		inMethodBody = false;
 	}
 	| declarator F declaration_list compound_statement	{//this rule can be constructor of classess OOPS
         DEBUG_PARSER("function_definition -> declarator F declaration_list compound_statement");
@@ -2991,6 +3003,7 @@ function_definition
 		string fName = string($2);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		inMethodBody = false;
 	}
 	| declarator F compound_statement	{//this rule can be constructor of classess OOPS
         DEBUG_PARSER("function_definition -> declarator F compound_statement");
@@ -3004,6 +3017,7 @@ function_definition
 		string fName = string($2);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		inMethodBody = false;
 	}
 	;
 

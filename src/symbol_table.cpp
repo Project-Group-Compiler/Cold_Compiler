@@ -545,12 +545,57 @@ int inheritFromClass(string childClassName, string parentClassName) {
         string memberName = it.first;
         sym_entry* member = it.second;
         
-        // Only inherit public members
+        // Only inherit public and protected members
         if (member->access == "public" || member->access == "protected") {
-            // Copy the member to the current class structure
-            // Avoid duplicating 'this' pointers happens by itself as this is in function not in class symbol table
-            if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end()) { //if child function has same name as parent this check is needed
-                insertClassAttr(memberName, member->type, member->size, member->init, member->access);
+            // Check if it's a method (starts with FUNC_)
+            if (memberName.find("FUNC_") == 0) {
+                // This is a method - needs special handling
+                
+                // Parse the original method name to extract components
+                size_t firstUnderPos = memberName.find('_', 5);  // Skip "FUNC_"
+                if (firstUnderPos != string::npos) {
+                    // Extract parent class name length and name
+                    string parentLenStr = memberName.substr(5, firstUnderPos - 5);
+                    std::cout<<"Parent length: " << parentLenStr << std::endl;
+                    int parentNameLen = stoi(parentLenStr);
+                    
+                    // Extract method name and signature (everything after parent class name)
+                    string methodSuffix = memberName.substr(5 + parentNameLen + 1 + 1);
+                    std::cout<<"Method suffix: " << methodSuffix << std::endl;
+                    // Create new mangled name with child class
+                    string childClassNameBase = childClassName.substr(6); // Remove "CLASS_" prefix
+                    std::cout<<"Child class name base: " << childClassNameBase << std::endl;
+                    string newMangledName = "FUNC_" + to_string(childClassNameBase.length()) + 
+                                           childClassNameBase + "_" + methodSuffix;
+                    std::cout<<"New mangled name: " << newMangledName << std::endl;
+                    
+                    // Create a copy of the method's symbol entry
+                    insertClassAttr(newMangledName, member->type, member->size, 
+                                  member->init, member->access);
+                    
+                    // If the method has a symbol table (for function body), copy it
+                    if (member->entry) {
+                        // Create a new symbol table for the inherited method
+                        sym_table* newMethodTable = new sym_table(*(member->entry));
+                        
+                        // Update the entry pointer in the new method
+                        (*curr_class_structure)[newMangledName]->entry = newMethodTable;
+                        
+                        // Register this in the parent_table map
+                        parent_table[newMethodTable] = curr_table;
+                        
+                        // Copy function arguments if this method has parameters
+                        if (func_arg.find(memberName) != func_arg.end()) {
+                            func_arg[newMangledName] = func_arg[memberName];
+                        }
+                    }
+                }
+            } else {
+                // Regular member (non-method) - copy as is
+                if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end()) {
+                    insertClassAttr(memberName, member->type, member->size, 
+                                 member->init, member->access);
+                }
             }
         }
     }

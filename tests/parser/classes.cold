@@ -7,38 +7,35 @@ class Person {
         char* name;
     }; 
     public{ 
-        char * returnName()  { return (*this).name;} 
+        char * returnName()  { return this->name;} 
     };
 }; 
-
-class Faculty <- Person { 
+  
+class Faculty <- public Person { 
    // data members of Faculty
     protected{
         long employeeID;
     };  
     public{
         long getEmployeeID(){ 
-         return (*this).employeeID; 
+         return this->employeeID; 
         }
     }; 
 }; 
   
-class Student <- Person { 
+class Student <- public Person { 
    // data members of Student 
    private {
        long rollNo;
    };
     public{ 
         long getRollNo() { 
-            //(*this).rollNo=(*this).aadhar_number; // or should it be (*this).aadhar_number??  2nd option seems better   -> throws error works fine
-            (*this).returnName();//till now we created object and then called function -> *this does the same thing
-            //ofc there should be errors on using private vars
-            return (*this).rollNo; 
+            return this->rollNo; 
         } 
     };
 }; 
   
-class Instructor <- Faculty  {//need to flag errors for multiple inheritance as it is not allowed
+class Instructor <- public Faculty, public Student  {
     private{
         char** courses;
         int maxSize =  1024;
@@ -47,8 +44,8 @@ class Instructor <- Faculty  {//need to flag errors for multiple inheritance as 
     public{
         void printCourses(){ 
             int i;
-            for(i=0; i<(*this).numCourses;i++)
-                (*this).courses[i]=1;
+            for(i=0; i<this->numCourses;i++)
+                printf("%s", this->courses[i]); 
         }
     };
 }; 
