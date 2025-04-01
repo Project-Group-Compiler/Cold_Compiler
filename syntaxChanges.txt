@@ -1,0 +1,5 @@
+-> Current reseting precendece order
+-> After all the things are done, we will implement that.
+-> Additional support of *(pointer) in 3ac
+-> Additional support of ptr+(pointer addition) in 3ac
+-> Additional support of copyToOffset operatore

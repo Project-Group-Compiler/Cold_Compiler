@@ -71,7 +71,7 @@ void updateFuncSymbolEntry(int args)
     }
 }
 
-void printSymbolTable(std::ofstream &out)
+void printSymbolTable_meet(std::ofstream &out)
 {
     out << "\nSymbol Table:\n\n";
     out << std::left << std::setw(60) << "Token"
@@ -121,8 +121,11 @@ std::string searchTypedefTable(std::string Token)
 
 void printType(std::ofstream &out)
 {
-    if (typedefTable.empty())
+    if (typedefTable.empty()){
+        std::cout << "Typedef table is empty\n";
         return;
+    }
+        
     out << "\nTypedef Table:\n\n";
     out << std::left << std::setw(60) << "Definition"
         << std::setw(25) << "Keyword" << std::endl;
@@ -147,7 +150,19 @@ void printTables(const std::string &inputFile)
         print_error("cannot open " + outputDir + inputFile + "_tables.txt");
         return;
     }
-    printSymbolTable(out);
+    printSymbolTable_meet(out);
     printConstantTable(out);
     printType(out);
+}
+
+std::string getSizeOfType(const std::string& typeStr) {
+    if (typeStr == "int") {
+        return "4";
+    } else if (typeStr == "int*") {
+        return "4";
+    } else if(typeStr.size() >= 4 && typeStr.substr(0, 4) == "int*"){//for int****
+        return "4";
+    } else {
+        return "0"; // Unknown type
+    }
 }

@@ -1,0 +1,28 @@
+int average(int count, ...) {
+    va_list args;
+    int sum;
+    int avg;
+    int i;
+    sum=0;
+    // Initialize va_list
+    va_start(args, count);
+
+    // Iterate through the arguments
+    for (i = 0; i < count; i++) {
+        sum += va_arg(args, "int");
+    }
+
+    // Clean up va_list
+    va_end(args);
+
+    avg=sum/count;
+
+    return avg;
+}
+
+int main() {
+    int x;
+    x=average(3, 10, 20, 30);
+    printf("Average: %f\n", x); // Output: Average: 20.000000
+    return 0;
+}

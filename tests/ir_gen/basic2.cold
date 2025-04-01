@@ -10,15 +10,6 @@ int main()
     int a, b, c;
     char op;
     a.val=5;
-    printf("%d", a.x);
-    
-    printf("Enter first number\n");
-    scanf("%d",&a);
-    printf("Enter second number\n");
-    scanf("%d",&b);
-    
-    printf("Type\n\t'+' for addition\n\t'-' for subtraction\n");
-    scanf(" %c",&op);
 
     switch(op){
         case '+':
@@ -32,6 +23,5 @@ int main()
         default:
             printf("Not a valid operator\n");
     }
-    
     return 0;
 }

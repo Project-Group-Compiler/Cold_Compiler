@@ -3,12 +3,6 @@ class Person
     private{
         int age;
     };
-    private{
-        char* name;
-    };
-    public{
-	Person(int x) {this->age = x;}
-    };
     public{
         int returnAge()  { return this->age;}
     };
@@ -17,6 +11,7 @@ class Person
 int main()
 {
 	class Person p1;
-	p1.returnName();
+    p1.age = 6;
+	p1.returnAge();
 	return 0;
 }
