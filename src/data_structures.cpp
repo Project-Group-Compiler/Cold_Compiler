@@ -121,8 +121,11 @@ std::string searchTypedefTable(std::string Token)
 
 void printType(std::ofstream &out)
 {
-    if (typedefTable.empty())
+    if (typedefTable.empty()){
+        std::cout << "Typedef table is empty\n";
         return;
+    }
+        
     out << "\nTypedef Table:\n\n";
     out << std::left << std::setw(60) << "Definition"
         << std::setw(25) << "Keyword" << std::endl;

@@ -13,9 +13,9 @@
 #include "tac.hpp"
 
 std::string currentDataType="";
-std::string currentAccess = "";//for classes
+std::string currentAccess = "", tdstring="", tdstring2="";//for classes
 int noArgs=0;
-bool flag=0,flag2=0;
+int flag=0,flag2=0, flag3=0;
 
 extern int yyleng;
 extern char* yytext;
@@ -41,7 +41,7 @@ vector<string> funcArgs;
 vector<string> idList;
 vector<string> currArgs;
 
-bool debug_enabled = 0;
+bool debug_enabled = 1;
 #define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -1199,6 +1199,7 @@ declaration_specifiers
 	}
 	| storage_class_specifier declaration_specifiers {
 		DBG("declaration_specifiers -> storage_class_specifier declaration_specifiers");
+		std::cout << tdstring << '\n';
 		$$ = getNode("declaration_specifiers", mergeAttrs($1, $2));
 	}
 	| type_specifier {
@@ -1238,7 +1239,11 @@ init_declarator
 		//$$=getNode($1);
 		//
 		$$ = $1;  // Just pass the node directly
-		
+		if(flag3){
+			//std::cout << tdstring2 << " haaaaa " << tdstring << endl;
+			typedefTable.push_back(make_pair(tdstring2,tdstring));
+			flag3=0;
+		}
 		// Semantics
 		if(currLookup($1->temp_name)){
 			yyerror(($1->temp_name + " is already declared").c_str(), "scope error");
@@ -1252,6 +1257,7 @@ init_declarator
 		}
 		else{
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+			std::cout << "insert ho rha\n";
 		}
 		//3AC
 		$$->place = $1->temp_name;
@@ -1291,6 +1297,7 @@ storage_class_specifier
 		DBG("storage_class_specifier -> TYPEDEF");
 		$$ = getNode($1);
 		flag = 1;
+		
 	}
 	| EXTERN {
 		DBG("storage_class_specifier -> EXTERN");
@@ -1323,86 +1330,118 @@ type_specifier
 			DBG("type_specifier -> VOID");
 			$$ = getNode($1);
 			currentDataType = "void";
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "void";
+			else type += " void";
 		}	
 		| CHAR {
 			DBG("type_specifier -> CHAR");
 			$$ = getNode($1);
+			if(flag==1){ 
+				flag++;
+				tdstring = std::string($1);
+			}
 			currentDataType = flag2 ? currentDataType + " char" : "char";
 			flag2 = 0;
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "char";
+			else type += " char";
 		}	
 		| SHORT {
 			DBG("type_specifier -> SHORT");
 			$$ = getNode($1);
+			if(flag==1){ 
+				flag++;
+				tdstring = std::string($1);
+			}
 			currentDataType = flag2 ? currentDataType + " short" : "short";
 			flag2 = 0;
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "short";
+			else type += " short";
 		}	
 		| INT {
 			DBG("type_specifier -> INT");
 			$$ = getNode($1);
+			if(flag==1){ 
+				flag++;
+				tdstring = std::string($1);
+			}
 			currentDataType = flag2 ? currentDataType + " int" : "int";
 			flag2 = 0;
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "int";
+			else type += " int";
 		}
 		| LONG {
 			DBG("type_specifier -> LONG");
 			$$ = getNode($1);
+			if(flag==1){ 
+				flag++;
+				tdstring = std::string($1);
+			}
 			currentDataType = flag2 ? currentDataType + " long" : "long";
 			flag2 = 0;
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "long";
+			else type += " long";
 		}
 		| FLOAT {
 			DBG("type_specifier -> FLOAT");
 			$$ = getNode($1);
+			if(flag==1){ 
+				flag++;
+				tdstring = std::string($1);
+			}
 			currentDataType = flag2 ? currentDataType + " float" : "float";
 			flag2 = 0;
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "float";
+			else type += " float";
 		}
 		| DOUBLE {
 			DBG("type_specifier -> DOUBLE");
 			$$ = getNode($1);
+			if(flag==1){ 
+				flag++;
+				tdstring = std::string($1);
+			}
 			currentDataType = flag2 ? currentDataType + " double" : "double";
 			flag2 = 0;
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "double";
+			else type += " double";
 		}
 		| SIGNED {
 			DBG("type_specifier -> SIGNED");
 			$$ = getNode($1);
 			currentDataType = "signed";
 			flag2 = 1;
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "signed";
+			else type += " signed";
 		}
 		| UNSIGNED {
 			DBG("type_specifier -> UNSIGNED");
 			$$ = getNode($1);
 			currentDataType = "unsigned";
 			flag2 = 1;
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "unsigned";
+			else type += " unsigned";
 		}
 		| FILE_MAN {
 			DBG("type_specifier -> FILE_MAN");
 			$$ = getNode($1);
+			if(flag==1){ 
+				flag++;
+				tdstring = std::string($1);
+			}
 			currentDataType = "file";
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "file";
+			else type += " file";
 		}
 		| VA_LIST {
 			DBG("type_specifier -> VA_LIST");
 			$$ = getNode($1);
+			if(flag==1){ 
+				flag++;
+				tdstring = std::string($1);
+			}
 			currentDataType = "va_list";
-			if(type.empty()) type = $1;
-			else type += " " + std::string($1);
+			if(type.empty()) type = "va_list";
+			else type += " va_list";
 		}
 		| struct_or_union_specifier {
 			DBG("type_specifier -> struct_or_union_specifier");
@@ -1575,6 +1614,15 @@ struct_or_union_specifier
         } else {
             yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
         }
+		if (flag == 1) {
+            // We're in a typedef, so register the struct type with tdstring
+            tdstring=std::string($2);
+            flag++;
+        }	
+		if(flag3){
+			tdstring=std::string($2);
+		}
+		
     }
     | struct_or_union S '{' struct_declaration_list '}' {
         DBG("struct_or_union_specifier -> struct_or_union S '{' struct_declaration_list '}'");
@@ -1589,6 +1637,7 @@ struct_or_union_specifier
     | struct_or_union IDENTIFIER {
         DBG("struct_or_union_specifier -> struct_or_union IDENTIFIER");
         $$ = getNode($1, mergeAttrs(getNode($2), nullptr));
+		//std::cout << string($2) << " jafaafafd\n";
         currentDataType += " " + string($2);
         if (findStruct("STRUCT_" + string($2)) == 1) {
             type = type.empty() ? "STRUCT_" + string($2) : type + " STRUCT_" + string($2);
@@ -1605,6 +1654,17 @@ G
         DBG("G -> IDENTIFIER");
 		$$ = $1;
 		structName = $1;
+		if (flag==1){
+			tdstring = std::string($1);
+			//std::cout << tdstring << "  " << flag << '\n';
+			//flag++;
+		}
+		else if (flag==2) {
+			//typedefTable.push_back(make_pair(check, tdstring));
+			flag = 0;
+		} else {
+			//addToSymbolTable(check, currentDataType);
+		}
 	}
 	;
 
@@ -1619,6 +1679,8 @@ struct_or_union
 	: STRUCT {
         DBG("struct_or_union -> STRUCT");
         $$ = $1; currentDataType="struct";
+		flag3 = 1;
+		flag=0;
     }
 	| UNION {
         DBG("struct_or_union -> UNION");
@@ -1788,8 +1850,17 @@ direct_declarator
 		DBG("direct_declarator -> IDENTIFIER");
 		$$ = getNode($1);
 		std::string check = std::string($1);
-		if (flag) {
-			typedefTable.push_back(make_pair(check, currentDataType));
+		tdstring2=check;
+		std::cout << check << '\n';
+		if (flag==1){
+			tdstring = std::string($1);
+			//std::cout << tdstring << "  " << flag << '\n';
+			//flag++;
+		}
+		else if (flag==2) {
+			//std::cout << tdstring << "  " << flag << '\n';
+			typedefTable.push_back(make_pair(check, tdstring));
+			//std::cout << typedefTable.size() << '\n';
 			flag = 0;
 		} else {
 			addToSymbolTable(check, currentDataType);

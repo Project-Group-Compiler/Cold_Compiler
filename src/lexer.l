@@ -21,6 +21,7 @@ IS			(u|U|l|L)*
 extern std::string outputDir;
 extern bool has_error;
 void print_error(const std::string &message);
+std::string type_check();
 
 void count();
 void reportError();
@@ -92,7 +93,7 @@ L?'(\\.|[^\\'])+'  { count();  current_token_type="CONSTANT"; set_int_type(0); i
 {D}*"."{D}+({E})?{FS}?  { count();  current_token_type="CONSTANT"; set_real_type(); if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
 {D}+"."{D}*({E})?{FS}?  { count(); current_token_type="CONSTANT"; set_real_type(); if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
 
-L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
+L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(type_check().c_str()); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
 
 "..."          { count(); yylval.str = strdup(yytext); current_token_type="ELLIPSIS"; return(ELLIPSIS); }
 ">>="          { count(); yylval.str = strdup(yytext); current_token_type="RIGHT_ASSIGN"; return(RIGHT_ASSIGN); }
@@ -197,6 +198,15 @@ void count()
 		else
 			column++;
 	}
+}
+
+std::string type_check(){
+    std::string str = searchTypedefTable(yytext);
+    std::cout << str << " jijijiji\n";
+    if(str.empty()){
+        return std::string(yytext);
+    }
+    return str;
 }
 
 
