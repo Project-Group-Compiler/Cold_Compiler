@@ -1,0 +1,45 @@
+//check different return types of functions
+struct a{
+    int a;
+};
+void fun(){
+    int x = 5;
+}
+char fun2(int x,char c){
+    return c;
+}
+int fun3(double y,int* p){
+    return *p;
+}
+float fun4(int x, float y){
+    int arr[5]={1,2,3,4,5};
+    return arr[x];
+}
+char* fun5(char str){
+    char*p="hell";
+    return p;
+}
+int* fun6(int* p){
+    int* arr={1,2,3,4,5};
+    return arr;
+}
+a fun7(a p){//doesn't work
+    return p;
+}
+void solve(){
+    int a = 5;
+    char b = 'c';
+    double c = 3.14;
+    float d = 2.5f;
+    char str = 'c';
+    int* p = &a;
+    // a=p;
+    struct a p1;
+    fun();
+    a=fun2(a, b);
+    fun3(c, p);
+    fun4(a, d);
+    b=fun5(str);//should give errror
+    fun6(p);
+    fun7(p1);
+}

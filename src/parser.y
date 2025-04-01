@@ -38,10 +38,13 @@ string type = "";
 int Anon_StructCounter=0;
 int Anon_ClassCounter = 0;
 vector<string> funcArgs;
+vector<string> classMethodArgs; 
+bool inMethodBody = false;  // Set true when inside a method body
 vector<string> idList;
 vector<string> currArgs;
 
-bool debug_enabled = 1;
+// Debug tracking
+bool debug_enabled = 0; // Flag to enable or disable debugging
 #define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -114,6 +117,7 @@ primary_expression
 		
 		// Semantics
 		string temp = primaryExpression(string($1));
+		std::cout<<string($1)<<std::endl;
 		if(temp == ""){
 			yyerror(("Undeclared Identifier " + string($1)).c_str(), "scope error");
 		}
@@ -125,6 +129,7 @@ primary_expression
 				$$->expType = 2; 
 			}
 			else $$->expType = 1;
+			//printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
 			$$->type = temp;
 			$$->isInit = lookup(string($1))->init;
 			$$->size = getSize(temp);
@@ -230,13 +235,20 @@ postfix_expression
 		// Semantics
 		$$->isInit = 1;
 		string temp = postfixExpression($1->type, 2);
+		std::cout<<$1->type<<" "<<temp<<std::endl;
+		std::cout<<$1->temp_name<<std::endl;
 		if(!temp.empty()){	
 			$$->type = temp;
 			if($1->expType == 3){
-				vector<string> funcArg = getFuncArgs($1->temp_name);
-				if(!funcArg.empty()){
-					yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
-				}else{
+				std::string mangledName = mangleFunctionName($1->temp_name,currArgs);
+				vector<string> funcArg = getFuncArgs(mangledName);
+				std::cout<<funcArg.size()<<std::endl;
+				for(auto i:funcArg)std::cout<<i<<" ";
+				std::cout<<std::endl;
+				if(currArgs.size()!=funcArg.size()){
+					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
+				}
+				else{
 					//3AC_5
 					std::string q = getTempVariable($1->type);
 					$$->place = q;
@@ -251,35 +263,57 @@ postfix_expression
 		}
 		currArgs.clear(); 
 	}
-	| postfix_expression '(' argument_expression_list ')' {
+	| postfix_expression '(' argument_expression_list ')' {//for function calls
         DBG("postfix_expression -> postfix_expression '(' argument_expression_list ')'");
 		$$ = getNode("postfix_expression", mergeAttrs($1, $3));
 		
 		// Semantics
 		$$->isInit = $3->isInit;
-		string temp = postfixExpression($1->type, 3);
+		
+		std::cout<<$1->type<<std::endl; //this is wrong type 
+		std::cout<<$1->temp_name<<std::endl;
+		// Create mangled name with current arguments
+	    std::string mangledName = mangleFunctionName($1->temp_name, currArgs);
+	    std::cout << "Trying to resolve: " << mangledName << std::endl;
+
+		string temp = primaryExpression(mangledName);
+		std::cout<<"temp "<<temp<<std::endl;
+		if(temp == ""){
+			//yyerror(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
+		}
+		else{
+			if(temp.substr(0, 5) == "FUNC_"){
+				$1->expType = 3;
+			}
+			else if(temp.back() == '*'){
+				$1->expType = 2; 
+			}
+			else $1->expType = 1;
+			//printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
+			$1->type = temp;
+			$1->isInit = lookup(mangledName)->init;
+			$1->size = getSize(temp);
+		}
+
+
+		temp = postfixExpression($1->type, 2);
 		
 		if(!temp.empty()){	
 			$$->type = temp;
 			if($1->expType == 3){
-				vector<string> funcArgs = getFuncArgs($1->temp_name);
+				vector<string> funcArgs = getFuncArgs(mangledName);
 				
+				if(currArgs.size()!=funcArgs.size()){
+					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
+				}
 				for(int i=0; i<funcArgs.size(); i++){
 					if(funcArgs[i]=="...")break;
-					if(currArgs.size()==i){
-						yyerror(("Too few Arguments to Function " + $1->temp_name).c_str(), "semantic error");
-						break;
-					}
 					string msg = checkType(funcArgs[i],currArgs[i]);
 					if(msg =="warning"){
 						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
 					}
 					else if(msg.empty()){
 						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
-						break;
-					}
-					if(i==funcArgs.size()-1 && i<currArgs.size()-1){
-						yyerror(("Too many Arguments to Function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
 				}
@@ -294,7 +328,7 @@ postfix_expression
 		else{
 			yyerror("Invalid function call", "semantic error");
 		}
-		currArgs.clear();
+	    currArgs.clear();
 	}
 	| postfix_expression '.' IDENTIFIER {
     	DBG("postfix_expression -> postfix_expression '.' IDENTIFIER");
@@ -304,14 +338,37 @@ postfix_expression
     	string temp = string($3);
     	string memberName = $1->temp_name;
     	string type = $1->type;
-	
-    	// First check if it's a class
-    	if (type.substr(0, 6) == "CLASS_") {
+		
+		// Debug the type to see what's reaching this rule
+    	printf("DEBUG: Member access type = '%s', member = '%s',memberName='%s'\n", type.c_str(), temp.c_str(),memberName.c_str());
+
+		if ($1->temp_name == "this" || ($1->type.substr(0, 6) == "CLASS_" && !className.empty() && $1->type.substr(6) == className)) {
+        	// We're inside a class method accessing a member through 'this'
+        	// Check if the member exists in the current class structure
+        	if (curr_class_structure && (*curr_class_structure).find(temp) != (*curr_class_structure).end()) {
+        	    $$->type = (*curr_class_structure)[temp]->type;
+        	    $$->temp_name = $1->temp_name + "." + temp;
+        	} else {
+        	    yyerror(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
+        	}
+    	}
+    	// First check if it's a regular class
+		else if (type.substr(0, 6) == "CLASS_") {
     	    int ret = lookupClass(type, temp);
+			std::cout<<type<<" "<<temp<<std::endl;
     	    if (ret == 1) {
-    	        // Class member found
-    	        $$->type = ClassAttrType(type, temp); 
-    	        $$->temp_name = $1->temp_name + "." + temp;
+    	        string memberAccess = ClassAttrAccess(type, temp);
+        
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != type.substr(6))) {
+        		    yyerror(("Cannot access " + memberAccess + " member '" + temp + 
+        		            "' of class '" + type.substr(6) + "'").c_str(), "access error");
+        		} else {
+        		    // Member found and accessible
+        		    $$->type = ClassAttrType(type, temp);
+        		    $$->temp_name = $1->temp_name + "." + temp;
+        		}
     	    }
     	    else if (ret == 0) {
     	        yyerror(("Member '" + temp + "' not found in class").c_str(), "scope error");
@@ -335,11 +392,230 @@ postfix_expression
     	    }
     	}
 		//3AC
-		std::string q = getTempVariable($$->type);
+		std::string q = getTempVariable($1->type+'*'); 
+		emit("unary&", $1->place, "", q, -1);
+		emit("ptr+", q, std::string($3), q, -1); //TODO: REPLACE $3 with $3->offset 
+		q = "*" + q;
         $$->place = q;
 		$$->nextlist.clear();
-        emit("member_access", $1->place, std::string($3), q, -1);
 
+	}
+	| postfix_expression '.' IDENTIFIER '(' ')'  {
+	    DBG("postfix_expression -> postfix_expression '.' IDENTIFIER '(' ')'");
+	    
+		$$ = getNode("method_call", mergeAttrs($1, getNode($3)));
+	
+	    // Semantics - check if it's a class method call
+	    string classType = $1->type;
+	    string methodName = string($3);
+	
+    	// Special case for 'this' pointer access within a class definition
+    	if ($1->temp_name == "this" || 
+    	    ($1->type.substr(0, 6) == "CLASS_" && !className.empty() && 
+    	     $1->type.substr(6) == className)) {
+			
+			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
+			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+
+    	    // We're inside a class method calling another method through 'this'
+    	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
+    	        string methodType = (*curr_class_structure)[manglemethod]->type;
+	
+    	        if (methodType.substr(0, 5) == "FUNC_") {
+    	            $$->type = methodType.substr(5); // Extract return type
+    	            $$->temp_name = $1->temp_name + "." + methodName;
+    	            $$->isInit = 1;
+	
+    	            // Check arguments
+    	            vector<string> methodArgs = getFuncArgs(manglemethod);
+    	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
+    	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+    	            }
+    	        } else {
+    	            yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+    	        }
+    	    } else {
+    	        yyerror(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
+    	    }
+    	}
+	    // First check if it's a class
+	    else if (classType.substr(0, 6) == "CLASS_") {
+	        // Look up method in class
+			std::string manglemethod=mangleFunctionName(methodName,currArgs);
+			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
+	        int ret = lookupClass(classType, manglemethod);
+			std::cout<<classType<<" "<<methodName<<" "<<manglemethod<<std::endl;
+
+	        if (ret == 1) {
+				string memberAccess = ClassAttrAccess(classType, manglemethod);
+				
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != classType.substr(6))) {
+        		    yyerror(("Cannot access " + memberAccess + " member '" + methodName + 
+        		            "' of class '" + classType.substr(6) + "'").c_str(), "access error");
+        		}
+				else{
+	            	// Get method type (should be FUNC_returnType)
+	            	string methodType = ClassAttrType(classType, manglemethod);
+
+	            	// Check if it's a function
+	            	if (methodType.substr(0, 5) == "FUNC_") {
+	            	    string returnType = methodType.substr(5); // Extract return type
+	            	    $$->type = returnType;
+	            	    $$->temp_name = $1->temp_name + "." + methodName;
+	            	    $$->isInit = 1;
+
+	            	    // Check arguments (none for this rule)
+	            	    vector<string> methodArgs = getFuncArgs(manglemethod);
+	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
+                	    	yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+                		}
+	            	} else {
+	            	    yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            	}
+				}
+	        } else if (ret == 0) {
+	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
+	        } else {
+	            yyerror(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
+	        }
+	    } else {
+	        yyerror("Cannot call method on non-class type", "type error");
+	    }
+	    currArgs.clear();
+		//3AC
+		std::string q = getTempVariable($1->type+'*'); 
+		emit("unary&", $1->place, "", q, -1);
+		emit("param", q, "", "", -1); 
+		std::string q2 = getTempVariable($$->type);
+		emit("CALL", std::string($3), "1", q2, -1);
+        $$->place = q2;
+		//$$->nextlist.clear();
+
+	}
+	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
+	    DBG("postfix_expression -> postfix_expression '.' IDENTIFIER '(' argument_expression_list ')'");
+		$$ = getNode("method_call_args", mergeAttrs($1, getNode($3), $5));
+	
+	    // Semantics - check if it's a class method call with arguments
+	    string classType = $1->type;
+	    string methodName = string($3);
+
+    	// Special case for 'this' pointer access within a class definition
+    	if (($1->temp_name == "this") || 
+    	    (classType.substr(0, 6) == "CLASS_" && !className.empty() && 
+    	     classType.substr(6) == className)) {
+			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
+			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+			std::cout<<manglemethod<<" "<<currArgs.size()<<std::endl;
+
+    	    // We're inside a class method calling another method through 'this'
+    	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
+    	        string methodType = (*curr_class_structure)[manglemethod]->type;
+				
+    	        if (methodType.substr(0, 5) == "FUNC_") {
+    	            string returnType = methodType.substr(5); // Extract return type
+    	            $$->type = returnType;
+    	            $$->temp_name = $1->temp_name + "." + methodName;
+    	            $$->isInit = $5->isInit;
+
+    	            // Check arguments
+    	            vector<string> methodArgs = getFuncArgs(manglemethod);
+	
+    	            // Check number of arguments (account for implicit 'this')
+    	            if (currArgs.size() != methodArgs.size() - 1) {
+    	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+    	            } else {
+    	                // Type check arguments
+    	                for (int i = 1; i < methodArgs.size(); i++) { // Start from 1 to skip 'this'
+    	                    if (methodArgs[i] == "...") break;
+	
+    	                    string msg = checkType(methodArgs[i], currArgs[i-1]);
+    	                    if (msg == "warning") {
+    	                        warning(("Incompatible conversion of " + currArgs[i-1] + 
+    	                                " to parameter of type " + methodArgs[i]).c_str());
+    	                    } else if (msg.empty()) {
+    	                        yyerror(("Incompatible argument to method " + methodName).c_str(), 
+    	                              "semantic error");
+    	                        break;
+    	                    }
+    	                }
+    	            }
+    	        } else {
+    	            yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+    	        }
+    	    } else {
+    	        yyerror(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
+    	    }
+    	}
+	    // First check if it's a class
+	    else if (classType.substr(0, 6) == "CLASS_") {
+	        // Look up method in class
+			std::string manglemethod=mangleFunctionName(methodName,currArgs);
+			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
+	        int ret = lookupClass(classType, manglemethod);
+			std::cout<<classType<<" "<<methodName<<" "<<manglemethod<<std::endl;
+	        if (ret == 1) {
+				string memberAccess = ClassAttrAccess(classType, manglemethod);
+
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != classType.substr(6))) {
+        		    yyerror(("Cannot access " + memberAccess + " member '" + methodName + 
+        		            "' of class '" + classType.substr(6) + "'").c_str(), "access error");
+        		}
+				else{
+	            	// Get method type (should be FUNC_returnType)
+	            	string methodType = ClassAttrType(classType, manglemethod);
+
+	            	// Check if it's a function
+	            	if (methodType.substr(0, 5) == "FUNC_") {
+	            	    string returnType = methodType.substr(5); // Extract return type
+
+	            	    // Check arguments against parameter types
+	            	    vector<string> methodArgs = getFuncArgs(manglemethod);//gives className_func ->className empty right now
+						if(currArgs.size() != methodArgs.size()-1)
+							yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+					else{
+
+	            	    for (int i = 1; i < methodArgs.size(); i++) {
+	            	        if (methodArgs[i] == "...") break;
+							string msg = checkType(methodArgs[i], currArgs[i-1]);
+	            	        if (msg == "warning") {
+	            	            warning(("Incompatible conversion of " + currArgs[i-1] + 
+	            	                    " to parameter of type " + methodArgs[i]).c_str());
+	            	        } else if (msg.empty()) {
+	            	            yyerror(("Incompatible argument to method " + methodName).c_str(), 
+	            	                   "semantic error");
+	            	            break;
+	            	        }
+	            	    }
+					}
+	            	    $$->type = returnType;
+	            	    $$->temp_name = $1->temp_name + "." + methodName;
+	            	    $$->isInit = $5->isInit;
+	            	} else {
+	            	    yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            	}
+				}
+	        } else if (ret == 0) {
+	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
+	        } else {
+	            yyerror(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
+	        }
+	    } else {
+	        yyerror("Cannot call method on non-class type", "type error");
+	    }
+		//3AC
+		std::string q = getTempVariable($1->type+'*'); 
+		emit("unary&", $1->place, "", q, -1);
+		emit("param", q, "", "", -1); 
+		std::string q2 = getTempVariable($$->type);
+		emit("CALL", std::string($3), stoi(currArgs.size()+1), q2, -1);
+        $$->place = q2;
+		//$$->nextlist.clear();
+	    currArgs.clear();
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
         DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
@@ -364,9 +640,11 @@ postfix_expression
 			$$->type = StructAttrType(temp1, temp);
 			$$->temp_name = $1->temp_name + "->" + temp;
 			//3AC
-			std::string q = getTempVariable($$->type);
-			emit("PTR_OP", $1->place, std::string($3), q, -1);
+			std::string q = getTempVariable($1->type); 
+			emit("ptr+", $1->place, std::string($3), q, -1); //TODO: REPLACE $3 with $3->offset 
+			q = "*" + q;
 			$$->place = q;
+			//$$->nextlist.clear();
 		}
 	}
 	| postfix_expression INC_OP {
@@ -493,27 +771,35 @@ unary_expression
 		
 		// Semantics
 		$$->isInit = $2->isInit;
-		string temp = unaryExp($1->node_name, $2->type);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $2->intVal;
-			//3AC
-			//TODO : Check Later
-			if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
-				$$->temp_name = $2->temp_name;
-				$$->place = "*" + $2->place;
-				$$->nextlist.clear();
-			}else{
-				std::string q = getTempVariable($2->type);
-				$$->temp_name = $2->temp_name;
-				$$->place = q;
-				$$->nextlist.clear();
-				emit($1->place, $2->place, "", q, -1);
-			}
-		}
-		else{
-			yyerror("Type inconsistent with operator", "type error");
-		}
+			// Special handling for dereferencing class pointers (this pointer)
+    	if ($1->node_name == "*" && $2->type.substr(0, 6) == "CLASS_" && $2->type.back() == '*') {
+			std::cout<<"type: "<<$2->type<<std::endl;
+    	    // For class pointers, preserve the class type without the trailing *
+    	    $$->type = $2->type.substr(0, $2->type.size() - 1);
+    	} else {
+    	    // Normal unary expression handling
+    	    string temp = unaryExp($1->node_name, $2->type);
+    	    if(!temp.empty()){
+    	        $$->type = temp;
+    	        $$->intVal = $2->intVal;
+				//3AC
+				//TODO : Check Later
+				if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
+					$$->temp_name = $2->temp_name;
+					$$->place = "*" + $2->place;
+					$$->nextlist.clear();
+				}else{
+					std::string q = getTempVariable($2->type);
+					$$->temp_name = $2->temp_name;
+					$$->place = q;
+					$$->nextlist.clear();
+					emit($1->place, $2->place, "", q, -1);
+				}
+    	    }
+    	    else{
+    	        yyerror("Type inconsistent with operator", "type error");
+    	    }
+    	}
 	}
 	| SIZEOF unary_expression {
         DBG("unary_expression -> SIZEOF unary_expression");
@@ -701,7 +987,9 @@ additive_expression
         $$->intVal = $1->intVal + $3->intVal;
         string temp = addExp($1->type, $3->type, '+');
         if(!temp.empty()){
-            $$->type = (temp == "int") ? "long long" : (temp == "real") ? "long double" : temp;
+            if(temp == "int") $$->type = "long long";
+			else if(temp == "real") $$->type = "long double";
+			else $$->type = temp;
 			//3AC
 			std::string q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
@@ -727,7 +1015,9 @@ additive_expression
         $$->intVal = $1->intVal - $3->intVal;
         string temp = addExp($1->type, $3->type, '-');
         if(!temp.empty()){
-            $$->type = (temp == "int") ? "long long" : (temp == "real") ? "long double" : temp;
+            if(temp == "int") $$->type = "long long";
+			else if(temp == "real") $$->type = "long double";
+			else $$->type = temp;
 			//3AC
 			std::string q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
@@ -877,6 +1167,7 @@ equality_expression
                 yyerror("Comparison between pointer and integer", "type error");
             }
             $$->type = "bool";
+			//3AC
 			std::string q = getTempVariable($$->type);
 			emit("==", $1->place, $3->place, q, -1);
 			$$->place = q;
@@ -951,7 +1242,12 @@ exclusive_or_expression
         if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
         string temp = bitExp($1->type, $3->type);
         if(!temp.empty()){
-            $$->type = (temp == "ok") ? "bool" : "long long";
+            if(temp == "ok"){
+				$$->type = "bool";
+			}
+			else {
+				$$->type = "long long";
+			}
 
 			// -3AC ---
 			std::string q = getTempVariable($$->type);  
@@ -1149,6 +1445,7 @@ assignment_operator
     | XOR_ASSIGN { $$ = $1; }
     | OR_ASSIGN { $$ = $1; }
     ;
+
 expression
 	: assignment_expression {
 		DBG("expression -> assignment_expression");
@@ -1175,22 +1472,27 @@ constant_expression
 	}
 	;
 
-declaration
-	: declaration_specifiers ';' {
-		DBG("declaration -> declaration_specifiers ';'");
-		$$ = $1;
-	}
-	| declaration_specifiers init_declarator_list ';' {
-		DBG("declaration -> declaration_specifiers init_declarator_list ';'");
-		$$ = getNode("declaration", mergeAttrs($1, $2));
-		$$->temp_name = $2->temp_name;
-		$$->type = $2->type;
-		$$->size = $2->size;
-		type = ""; // Reset type
-		// 3AC
+declaration 
+    : declaration_specifiers ';' { 
+        DBG("declaration -> declaration_specifiers ';'");
+          $$ = $1; 
+      }
+    | declaration_specifiers init_declarator_list ';' {
+        DBG("declaration -> declaration_specifiers init_declarator_list ';'");
+          $$ = getNode("declaration", mergeAttrs($1, $2));
+
+			//changes made for classes
+		  $$->temp_name = $2->temp_name;
+        $$->type = $2->type;
+        $$->size = $2->size;
+        
+        type = "";
+
+        // 3AC
 		$$->nextlist = $2->nextlist;
-	}
-	;
+      }
+    ;
+
 
 declaration_specifiers
 	: storage_class_specifier {
@@ -1233,6 +1535,7 @@ init_declarator_list
         $$->nextlist = $4->nextlist;
 	}
 	;
+
 init_declarator
 	: declarator {
 		DBG("init_declarator -> declarator");
@@ -1256,8 +1559,11 @@ init_declarator
 			removeFuncProto();
 		}
 		else{
-			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
-			std::cout << "insert ho rha\n";
+			// Insert into symbol table based on context:
+            // 1. No class context - normal insertion
+            // 2. In class but not in method body - class member (handled in insertClassAttr)
+            // 3. In class and in method body - local variable
+			if(className.empty() || inMethodBody)insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
 		}
 		//3AC
 		$$->place = $1->temp_name;
@@ -1461,110 +1767,145 @@ type_specifier
 			type = getType($1);
 		}	
 		;
-		inheritance_specifier
-			: access_specifier IDENTIFIER {
+
+inheritance_specifier
+			: IDENTIFIER {
 				DBG("inheritance_specifier -> access_specifier IDENTIFIER");
-				$$ = getNode("inheritance_specifier", mergeAttrs($1, getNode($2)));
+				$$ = getNode("inheritance_specifier", getNode($1));
+				$$->temp_name=string($1); //to propagate the class name of parent
 			}
 			;
 
-		inheritance_specifier_list
-			: inheritance_specifier {
-				DBG("inheritance_specifier_list -> inheritance_specifier");
-				$$ = $1;
-			}
-			| inheritance_specifier_list ',' inheritance_specifier {
-				DBG("inheritance_specifier_list -> inheritance_specifier_list ',' inheritance_specifier");
-				$$ = getNode("inheritance_specifier_list", mergeAttrs($1, $3));
-			}
-			;
+inheritance_specifier_list
+	: inheritance_specifier {
+        DBG("inheritance_specifier_list -> inheritance_specifier");
+        $$ = $1;
+    }
+	| inheritance_specifier_list ',' inheritance_specifier{
+        DBG("inheritance_specifier_list -> inheritance_specifier_list ',' inheritance_specifier");
+        $$ = getNode("inheritance_specifier_list", mergeAttrs($1, $3));
+		yyerror("Multiple inheritance is not supported","syntax error");
+    }
+	;
 
-		access_specifier 
-			: PRIVATE {
-				DBG("access_specifier -> PRIVATE");
-				$$ = getNode($1);
-			}
-			| PUBLIC {
-				DBG("access_specifier -> PUBLIC");
-				$$ = getNode($1);
-			}
-			| PROTECTED {
-				DBG("access_specifier -> PROTECTED");
-				$$ = getNode($1);
-			}
-			;
+access_specifier 
+	: PRIVATE {
+		DBG("access_specifier -> PRIVATE");
+		$$ = getNode($1);
+		currentAccess="private";
+	}
+	| PUBLIC {
+		DBG("access_specifier -> PUBLIC");
+		$$ = getNode($1);
+		currentAccess="public";
+	}
+	PROTECTED {
+		DBG("access_specifier -> PROTECTED");
+		$$ = getNode($1);
+		currentAccess="protected";
+	}
+	;
 
-		class
-			: CLASS {
-				DBG("class -> CLASS");
-				$$ = getNode($1);
-			}
-			;
+class
+	: CLASS {
+		DBG("class -> CLASS");
+		$$ = getNode($1);
+	}
+	;
 
-		class_definition_head 
-			: class S_C INHERITANCE_OP inheritance_specifier_list {
-				DBG("class_definition_head -> class INHERITANCE_OP inheritance_specifier_list");
-				$$ = getNode("class_definition_head", mergeAttrs($1, $4));
-				$$->type = currentDataType;
-				$$->temp_name = to_string(++Anon_ClassCounter);
-			}
-			| class G_C S_C {
-				DBG("class_definition_head -> class IDENTIFIER");
-				$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2)));
-				currentDataType = "Class " + std::string($2);
-				$$->temp_name = std::string($2);
-			}
-			| class G_C S_C INHERITANCE_OP inheritance_specifier_list {
-				DBG("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
-				$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2), $5));
-				currentDataType = "Class " + std::string($2);
-				$$->temp_name = std::string($2);
-			}
-			;
+class_definition_head 
+	: class S_C INHERITANCE_OP inheritance_specifier_list {
+        DBG("class_definition_head -> class INHERITANCE_OP inheritance_specifier_list");
+		$$ = getNode("class_definition_head", mergeAttrs($1, $4))
+         // Semantics: For inherited classes without an explicit name, mark as anonymous.
+        $$->type = currentDataType;
+        Anon_ClassCounter++; 
+		$$->temp_name = to_string(Anon_ClassCounter);  
+    }
+	| class G_C S_C {
+        DBG("class_definition_head -> class IDENTIFIER");
+		$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2)));
+        currentDataType = "Class " + std::string($2);
+		$$->temp_name = std::string($2); 
+        // Semantics: Save the class name for later symbol table insertion.
+    }
+	| class G_C S_C INHERITANCE_OP inheritance_specifier_list {
+        DBG("class_definition_head -> class IDENTIFIER INHERITANCE_OP inheritance_specifier_list");
+		$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2), $5));
+        currentDataType = "Class " + std::string($2);
+		$$->temp_name = std::string($2); 
+        // Semantics: Save the class name for later symbol table insertion.
+        // Process inheritance
+		Node* inheritanceNode = $5;
+        // Extract parent class name(s)
+		if (inheritanceNode->node_name == "inheritance_specifier") {
+            // Single parent
+            string parentClassName = "CLASS_" + inheritanceNode->temp_name;
+            if (!inheritFromClass("CLASS_" + std::string($2), parentClassName)) {
+                yyerror(("Cannot inherit from undefined class " + 
+                        parentClassName.substr(6)).c_str(), "inheritance error");
+            }
+        }
+    }
+	;
 
-		class_definition 
-			: class_definition_head '{' class_internal_definition_list '}' {
-				DBG("class_definition -> class_definition_head '{' class_internal_definition_list '}'");
-				$$ = getNode("class_definition", mergeAttrs($1, $3));
-				$$->temp_name = $1->temp_name;
-				if (printClassTable("CLASS_" + $1->temp_name) == 1) {
-					type = type.empty() ? "CLASS_" + $1->temp_name : type + " CLASS_" + $1->temp_name;
-				} else {
-					yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
-				}
-			}
-			| class IDENTIFIER {
-				DBG("class_definition -> class IDENTIFIER");
-				$$ = $1;
-				
-				if (findClass("CLASS_" + string($2)) == 1) {
-					type = type.empty() ? "CLASS_" + string($2) : type + " CLASS_" + string($2);
-				} else if (className == string($2)) {
-					type = "#INSIDE";
-				} else {
-					yyerror(("Class " + string($2) + " is not defined").c_str(), "scope error");
-				}
-			}
-			;
+class_definition 
+	: class_definition_head '{' class_internal_definition_list '}' {
+        DBG("class_definition -> class_definition_head '{' class_internal_definition_list '}'");
+		$$ = getNode("class_definition", mergeAttrs($1, $3));
+		$$->temp_name = $1->temp_name;
+		// Semantics
+		if(printClassTable("CLASS_" + $1->temp_name) == 1){
+			if(type == "") type = "CLASS_" + $1->temp_name;
+			else type += " CLASS_" + $1->temp_name; //won't occur but need to confirm
+			//size not getting registered correctly
+			insertSymbol(*curr_table, "CLASS_" + $1->temp_name, "class", getSize("CLASS_" + $1->temp_name), true, nullptr);
+		}
+		else{
+			yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
+		}
+		className = "";
+		inClassContext = false;
+		type = ""; //clearing after definition of class
+    }
+	| class IDENTIFIER {
+        DBG("class_definition -> class IDENTIFIER");
+		$$ = $1;
 
-		class_internal_definition_list
-			: class_internal_definition {
-				DBG("class_internal_definition_list -> class_internal_definition");
-				$$ = $1;
-			}
-			| class_internal_definition_list class_internal_definition {
-				DBG("class_internal_definition_list -> class_internal_definition_list class_internal_definition");
-				$$ = getNode("class_internal_definition_list", mergeAttrs($1, $2));
-			}
-			; 
+		// Semantics
+		if(findClass("CLASS_" + string($2)) == 1){
+			if(type == "") type = "CLASS_" + string($2);
+			else type += " CLASS_" + string($2);
+		}
+		else if(className == string($2)){
+			// We are inside a class
+			type = "#INSIDE";
+		}
+		else{
+			yyerror(("Class " + string($2) + " is not defined").c_str(), "scope error");
+		}
+    }
+	;
 
-		class_internal_definition	
-			: access_specifier '{' class_member_list '}' ';' {
-				DBG("class_internal_definition -> access_specifier '{' class_member_list '}' ';'");
-				$$ = getNode("class_internal_definition", mergeAttrs($1, $3));
-				currentAccess = $1->strVal;
-			}
-			;
+class_internal_definition_list
+	: class_internal_definition {
+		DBG("class_internal_definition_list -> class_internal_definition");
+		$$ = $1;
+	}
+	| class_internal_definition_list class_internal_definition {
+		DBG("class_internal_definition_list -> class_internal_definition_list class_internal_definition");
+		$$ = getNode("class_internal_definition_list", mergeAttrs($1, $2));
+	}
+	; 
+
+class_internal_definition	
+	: access_specifier '{' class_member_list '}' ';' {
+		DBG("class_internal_definition -> access_specifier '{' class_member_list '}' ';'");
+		$$ = getNode("class_internal_definition", mergeAttrs($1, $3));
+		currentAccess = $1->strVal;
+		// Semantics: Propagate the access specifier from $1 to every member in $3.
+	}
+	;
 
 class_member_list
     : class_member {
@@ -1578,23 +1919,46 @@ class_member_list
     ;
 
 class_member
-    : function_definition { 
+	: function_definition { 
         DBG("class_member -> function_definition");
-        $1->strVal = currentAccess;
-        insertClassAttr($1->temp_name, "FUNC_" + $1->type, $1->size, 0);
-    }
-    | declaration { 
+		 $1->strVal = currentAccess;
+		 // Add function as a class member with proper access specifier
+		printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
+
+        std::string manglemethod;
+		if (classMethodArgs.empty()) {
+			std::cout<<"EMPTY classMethodArgs"<<std::endl;
+		    // Function with no arguments - create with empty parameter types
+		    manglemethod = mangleFunctionName($1->temp_name, std::vector<string>());
+		} else {
+		    // Function with arguments - skip 'this' parameter if present
+		    manglemethod = mangleFunctionName($1->temp_name, std::vector<string>(
+		        classMethodArgs.size() > 0 ? classMethodArgs.begin() + 1 : classMethodArgs.begin(), 
+		        classMethodArgs.end()
+		    ));
+		}
+		manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+		std::cout<<manglemethod<<std::endl;
+        insertClassAttr(manglemethod, "FUNC_"+$1->type, $1->size, 0,currentAccess);
+		classMethodArgs.clear();
+		$$ = $1; 
+	}
+	| declaration { 
         DBG("class_member -> declaration");
         $1->strVal = currentAccess;
+		// Add declaration as a class member with proper access specifier
+		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
         insertClassAttr($1->temp_name, $1->type, $1->size, 0);
-    }
-    ;
+		$$ = $1; 
+	}
+	;
 
 G_C 
     : IDENTIFIER {
         DBG("G_C -> IDENTIFIER");
         $$ = $1;
         className = $1;
+		inClassContext = true;
     }
     ;
 
@@ -1606,14 +1970,20 @@ S_C
     ;
 
 struct_or_union_specifier
-    : struct_or_union G S '{' struct_declaration_list '}' {
+	: struct_or_union G S '{' struct_declaration_list '}'	{
         DBG("struct_or_union_specifier -> struct_or_union G S '{' struct_declaration_list '}'");
         $$ = getNode($1, mergeAttrs(getNode($2), $5));
-        if (printStructTable("STRUCT_" + string($2)) == 1) {
-            type = type.empty() ? "STRUCT_" + string($2) : type + " STRUCT_" + string($2);
-        } else {
-            yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
-        }
+		std::string check=std::string($2);
+		// Semantics
+		if(printStructTable("STRUCT_" + string($2)) == 1){
+			if(type == "") type = "STRUCT_" + string($2);
+			else type += " STRUCT_" + string($2);
+			insertSymbol(*curr_table, "STRUCT_" + string($2), "struct", getSize("STRUCT_" + string($2)), true, nullptr);
+		}
+		else{
+			yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
+		}
+		type = ""; //clearing after definition of struct
 		if (flag == 1) {
             // We're in a typedef, so register the struct type with tdstring
             tdstring=std::string($2);
@@ -1622,32 +1992,46 @@ struct_or_union_specifier
 		if(flag3){
 			tdstring=std::string($2);
 		}
-		
-    }
-    | struct_or_union S '{' struct_declaration_list '}' {
+	}
+	| struct_or_union S '{' struct_declaration_list '}'		{
         DBG("struct_or_union_specifier -> struct_or_union S '{' struct_declaration_list '}'");
         $$ = getNode($1, mergeAttrs($4, nullptr));
-        Anon_StructCounter++;
-        if (printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1) {
-            type = type.empty() ? "STRUCT_" + to_string(Anon_StructCounter) : type + " STRUCT_" + to_string(Anon_StructCounter);
-        } else {
-            yyerror("Struct is already defined", "scope error");
-        }
-    }
-    | struct_or_union IDENTIFIER {
+		
+		// Semantics
+		Anon_StructCounter++;
+		if(printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1){
+			if(type == "") type = "STRUCT_" + to_string(Anon_StructCounter);
+			else type += " STRUCT_" + to_string(Anon_StructCounter);
+			insertSymbol(*curr_table, "STRUCT_" + to_string(Anon_StructCounter), "struct", getSize("STRUCT_" + to_string(Anon_StructCounter)), true, nullptr);
+		}
+		else{
+			yyerror("Struct is already defined", "scope error");
+		}
+		type = ""; //clearing after definition of struct
+	}
+	| struct_or_union IDENTIFIER 	{
         DBG("struct_or_union_specifier -> struct_or_union IDENTIFIER");
         $$ = getNode($1, mergeAttrs(getNode($2), nullptr));
-		//std::cout << string($2) << " jafaafafd\n";
-        currentDataType += " " + string($2);
-        if (findStruct("STRUCT_" + string($2)) == 1) {
-            type = type.empty() ? "STRUCT_" + string($2) : type + " STRUCT_" + string($2);
-        } else if (structName == string($2)) {
-            type = "#INSIDE";
-        } else {
-            yyerror(("Struct " + string($2) + " is not defined").c_str(), "scope error");
-        }
-    }
-    ;
+		currentDataType += " " + string($2);
+		
+		// Clear type before processing struct members
+        type = "";
+
+		// Semantics
+		if(findStruct("STRUCT_" + string($2)) == 1){
+			if(type == "") type = "STRUCT_" + string($2);
+			else type += " STRUCT_" + string($2);
+		}
+		else if(structName == string($2)){
+			// We are inside a struct
+			// We are inside a struct to handle declaration of structs in structs
+			type = "#INSIDE";
+		}
+		else{
+			yyerror(("Struct " + string($2) + " is not defined").c_str(), "scope error");
+		}
+	}
+	;
 
 G 
 	: IDENTIFIER {
@@ -1687,81 +2071,82 @@ struct_or_union
         $$ = $1; currentDataType="union";
     }
 	;
-    struct_declaration_list
-        : struct_declaration {
-            DBG("struct_declaration_list -> struct_declaration");
-            $$ = getNode("struct_declaration_list", mergeAttrs($1));
-        }
-        | struct_declaration_list struct_declaration {
-            DBG("struct_declaration_list -> struct_declaration_list struct_declaration");
-            $$ = getNode("struct_declaration_list", mergeAttrs($1, $2));
-        }
-        ;
 
-    struct_declaration
-        : specifier_qualifier_list struct_declarator_list ';' {
-            DBG("struct_declaration -> specifier_qualifier_list struct_declarator_list ';'");
-            $$ = getNode("struct_declaration", mergeAttrs($1, $2));
-            
-            // Semantics
-            type = "";
-        }
-        ;
+struct_declaration_list
+	: struct_declaration {
+		DBG("struct_declaration_list -> struct_declaration");
+		$$ = getNode("struct_declaration_list", mergeAttrs($1));
+	}
+	| struct_declaration_list struct_declaration {
+		DBG("struct_declaration_list -> struct_declaration_list struct_declaration");
+		$$ = getNode("struct_declaration_list", mergeAttrs($1, $2));
+	}
+	;
 
-    specifier_qualifier_list
-        : type_specifier specifier_qualifier_list {
-            DBG("specifier_qualifier_list -> type_specifier specifier_qualifier_list");
-            $$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
-        }
-        | type_specifier {
-            DBG("specifier_qualifier_list -> type_specifier");
-            $$ = $1;
-        }
-        | type_qualifier specifier_qualifier_list {
-            DBG("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
-            $$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
-        }
-        | type_qualifier {
-            DBG("specifier_qualifier_list -> type_qualifier");
-            $$ = $1;
-        }
-        ;
+struct_declaration
+	: specifier_qualifier_list struct_declarator_list ';' {
+		DBG("struct_declaration -> specifier_qualifier_list struct_declarator_list ';'");
+		$$ = getNode("struct_declaration", mergeAttrs($1, $2));
+		
+		// Semantics
+		type = "";
+	}
+	;
 
-    struct_declarator_list
-        : struct_declarator {
-            DBG("struct_declarator_list -> struct_declarator");
-            $$ = $1;
-        }
-        | struct_declarator_list ',' struct_declarator {
-            DBG("struct_declarator_list -> struct_declarator_list ',' struct_declarator");
-            $$ = getNode("struct_declarator_list", mergeAttrs($1, $3));
-        }
-        ;
+specifier_qualifier_list
+	: type_specifier specifier_qualifier_list {
+		DBG("specifier_qualifier_list -> type_specifier specifier_qualifier_list");
+		$$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
+	}
+	| type_specifier {
+		DBG("specifier_qualifier_list -> type_specifier");
+		$$ = $1;
+	}
+	| type_qualifier specifier_qualifier_list {
+		DBG("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
+		$$ = getNode("specifier_qualifier_list", mergeAttrs($1, $2));
+	}
+	| type_qualifier {
+		DBG("specifier_qualifier_list -> type_qualifier");
+		$$ = $1;
+	}
+	;
 
-    struct_declarator
-        : declarator {
-            DBG("struct_declarator -> declarator");
-            $$ = $1;
-            
-            // Semantics
-            if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1) {
-                yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
-            }
-        }
-        | ':' constant_expression {
-            DBG("struct_declarator -> ':' constant_expression");
-            $$ = $2;
-        }
-        | declarator ':' constant_expression {
-            DBG("struct_declarator -> declarator ':' constant_expression");
-            $$ = getNode(":", mergeAttrs($1, $3));
-            
-            // Semantics
-            if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1) {
-                yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
-            }
-        }
-        ;
+struct_declarator_list
+	: struct_declarator {
+		DBG("struct_declarator_list -> struct_declarator");
+		$$ = $1;
+	}
+	| struct_declarator_list ',' struct_declarator {
+		DBG("struct_declarator_list -> struct_declarator_list ',' struct_declarator");
+		$$ = getNode("struct_declarator_list", mergeAttrs($1, $3));
+	}
+	;
+
+struct_declarator
+	: declarator {
+		DBG("struct_declarator -> declarator");
+		$$ = $1;
+		
+		// Semantics
+		if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1) {
+			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
+		}
+	}
+	| ':' constant_expression {
+		DBG("struct_declarator -> ':' constant_expression");
+		$$ = $2;
+	}
+	| declarator ':' constant_expression {
+		DBG("struct_declarator -> declarator ':' constant_expression");
+		$$ = getNode(":", mergeAttrs($1, $3));
+		
+		// Semantics
+		if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1) {
+			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
+		}
+	}
+	;
 
 
 enum_specifier
@@ -1826,12 +2211,13 @@ declarator
 		if (type == "#INSIDE") {
 			$$->type = "STRUCT_" + structName + $1->type;
 			$$->temp_name = $2->temp_name;
-			$$->size = 8;
+			$$->size = 4;
 			$$->expType = 2;
 		} else {
 			$$->type = $2->type + $1->type;
+			type=$$->type;
 			$$->temp_name = $2->temp_name;
-			$$->size = 8;
+			$$->size = 4;
 			$$->expType = 2;
 		}
 		//3AC
@@ -1915,10 +2301,11 @@ direct_declarator
 			$$->expType = 2;
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
-			$$->size = 8;
+			$$->size = 4;
 			//3AC
 			$$->place = $$->temp_name;
-		} else {
+		}
+		else{
 			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
@@ -1930,48 +2317,87 @@ direct_declarator
 		updateFuncSymbolEntry(noArgs);
 		noArgs = 0;
 		// Semantics
-		string argMapKey = $1->temp_name;
-		if (!className.empty()) {
-			argMapKey = className + "_" + argMapKey;
-		}
-		if ($1->expType == 1) {
+		string baseName = $1->temp_name;//just function name -> don't change to funcName will cause issues as it is global
+        	// If inside a class definition, use qualified name
+		std::string mangledName;
+        if (!className.empty()) {
+            	mangledName=mangleFunctionName(baseName, funcArgs);
+				mangledName="FUNC_" + std::to_string(className.size()) + className + "_" + mangledName.substr(5);
+				std::cout<<baseName<<" "<<mangledName<<std::endl;
+        		// Add implicit 'this' pointer as first parameter
+        		string thisType = "CLASS_" + className + "*";
+        		vector<string> newFuncArgs;
+
+        		// Add 'this' as first parameter
+        		newFuncArgs.push_back(thisType);
+
+        		// Add the rest of the parameters
+        		for (const auto& arg : funcArgs) {
+        		    newFuncArgs.push_back(arg);
+        		}
+
+        		// Replace funcArgs with the new list including 'this'
+        		funcArgs = newFuncArgs;
+
+        		// Insert 'this' parameter into symbol table
+        		insertSymbol(*curr_table, "this", thisType, 4, true, NULL);
+        }
+		else mangledName = mangleFunctionName(baseName, funcArgs);
+		std::cout<<mangledName<<std::endl;
+		if($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
 			$$->expType = 3;
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
-			vector<string> temp = getFuncArgs(argMapKey);
-			if (temp.size() == 1 && temp[0] == "#NO_FUNC") {
-				insertFuncArg(argMapKey, funcArgs);
-				funcArgs.clear();
-				funcName = string(argMapKey);
+			std::cout<<$1->type<<std::endl;
+			vector<string> temp = getFuncArgs(mangledName);
+			for(auto i:temp){
+				std::cout<<i<<std::endl;
+			}
+			for(auto i:funcArgs){
+				std::cout<<i<<std::endl;
+			}
+			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
+				insertFuncArg(mangledName, funcArgs);
+				funcName = string(baseName);
 				funcType = $1->type;
-			} else {
-				if (temp == funcArgs) {
-					funcArgs.clear();
-					funcName = string(argMapKey);
+			}
+			else{
+				// Check if temp is correct
+				if(temp == funcArgs){
+					funcName = string(baseName);
 					funcType = $1->type;
-				} else {
-					yyerror(("Conflicting types for " + argMapKey).c_str(), "type error");
+				}
+				else{
+					// This isn't an error anymore - it's overloading!
+                	// Just create a new entry with different parameter types
+                	insertFuncArg(mangledName, funcArgs);
+                	funcName = string(baseName);
+                	funcType = $1->type;
 				}
 			}
 			//3 AC
 			$$->place =$$->temp_name;
 			backpatch($4->nextlist,$6);
 			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
-		} else {
-			if ($1->expType == 2) {
-				yyerror((argMapKey + " declared as array of function").c_str(), "type error");
-			} else {
-				yyerror((argMapKey + " declared as function of function").c_str(), "type error");
+		}
+		else{
+			if($1->expType == 2){
+				yyerror( (baseName + "declared as array of function").c_str(), "type error");
+			}
+			else{
+				yyerror( (baseName + "declared as function of function").c_str(), "type error");
 			}
 		}
 	}
-	| direct_declarator '(' A identifier_list ')' {
-		DBG("direct_declarator -> direct_declarator '(' A identifier_list ')'");
+	| direct_declarator '(' A identifier_list ')'{ //useless production
+        DBG("direct_declarator -> direct_declarator '(' A identifier_list ')'");
 		Node *node = getNode("( )", mergeAttrs($4));
 		$$ = getNode("direct_declarator", mergeAttrs($1, node));
 
 		// Semantics
+		// ToDo : check if A is needed
+		// ToDo : Check if func declaration exists and args match
 		fn_decl = 1;
 		$$->temp_name = $1->temp_name;
 		$$->expType = 3;
@@ -2012,16 +2438,31 @@ direct_declarator
 		insertAttr(attr, NULL, "( )", 0);
 		$$ = getNode("direct_declarator", &attr);
 		updateFuncSymbolEntry(0);
+
+		string baseName = $1->temp_name;
+		std::string mangledName;
+
+		if (!className.empty()) {
+				mangledName=mangleFunctionName(baseName, funcArgs);
+				mangledName="FUNC_" + std::to_string(className.size()) + className + "_" + mangledName.substr(5);
+        // Add implicit 'this' pointer for class methods
+        string thisType = "CLASS_" + className + "*";
+        funcArgs.push_back(thisType);
+        
+        // Insert 'this' parameter into symbol table
+        insertSymbol(*curr_table, "this", thisType, 8, true, NULL);
+    	}
+		else mangledName = mangleFunctionName(baseName, funcArgs);
 		// Semantics
 		if ($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
 			$$->expType = 3;
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
-			vector<string> temp = getFuncArgs($1->temp_name);
-			if (temp.size() == 1 && temp[0] == "#NO_FUNC") {
-				insertFuncArg($$->temp_name, funcArgs);
-				funcArgs.clear();
+
+			vector<string> temp = getFuncArgs(mangledName);
+			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
+				insertFuncArg(mangledName, funcArgs);
 				funcName = string($1->temp_name);
 				funcType = $1->type;
 			} else {
@@ -2200,7 +2641,7 @@ direct_abstract_declarator
 		DBG("direct_abstract_declarator -> '[' ']'");
 		$$ = getNode("[ ]");
 		$$->type = type + "*"; // Semantics
-		$$->size = 8;
+		$$->size = 4; //Default size for pointer
 	}
 	| '[' constant_expression ']' {
 		DBG("direct_abstract_declarator -> '[' constant_expression ']'");
@@ -2216,7 +2657,7 @@ direct_abstract_declarator
 		$$ = getNode("direct_abstract_declarator",&attr);
 
 		$$->type = $1->type + "*"; // Semantics
-		$$->size = 8;
+		$$->size = 4; //Default size for pointer
 	}
 	| direct_abstract_declarator '[' constant_expression ']' {
 		DBG("direct_abstract_declarator -> direct_abstract_declarator '[' constant_expression ']'");
@@ -2381,7 +2822,9 @@ compound_statement
 	| '{' CHANGE_TABLE statement_list '}' {
 		DBG("compound_statement -> '{' CHANGE_TABLE statement_list '}'");
 		$$ = $3;
-		if(func_flag >= 2){
+		
+		// Semantics - clean up block scope
+		if(func_flag >= 2){ //>=2 essentially means we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
 			string str = "Block" + to_string(bc);
@@ -2394,7 +2837,9 @@ compound_statement
 	| '{' CHANGE_TABLE declaration_list '}' {
 		DBG("compound_statement -> '{' CHANGE_TABLE declaration_list '}'");
 		$$ = $3;
-		if(func_flag >= 2){
+		
+		// Semantics - clean up block scope
+		if(func_flag >= 2){//>=2 essentially means we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
 			string str = "Block" + to_string(bc);
@@ -2404,10 +2849,12 @@ compound_statement
 			func_flag--;
 		}
 	}
-	| '{' CHANGE_TABLE declaration_list NEXT_QUAD statement_list '}' {
-		DBG("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
+	| '{' CHANGE_TABLE declaration_list statement_list '}'	{
+        DBG("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
 		$$ = getNode("compound_statement", mergeAttrs($3, $5));
-		if(func_flag >= 2){
+		
+		// Semantics - clean up block scope
+		if(func_flag >= 2){//>=2 essentially means we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
 			string str = "Block" + to_string(bc);
@@ -2433,10 +2880,16 @@ CHANGE_TABLE
 			string str = "Block" + to_string(block_count);
 			block_stack.push(block_count);
 			block_count++;
-			func_flag++;
 			makeSymbolTable(str, "");
 		}
-		else func_flag++;
+		else {
+			if (!className.empty() && funcName != "") {
+                inMethodBody = true;  // We're entering a method body in a class
+				std::cout<<"here"<<std::endl;
+            }
+		}
+		func_flag++;
+		std::cout<<"func_flag "<<func_flag<<std::endl;
 		$$ = strdup("");
 	}
 	;
@@ -2549,16 +3002,6 @@ selection_statement
 		$$->nextlist = $5->nextlist;
 		$$->continuelist = $5->continuelist;
 	}
-	// | IF '(' ')' statement {
-	// 	DBG("selection_statement -> IF '(' ')' statement");
-	// 	yyerror("missing condition in 'if' statement.", "syntax error");
-	// 	$$ = getNode("error-node", nullptr);
-	// }
-	// | SWITCH '(' ')' statement {
-	// 	DBG("selection_statement -> SWITCH '(' ')' statement");
-	// 	yyerror("missing condition in 'switch' statement.", "syntax error");
-	// 	$$ = getNode("error-node", nullptr);
-	// }
 	;
 
 
@@ -2769,16 +3212,28 @@ function_definition
 		DBG("function_definition -> declaration_specifiers declarator F declaration_list compound_statement");
 		$$ = getNode("function", mergeAttrs($1, $2, $4, $5));
 		// Semantics
-		// Extract and propagate function name and return type
+		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
-        $$->type = funcType;            // Return type from declaration_specifiers
+        if ($2->type.find("*") != string::npos) {
+            // Use the complete type from declarator which includes pointer
+            $$->type = $2->type;
+            funcType = $2->type;
+        } else {
+            // Otherwise it's a non-pointer type
+            $$->type = funcType;
+        }
+        // Return type from declaration_specifiers
         $$->size = $2->size;            // Size if applicable
 
 		type = "";
 		string fName = string($3);
+		std::cout<<funcName<<" "<<funcType<<" "<<fn_decl<<" "<<func_flag<<std::endl;
+		for(auto i:funcArgs)std::cout<<i<<" ";
+		for(auto i:currArgs)std::cout<<i<<" ";
+		std::cout<<std::endl;
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
-
+		inMethodBody = false;
 		//3AC
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
@@ -2790,15 +3245,24 @@ function_definition
 		DBG("function_definition -> declaration_specifiers declarator F compound_statement");
 		$$ = getNode("function (w/o decl_list)", mergeAttrs($1, $2, $4));
 		// Semantics 
-		// Extract and propagate function name and return type
+		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
-        $$->type = funcType;            // Return type from declaration_specifiers
+		if ($2->type.find("*") != string::npos) {
+            // Use the complete type from declarator which includes pointer
+            $$->type = $2->type;
+            funcType = $2->type;
+        } else {
+            // Otherwise it's a non-pointer type
+            $$->type = funcType;
+        }
+        // Return type from declaration_specifiers
         $$->size = $2->size;            // Size if applicable
 
 		type = "";
 		string fName = string($3);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		inMethodBody = false;
 		//3AC
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
@@ -2814,6 +3278,7 @@ function_definition
 		string fName = string($2);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		inMethodBody = false;
 		//3AC
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
@@ -2829,6 +3294,7 @@ function_definition
 		string fName = string($2);
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
+		inMethodBody = false;
 		//3AC
 		for (auto &i : gotolablelist) {
 			backpatch(i.second, gotolabel[i.first]);
@@ -2840,14 +3306,28 @@ function_definition
 
 F 
 	: %empty {
-		DBG("F -> %empty");
+        DBG("F -> %empty");
 		std::string qualifiedFuncName = funcName;
-		if (!className.empty() && funcName.find(className + "_") != 0) {
-			qualifiedFuncName = className + "_" + funcName;
+		if (!className.empty()) {
+			classMethodArgs = funcArgs;  // Cache arguments for class methods
+		    // Check if funcName already has className prefix to avoid duplication
+		    if (funcName.find(className + "_") == 0) {
+				funcName=funcName.substr(className.size()+1);
+		    } 
+		    qualifiedFuncName=mangleFunctionName(funcName, std::vector<string>(funcArgs.begin() + 1, funcArgs.end()));//need to skip 'this'
+			qualifiedFuncName="FUNC_" + std::to_string(className.size()) + className + "_" + qualifiedFuncName.substr(5);
+		    
 		}
-		if (gst.find(qualifiedFuncName) != gst.end()) {
-			yyerror(("Redefinition of function " + qualifiedFuncName).c_str(), "scope error");
-		} else {
+		else qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
+		funcArgs.clear();
+		std::cout<<qualifiedFuncName<<std::endl;
+		if (gst.find(qualifiedFuncName) != gst.end()){
+			yyerror(("Redefinition of function " + funcName).c_str(), "scope error");
+		}
+		else{
+			if (type.find("*") != string::npos) {//pointers prolly can handle struct ,classes return type here too
+            	funcType = type;
+        	}
 			makeSymbolTable(qualifiedFuncName, funcType);
 			$$ = strdup(qualifiedFuncName.c_str());
 			block_count = 1;
