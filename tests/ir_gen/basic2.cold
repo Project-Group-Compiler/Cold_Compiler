@@ -6,10 +6,10 @@ struct Node {
 
 int main()
 {
-    struct Node a;
+    struct Node aa;
     int a, b, c;
     char op;
-    a.val=5;
+    aa.val=5;
 
     switch(op){
         case '+':

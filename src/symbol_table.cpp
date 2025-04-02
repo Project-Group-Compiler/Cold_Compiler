@@ -32,6 +32,9 @@ int struct_count = 1;
 int avl = 0;
 int blockCnt = 1;
 
+vector<std::string> lib_funcs={"scanf", "printf", "malloc", "calloc", "free", "fopen", "fputs", "fgets",
+     "fclose", "fprintf", "fscanf", "fgetc", "fputc","strlen", "strcmp", "strncmp", "strcpy", "strcat", "va_start", "va_arg", "va_end"};
+
 void symTable_init()
 {
     // Initialize global stacks.
@@ -233,11 +236,11 @@ void insertKeywords()
 
     for (auto h : key_words)
     {
-        insertSymbol(*curr_table, h, "keyword", 8, true, nullptr);
+        //insertSymbol(*curr_table, h, "keyword", 8, true, nullptr);
     }
     for (auto h : op)
     {
-        insertSymbol(*curr_table, h, "operator", 8, true, nullptr);
+        //insertSymbol(*curr_table, h, "operator", 8, true, nullptr);
     }
     
     // important io functions
@@ -729,6 +732,12 @@ string getTypeCode(const string& type) {
 }
 
 string mangleFunctionName(const string& name, const vector<string>& paramTypes) {
+    
+    // Check if the function name needs to be mangled (check for printf etc)
+    for(auto it : lib_funcs){
+        if(name == it) return name;
+    }
+
     string result = "FUNC_" + to_string(name.length()) + name + "_";
     
     // If no parameters, use 'v' for void
@@ -766,6 +775,12 @@ void updTableSize(string id)
 void insertFuncArg(string &func, vector<string> &arg)
 {
     func_arg.insert(make_pair(func, arg));
+    // std::cout << "Function: " << func << " Args: ";
+    // for (auto it : arg)
+    // {
+    //     std::cout << it << " ";
+    // }
+    // std::cout << std::endl;
 }
 
 void insertType(string a, string b)

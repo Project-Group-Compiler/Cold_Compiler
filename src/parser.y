@@ -44,7 +44,7 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 0; // Flag to enable or disable debugging
+bool debug_enabled = 1; // Flag to enable or disable debugging
 #define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -272,7 +272,6 @@ postfix_expression
 		// std::cout<<$1->type<<std::endl; //this is wrong type 
 		// Create mangled name with current arguments
 	    std::string mangledName = mangleFunctionName($1->temp_name, currArgs);
-
 		string temp = primaryExpression(mangledName);
 		if(temp == ""){
 			//yyerror(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
@@ -298,8 +297,13 @@ postfix_expression
 			$$->type = temp;
 			if($1->expType == 3){
 				vector<string> funcArgs = getFuncArgs(mangledName);
-				
-				if(currArgs.size()!=funcArgs.size()){
+				std::cout << mangledName << std::endl;
+				if (funcArgs.back() == "...") { //if "..." is present, remove it and do not check for size
+					funcArgs.pop_back();
+				}
+				else if(currArgs.size()!=funcArgs.size()){
+					std::cout << "currArgs.size() = " << currArgs.size() << std::endl;
+					std::cout << "funcArgs.size() = " << funcArgs.size() << std::endl;
 					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
 				for(int i=0; i<funcArgs.size(); i++){

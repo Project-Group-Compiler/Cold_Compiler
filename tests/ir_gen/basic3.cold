@@ -61,12 +61,16 @@ void test_iteration()
     return i;
 }
 
-int add(int a, int b)
+int add(int a[], int b)
 {
     return a + b;
 }
 
 void call_add()
 {
-    add(1, 2);
+    int x;
+    int y;
+    x=1;
+    y=1;
+    add(x, y);
 }
