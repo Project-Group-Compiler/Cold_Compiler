@@ -2,16 +2,24 @@ class Person
 {
     private{
         int age;
+
     };
     public{
-        int returnAge()  { return this->age;}
+        int returnAge(int x)  { 
+            return 42;
+        }
     };
+    
 };
-
+int returnAge(int x)  { 
+            return 42;
+        }
 int main()
 {
 	class Person p1;
-    p1.age = 6;
-	p1.returnAge();
+   // p1.age = 6;
+   int x;
+   returnAge(x);
+	p1.returnAge(x);
 	return 0;
 }
