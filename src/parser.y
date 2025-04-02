@@ -22,6 +22,7 @@ extern char* yytext;
 extern int column;
 extern int line;
 extern std::string inputFilename;
+extern std::string outputDir;
 extern bool has_error;
 
 //Semantics
@@ -44,8 +45,12 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 1; // Flag to enable or disable debugging
-#define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
+extern bool debug_enabled; // Flag to enable or disable debugging
+std::ofstream out;
+void DBG(const std::string&rule){
+	 if (debug_enabled) 
+		out<<"DEBUG: Processing rule "<<rule<<" at line "<<line<<"\n";
+}
 
 void semantic_error(const char* s, const std::string &errorType="semantic error");
 void yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -3461,6 +3466,8 @@ F
 void performParsing(const std::string &inputFile)
 {
 	onlyLexin = false;
+	if(debug_enabled)
+		out = std::ofstream(outputDir + inputFile + "_debug_file.txt");
     beginAST(inputFile);
     yyparse();
     endAST();
