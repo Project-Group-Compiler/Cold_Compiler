@@ -44,10 +44,11 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 1; // Flag to enable or disable debugging
+bool debug_enabled = 0; // Flag to enable or disable debugging
 #define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
-int yyerror(const char* s, const std::string &errorType = "syntax error");
+void semantic_error(const char* s, const std::string &errorType="semantic error");
+void yyerror(const char* s, const std::string &errorType = "syntax error");
 int yylex();
 int warning(const char*);
 
@@ -122,7 +123,7 @@ primary_expression
 		// Semantics
 		string temp = primaryExpression(string($1));
 		if(temp == ""){
-			yyerror(("Undeclared Identifier " + string($1)).c_str(), "scope error");
+			semantic_error(("Undeclared Identifier " + string($1)).c_str(), "scope error");
 		}
 		else{
 			if(temp.substr(0, 5) == "FUNC_"){
@@ -148,16 +149,17 @@ primary_expression
 			$$->nextlist.clear();
 		}
     }
-	/* | CONSTANT IDENTIFIER {
+	| CONSTANT IDENTIFIER {
 		DBG("primary_expression -> CONSTANT IDENTIFIER");
 		yyerror("invalid identifier", "syntax error");
-		$$ = getNode($1);
+		$$ = getNode($2);
 	}
 	| CONSTANT CONSTANT {
 		DBG("primary_expression -> CONSTANT CONSTANT");
 		yyerror("invalid constant", "syntax error");
-		$$ = getNode($1);
-	} */
+		std::string tp = std::string($1->str);
+		$$ = getNode(tp);
+	}
 	| CONSTANT {
 		std::string tp = std::string($1->str);
 		$$ = getNode(tp);
@@ -228,7 +230,7 @@ postfix_expression
 			$$->temp_name = $1->temp_name;
 		}
 		else{
-			yyerror(("Array " + $1->temp_name +  " Index out of bound").c_str(), "semantic error");
+			//semantic_error(("Array " + $1->temp_name +  " Index out of bound").c_str(), "semantic error"); ->TODO
 		}
 	}
 	| postfix_expression '(' ')' {
@@ -245,7 +247,7 @@ postfix_expression
 				vector<string> funcArg = getFuncArgs(mangledName);
 				
 				if(currArgs.size()!=funcArg.size()){
-					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
+					semantic_error(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
 				else{
 					//3AC_5
@@ -258,7 +260,7 @@ postfix_expression
 			}
 		}
 		else{
-			yyerror(("Function " + $1->temp_name + " not declared in this scope").c_str(), "scope error");
+			semantic_error(("Function " + $1->temp_name + " not declared in this scope").c_str(), "scope error");
 		}
 		currArgs.clear(); 
 	}
@@ -274,7 +276,7 @@ postfix_expression
 	    std::string mangledName = mangleFunctionName($1->temp_name, currArgs);
 		string temp = primaryExpression(mangledName);
 		if(temp == ""){
-			//yyerror(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
+			//semantic_error(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
 		}
 		else{
 			if(temp.substr(0, 5) == "FUNC_"){
@@ -304,7 +306,7 @@ postfix_expression
 				else if(currArgs.size()!=funcArgs.size()){
 					std::cout << "currArgs.size() = " << currArgs.size() << std::endl;
 					std::cout << "funcArgs.size() = " << funcArgs.size() << std::endl;
-					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
+					semantic_error(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
 				for(int i=0; i<funcArgs.size(); i++){
 					if(funcArgs[i]=="...")break;
@@ -313,7 +315,7 @@ postfix_expression
 						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
 					}
 					else if(msg.empty()){
-						yyerror(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
+						semantic_error(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
 				}
@@ -327,7 +329,7 @@ postfix_expression
 			}
 		}
 		else{
-			yyerror("Invalid function call", "semantic error");
+			semantic_error("Invalid function call", "semantic error");
 		}
 	    currArgs.clear();
 	}
@@ -350,7 +352,7 @@ postfix_expression
         	    $$->type = (*curr_class_structure)[temp]->type;
         	    $$->temp_name = $1->temp_name + "." + temp;
         	} else {
-        	    yyerror(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
+        	    semantic_error(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
         	}
     	}
     	// First check if it's a regular class
@@ -362,8 +364,8 @@ postfix_expression
         		// If outside class trying to access private/protected member
         		if ((memberAccess == "private" || memberAccess == "protected") && 
         		    (className.empty() || className != type.substr(6))) {
-        		    yyerror(("Cannot access " + memberAccess + " member '" + temp + 
-        		            "' of class '" + type.substr(6) + "'").c_str(), "access error");
+        		    semantic_error(("Cannot access " + memberAccess + " member '" + temp + 
+        		            "' of class '" + type.substr(6) + "'").c_str(), "scope error");
         		} else {
         		    // Member found and accessible
         		    $$->type = ClassAttrType(type, temp);
@@ -371,20 +373,20 @@ postfix_expression
         		}
     	    }
     	    else if (ret == 0) {
-    	        yyerror(("Member '" + temp + "' not found in class").c_str(), "scope error");
+    	        semantic_error(("Member '" + temp + "' not found in class").c_str(), "scope error");
     	    }
     	    else {
-    	        yyerror(("Class '" + memberName + "' not defined").c_str(), "scope error");
+    	        semantic_error(("Class '" + memberName + "' not defined").c_str(), "scope error");
     	    }
     	}
     	// If not a class, try struct
     	else {
     	    int ret = lookupStruct($1->type, temp);
     	    if (ret == -1) {
-    	        yyerror(("Struct or class '" + memberName + "' not defined").c_str(), "scope error");
+    	        semantic_error(("Struct or class '" + memberName + "' not defined").c_str(), "scope error");
     	    }
     	    else if (ret == 0) {
-    	        yyerror(("Member '" + temp + "' not found in struct").c_str(), "scope error");
+    	        semantic_error(("Member '" + temp + "' not found in struct").c_str(), "scope error");
     	    }
     	    else {
     	        $$->type = StructAttrType($1->type, temp);
@@ -429,13 +431,13 @@ postfix_expression
     	            // Check arguments
     	            vector<string> methodArgs = getFuncArgs(manglemethod);
     	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
-    	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+    	                semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
     	            }
     	        } else {
-    	            yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+    	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        yyerror(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
+    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
     	    }
     	}
 	    // First check if it's a class
@@ -451,8 +453,8 @@ postfix_expression
         		// If outside class trying to access private/protected member
         		if ((memberAccess == "private" || memberAccess == "protected") && 
         		    (className.empty() || className != classType.substr(6))) {
-        		    yyerror(("Cannot access " + memberAccess + " member '" + methodName + 
-        		            "' of class '" + classType.substr(6) + "'").c_str(), "access error");
+        		    semantic_error(("Cannot access " + memberAccess + " member '" + methodName + 
+        		            "' of class '" + classType.substr(6) + "'").c_str(), "scope error");
         		}
 				else{
 	            	// Get method type (should be FUNC_returnType)
@@ -468,19 +470,19 @@ postfix_expression
 	            	    // Check arguments (none for this rule)
 	            	    vector<string> methodArgs = getFuncArgs(manglemethod);
 	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
-                	    	yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+                	    	semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
                 		}
 	            	} else {
-	            	    yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            	    semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
 	            	}
 				}
 	        } else if (ret == 0) {
-	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
+	            semantic_error(("Method '" + methodName + "' not found in class").c_str(), "scope error");
 	        } else {
-	            yyerror(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
+	            semantic_error(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
 	        }
 	    } else {
-	        yyerror("Cannot call method on non-class type", "type error");
+	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 	    currArgs.clear();
 		//3AC
@@ -523,7 +525,7 @@ postfix_expression
 	
     	            // Check number of arguments (account for implicit 'this')
     	            if (currArgs.size() != methodArgs.size() - 1) {
-    	                yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+    	                semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
     	            } else {
     	                // Type check arguments
     	                for (int i = 1; i < methodArgs.size(); i++) { // Start from 1 to skip 'this'
@@ -534,17 +536,17 @@ postfix_expression
     	                        warning(("Incompatible conversion of " + currArgs[i-1] + 
     	                                " to parameter of type " + methodArgs[i]).c_str());
     	                    } else if (msg.empty()) {
-    	                        yyerror(("Incompatible argument to method " + methodName).c_str(), 
+    	                        semantic_error(("Incompatible argument to method " + methodName).c_str(), 
     	                              "semantic error");
     	                        break;
     	                    }
     	                }
     	            }
     	        } else {
-    	            yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+    	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        yyerror(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
+    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
     	    }
     	}
 	    // First check if it's a class
@@ -559,8 +561,8 @@ postfix_expression
         		// If outside class trying to access private/protected member
         		if ((memberAccess == "private" || memberAccess == "protected") && 
         		    (className.empty() || className != classType.substr(6))) {
-        		    yyerror(("Cannot access " + memberAccess + " member '" + methodName + 
-        		            "' of class '" + classType.substr(6) + "'").c_str(), "access error");
+        		    semantic_error(("Cannot access " + memberAccess + " member '" + methodName + 
+        		            "' of class '" + classType.substr(6) + "'").c_str(), "scope error");
         		}
 				else{
 	            	// Get method type (should be FUNC_returnType)
@@ -573,7 +575,7 @@ postfix_expression
 	            	    // Check arguments against parameter types
 	            	    vector<string> methodArgs = getFuncArgs(manglemethod);//gives className_func ->className empty right now
 						if(currArgs.size() != methodArgs.size()-1)
-							yyerror(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+							semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
 					else{
 
 	            	    for (int i = 1; i < methodArgs.size(); i++) {
@@ -583,7 +585,7 @@ postfix_expression
 	            	            warning(("Incompatible conversion of " + currArgs[i-1] + 
 	            	                    " to parameter of type " + methodArgs[i]).c_str());
 	            	        } else if (msg.empty()) {
-	            	            yyerror(("Incompatible argument to method " + methodName).c_str(), 
+	            	            semantic_error(("Incompatible argument to method " + methodName).c_str(), 
 	            	                   "semantic error");
 	            	            break;
 	            	        }
@@ -593,16 +595,16 @@ postfix_expression
 	            	    $$->temp_name = $1->temp_name + "." + methodName;
 	            	    $$->isInit = $5->isInit;
 	            	} else {
-	            	    yyerror(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            	    semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
 	            	}
 				}
 	        } else if (ret == 0) {
-	            yyerror(("Method '" + methodName + "' not found in class").c_str(), "scope error");
+	            semantic_error(("Method '" + methodName + "' not found in class").c_str(), "scope error");
 	        } else {
-	            yyerror(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
+	            semantic_error(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
 	        }
 	    } else {
-	        yyerror("Cannot call method on non-class type", "type error");
+	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 		//3AC
 		std::string q = getTempVariable($1->type+'*'); 
@@ -622,16 +624,16 @@ postfix_expression
 		string temp = string($3);
 		string temp1 = ($1->type);
 		if(temp1.back() != '*'){
-			yyerror(($1->node_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
+			semantic_error(($1->node_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
 		}
 		else temp1.pop_back();
 		
 		int ret = lookupStruct(temp1, temp);
 		if(ret == -1){
-			yyerror("Struct not defined", "scope error");
+			semantic_error("Struct not defined", "scope error");
 		}
 		else if (ret == 0){
-			yyerror("Attribute of Struct not defined", "scope error");
+			semantic_error("Attribute of Struct not defined", "scope error");
 		}
 		else{
 			$$->type = StructAttrType(temp1, temp);
@@ -661,7 +663,7 @@ postfix_expression
 			emit("S++", $1->place, "", q, -1);
 		}
 		else{
-			yyerror("Increment not defined for this type", "type error");
+			semantic_error("Increment not defined for this type", "type error");
 		}
 	}
 	| postfix_expression DEC_OP {
@@ -681,7 +683,7 @@ postfix_expression
 			emit("S--", $1->place, "", q, -1);
 		}
 		else{
-			yyerror("Decrement not defined for this type", "type error");
+			semantic_error("Decrement not defined for this type", "type error");
 		}
 	}
 	;
@@ -739,7 +741,7 @@ unary_expression
 			emit("++P", $2->place, "", q, -1);
 		}
 		else{
-			yyerror("Increment not defined for this type", "type error");
+			semantic_error("Increment not defined for this type", "type error");
 		}
 	}
 	| DEC_OP unary_expression {
@@ -760,7 +762,7 @@ unary_expression
 			emit("--P", $2->place, "", q, -1);
 		}
 		else{
-			yyerror("Decrement not defined for this type", "type error");
+			semantic_error("Decrement not defined for this type", "type error");
 		}
 	}
 	| unary_operator cast_expression {
@@ -812,7 +814,7 @@ unary_expression
 				}
     	    }
     	    else{
-    	        yyerror("Type inconsistent with operator", "type error");
+    	        semantic_error("Type inconsistent with operator", "type error");
     	    }
     	}
 	}
@@ -954,7 +956,7 @@ multiplicative_expression
 			$$->nextlist.clear();
 		}
 		else{
-			yyerror("Incompatible type for * operator", "type error");
+			semantic_error("Incompatible type for * operator", "type error");
 		}
 	}
 	| multiplicative_expression '/' cast_expression {
@@ -997,7 +999,7 @@ multiplicative_expression
 			$$->nextlist.clear();
 		}
 		else{
-			yyerror("Incompatible type for / operator", "type error");
+			semantic_error("Incompatible type for / operator", "type error");
 		}
 	}
 	| multiplicative_expression '%' cast_expression {
@@ -1035,7 +1037,7 @@ multiplicative_expression
 			$$->nextlist.clear();
 		}
 		else{
-			yyerror("Incompatible type for % operator", "type error");
+			semantic_error("Incompatible type for % operator", "type error");
 		}
 	}
 	;
@@ -1085,7 +1087,7 @@ additive_expression
 			}
 			$$->nextlist.clear();
         } else {
-            yyerror("Incompatible type for + operator", "type error");
+            semantic_error("Incompatible type for + operator", "type error");
         }
     }
     | additive_expression '-' multiplicative_expression {
@@ -1121,7 +1123,7 @@ additive_expression
 			}
 			$$->nextlist.clear();
         } else {
-            yyerror("Incompatible type for - operator", "type error");
+            semantic_error("Incompatible type for - operator", "type error");
         }
     }
     ;
@@ -1145,7 +1147,7 @@ shift_expression
 			$$->nextlist.clear();
 			emit("<<", $1->place, $3->place, q, -1);
         } else {
-            yyerror("Invalid operands to binary <<", "type error");
+            semantic_error("Invalid operands to binary <<", "type error");
         }
     }
     | shift_expression RIGHT_OP additive_expression {
@@ -1162,7 +1164,7 @@ shift_expression
 			$$->nextlist.clear();
 			emit(">>", $1->place, $3->place, q, -1);
         } else {
-            yyerror("Invalid operands to binary >>", "type error");
+            semantic_error("Invalid operands to binary >>", "type error");
         }
     }
     ;
@@ -1187,7 +1189,7 @@ relational_expression
 			$$->place = q;
 			$$->nextlist.clear();
         } else {
-            yyerror("Invalid operands to binary <", "type error");
+            semantic_error("Invalid operands to binary <", "type error");
         }
     }
     | relational_expression '>' inclusive_or_expression {
@@ -1205,7 +1207,7 @@ relational_expression
 			$$->place = q;
 			$$->nextlist.clear();
         } else {
-            yyerror("Invalid operands to binary >", "type error");
+            semantic_error("Invalid operands to binary >", "type error");
         }
     }
     | relational_expression LE_OP inclusive_or_expression {
@@ -1223,7 +1225,7 @@ relational_expression
 			$$->place = q;
 			$$->nextlist.clear();
         } else {
-            yyerror("Invalid operands to binary <=", "type error");
+            semantic_error("Invalid operands to binary <=", "type error");
         }
     }
     | relational_expression GE_OP inclusive_or_expression {
@@ -1241,7 +1243,7 @@ relational_expression
 			$$->place = q;
 			$$->nextlist.clear();
         } else {
-            yyerror("Invalid operands to binary >=", "type error");
+            semantic_error("Invalid operands to binary >=", "type error");
         }
     }
     ;
@@ -1260,7 +1262,7 @@ equality_expression
         string temp = eqExp($1->type, $3->type);
         if(!temp.empty()){
             if(temp == "ok"){
-                yyerror("Comparison between pointer and integer", "type error");
+                semantic_error("Comparison between pointer and integer", "type error");
             }
             $$->type = "bool";
 			//3AC
@@ -1270,7 +1272,7 @@ equality_expression
 			$$->nextlist.clear();
         }
         else{
-            yyerror("Invalid operands to binary ==", "type error");
+            semantic_error("Invalid operands to binary ==", "type error");
         }
     }
     | equality_expression NE_OP relational_expression {
@@ -1282,7 +1284,7 @@ equality_expression
         string temp = eqExp($1->type, $3->type);
         if(!temp.empty()){
             if(temp == "ok"){
-                yyerror("Comparison between pointer and integer", "type error");
+                semantic_error("Comparison between pointer and integer", "type error");
             }
             $$->type = "bool";
 			//3AC
@@ -1292,7 +1294,7 @@ equality_expression
 			$$->nextlist.clear();
         }
         else{
-            yyerror("Invalid operands to binary !=", "type error");
+            semantic_error("Invalid operands to binary !=", "type error");
         }
     }
     ;
@@ -1320,7 +1322,7 @@ and_expression
 			$$->place = q;
         }
         else{
-            yyerror("Invalid operands to binary &", "type error");
+            semantic_error("Invalid operands to binary &", "type error");
         }
     }
     ;
@@ -1351,7 +1353,7 @@ exclusive_or_expression
 			$$->place = q;
 			$$->nextlist.clear();
         } else {
-            yyerror("Invalid operands to binary ^", "type error");
+            semantic_error("Invalid operands to binary ^", "type error");
         }
     }
     ;
@@ -1376,7 +1378,7 @@ inclusive_or_expression
 			$$->place = q;
 			$$->nextlist.clear();
         } else {
-            yyerror("Invalid operands to binary |", "type error");
+            semantic_error("Invalid operands to binary |", "type error");
         }
     }
     ;
@@ -1461,7 +1463,7 @@ conditional_expression
 			$$->nextlist.push_back($4);
 			$$->place = q;
         } else {
-            yyerror("Type mismatch in Conditional Expression", "type error");
+            semantic_error("Type mismatch in Conditional Expression", "type error");
         }
         $$->isInit = $1->isInit & $3->isInit & $7->isInit;
     }
@@ -1518,7 +1520,7 @@ assignment_expression
 			backpatch($4->nextlist, num);
 			rValue = 0;
         } else {
-            yyerror("Incompatible types when assigning type", "type error");
+            semantic_error("Incompatible types when assigning type", "type error");
         }
         if ($1->expType == 3 && $4->isInit) {
             updInit($1->temp_name);
@@ -1643,11 +1645,11 @@ init_declarator
 		}
 		// Semantics
 		if(currLookup($1->temp_name)){
-			yyerror(($1->temp_name + " is already declared").c_str(), "scope error");
+			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
 		else if($1->expType == 3){
 			if(fn_decl){
-				yyerror("A parameter list without types is only allowed in a function definition", "syntax error");
+				semantic_error("A parameter list with types is only allowed in a function definition", "semantic error");
 				fn_decl = 0;
 			}
 			removeFuncProto();
@@ -1661,6 +1663,7 @@ init_declarator
 		}
 		//3AC
 		$$->place = $1->temp_name;
+		std::cout<<"Checking if rule completes"<<std::endl;
 	}
 	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
 		DBG("init_declarator -> declarator '=' initializer");
@@ -1668,7 +1671,7 @@ init_declarator
 		
 		// Semantics
 		if(currLookup($1->temp_name)){
-			yyerror(($1->temp_name + " is already declared").c_str(), "scope error");
+			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
 		else{
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
@@ -1941,8 +1944,8 @@ class_definition_head
             // Single parent
             string parentClassName = "CLASS_" + inheritanceNode->temp_name;
             if (!inheritFromClass("CLASS_" + std::string($2), parentClassName)) {
-                yyerror(("Cannot inherit from undefined class " + 
-                        parentClassName.substr(6)).c_str(), "inheritance error");
+                semantic_error(("Cannot inherit from undefined class " + 
+                        parentClassName.substr(6)).c_str(), "scope error");
             }
         }
     }
@@ -1961,7 +1964,7 @@ class_definition
 			insertSymbol(*curr_table, "CLASS_" + $1->temp_name, "class", getSize("CLASS_" + $1->temp_name), true, nullptr);
 		}
 		else{
-			yyerror(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
+			semantic_error(("Class " + $1->temp_name + " is already defined").c_str(), "scope error");
 		}
 		className = "";
 		inClassContext = false;
@@ -1981,7 +1984,7 @@ class_definition
 			type = "#INSIDE";
 		}
 		else{
-			yyerror(("Class " + string($2) + " is not defined").c_str(), "scope error");
+			semantic_error(("Class " + string($2) + " is not defined").c_str(), "scope error");
 		}
     }
 	;
@@ -2079,7 +2082,7 @@ struct_or_union_specifier
 			insertSymbol(*curr_table, "STRUCT_" + string($2), "struct", getSize("STRUCT_" + string($2)), true, nullptr);
 		}
 		else{
-			yyerror(("Struct " + string($2) + " is already defined").c_str(), "scope error");
+			semantic_error(("Struct " + string($2) + " is already defined").c_str(), "scope error");
 		}
 		type = ""; //clearing after definition of struct
 		if (flag == 1) {
@@ -2103,7 +2106,7 @@ struct_or_union_specifier
 			insertSymbol(*curr_table, "STRUCT_" + to_string(Anon_StructCounter), "struct", getSize("STRUCT_" + to_string(Anon_StructCounter)), true, nullptr);
 		}
 		else{
-			yyerror("Struct is already defined", "scope error");
+			semantic_error("Struct is already defined", "scope error");
 		}
 		type = ""; //clearing after definition of struct
 	}
@@ -2126,7 +2129,7 @@ struct_or_union_specifier
 			type = "#INSIDE";
 		}
 		else{
-			yyerror(("Struct " + string($2) + " is not defined").c_str(), "scope error");
+			semantic_error(("Struct " + string($2) + " is not defined").c_str(), "scope error");
 		}
 	}
 	;
@@ -2227,7 +2230,7 @@ struct_declarator
 		
 		// Semantics
 		if (insertStructAttr($1->temp_name, $1->type, $1->size, 0) != 1) {
-			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
+			semantic_error(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
 		}
 	}
 	| ':' constant_expression {
@@ -2240,7 +2243,7 @@ struct_declarator
 		
 		// Semantics
 		if (insertStructAttr($1->temp_name, $1->type, $3->intVal, 0) != 1) {
-			yyerror(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
+			semantic_error(("The Attribute " + string($1->temp_name) + " is already declared in the same struct").c_str(), "scope error");
 		}
 	}
 	;
@@ -2355,7 +2358,7 @@ direct_declarator
 	| CONSTANT IDENTIFIER {
 		DBG("direct_declarator -> CONSTANT IDENTIFIER");
 		yyerror("invalid identifier", "syntax error");
-		$$ = getNode("Invalid Identifier");
+		$$ = getNode($2);
 	}
 	| '(' declarator ')' {
 		DBG("direct_declarator -> '(' declarator ')'");
@@ -2378,7 +2381,7 @@ direct_declarator
 			//3AC
 			$$->place = $$->temp_name;
 		} else {
-			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
+			semantic_error(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
 	| direct_declarator '[' ']' {
@@ -2399,7 +2402,7 @@ direct_declarator
 			$$->place = $$->temp_name;
 		}
 		else{
-			yyerror(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
+			semantic_error(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
 	| direct_declarator '(' A parameter_type_list ')' NEXT_QUAD {
@@ -2468,10 +2471,10 @@ direct_declarator
 		}
 		else{
 			if($1->expType == 2){
-				yyerror( (baseName + "declared as array of function").c_str(), "type error");
+				semantic_error( (baseName + "declared as array of function").c_str(), "type error");
 			}
 			else{
-				yyerror( (baseName + "declared as function of function").c_str(), "type error");
+				semantic_error( (baseName + "declared as function of function").c_str(), "type error");
 			}
 		}
 	}
@@ -2502,7 +2505,7 @@ direct_declarator
 		if (args.size() == idList.size()) {
 			for (int i = 0; i < args.size(); i++) {
 				if (args[i] == "...") {
-					yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
+					semantic_error(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 					break;
 				}
 				insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
@@ -2512,7 +2515,7 @@ direct_declarator
 			$$->place =$$->temp_name;
 			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
 		} else {
-			yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
+			semantic_error(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 			idList.clear();
 		}
 	}
@@ -2551,16 +2554,16 @@ direct_declarator
 				funcName = string($1->temp_name);
 				funcType = $1->type;
 			} else {
-				yyerror(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
+				semantic_error(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 			}
 			//3 AC
 			$$->place =$$->temp_name;
 			emit(mangledName + " start :", "", "", "", -2);
 		} else {
 			if ($1->expType == 2) {
-				yyerror(($1->temp_name + " declared as array of function").c_str(), "type error");
+				semantic_error(($1->temp_name + " declared as array of function").c_str(), "type error");
 			} else {
-				yyerror(($1->temp_name + " declared as function of function").c_str(), "type error");
+				semantic_error(($1->temp_name + " declared as function of function").c_str(), "type error");
 			}
 		}
 	}
@@ -2656,7 +2659,7 @@ parameter_declaration
 		type = "";
 		if ($2->expType == 1 || $2->expType == 2) {
 			if (currLookup($2->temp_name)) {
-				yyerror(("Redeclaration of Parameter " + $2->temp_name).c_str(), "scope error");
+				semantic_error(("Redeclaration of Parameter " + $2->temp_name).c_str(), "scope error");
 			} else {
 				insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
 			}
@@ -3401,7 +3404,7 @@ F
 		else qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
 		funcArgs.clear();
 		if (gst.find(qualifiedFuncName) != gst.end()){
-			yyerror(("Redefinition of function " + funcName).c_str(), "scope error");
+			semantic_error(("Redefinition of function " + funcName).c_str(), "scope error");
 		}
 		else{
 			if (type.find("*") != string::npos) {//pointers prolly can handle struct ,classes return type here too
@@ -3424,8 +3427,34 @@ void performParsing(const std::string &inputFile)
     yyparse();
     endAST();
 }
+// Add this function near the yyerror function (before the end of the file)
 
-int yyerror(const char* s, const std::string &errorType) {
+void semantic_error(const char* s, const std::string &errorType) {
+    // Mark that an error occurred but DON'T call yyclearin
+    has_error = true;
+    std::ifstream file(inputFilename);
+    std::string curr_line;
+    int count = 1;
+    std::string error_line(s);
+    
+    // Read through the file to find the line where the error occurred.
+    while (std::getline(file, curr_line)) {
+        if (count == line) {
+            // Print error in a C/C++ style error message format.
+            std::cerr << "\033[1;31merror: \033[0m" 
+                      << errorType << "::" 
+                      << line << ":" << (column - yyleng) 
+                      << ": " << error_line << "\n\n";
+            std::cerr << line << " | " << curr_line << "\n";
+            std::cerr << std::string(column - yyleng + 4, ' ') << "^\n";
+            break;
+        }
+        count++;
+    }
+    file.close();
+    return;
+}
+void yyerror(const char* s, const std::string &errorType) {
     yyclearin;  // clear the input token stream (if applicable)
     has_error = true;
     std::ifstream file(inputFilename);
@@ -3447,7 +3476,7 @@ int yyerror(const char* s, const std::string &errorType) {
         count++;
     }
     file.close();
-    return -1;
+    return;
 }
 
 // Add the warning function for issueing warnings
