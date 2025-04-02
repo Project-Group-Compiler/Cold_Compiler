@@ -44,7 +44,7 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 0; // Flag to enable or disable debugging
+bool debug_enabled = 1; // Flag to enable or disable debugging
 #define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -1860,12 +1860,14 @@ type_specifier
 		;
 
 inheritance_specifier
-			: IDENTIFIER {
-				DBG("inheritance_specifier -> access_specifier IDENTIFIER");
-				$$ = getNode($1);
-				$$->temp_name=string($1); //to propagate the class name of parent
-			}
-			;
+	: IDENTIFIER {
+		DBG("inheritance_specifier -> IDENTIFIER");
+		std::vector<Data> attr;
+		insertAttr(attr, getNode($1), "", 1);
+		$$ = getNode("inheritance_specifier",&attr);
+		$$->temp_name=string($1); //to propagate the class name of parent
+	}
+	;
 
 inheritance_specifier_list
 	: inheritance_specifier {
@@ -1929,6 +1931,8 @@ class_definition_head
         // Process inheritance
 		Node* inheritanceNode = $5;
         // Extract parent class name(s)
+		std::cout<<"inheritanceNode->node_name: "<<inheritanceNode->node_name<<std::endl;
+		std::cout<<"inheritanceNode->temp_name: "<<inheritanceNode->temp_name<<std::endl;
 		if (inheritanceNode->node_name == "inheritance_specifier") {
             // Single parent
             string parentClassName = "CLASS_" + inheritanceNode->temp_name;
@@ -2038,7 +2042,7 @@ class_member
         $1->strVal = currentAccess;
 		// Add declaration as a class member with proper access specifier
 		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
-        insertClassAttr($1->temp_name, $1->type, $1->size, 0);
+        insertClassAttr($1->temp_name, $1->type, $1->size, 0,currentAccess);
 		$$ = $1; 
 	}
 	;
