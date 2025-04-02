@@ -26,7 +26,7 @@ void setResult(int ind, std::string value)
 
 void extendList(std::vector<int> &list1, std::vector<int> &list2)
 {
-    for(auto &it : list2)
+    for (auto &it : list2)
         list1.push_back(it);
 }
 
@@ -63,30 +63,52 @@ std::string getTempVariable(std::string type)
 // TODO: Handle float
 int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2)
 {
-    // std::cerr<<"assign_exp: "<<op<<"#"<<type<<"#"<<type1<<"#"<<type2<<"#"<<arg1<<"#"<<arg2<<std::endl;
+    // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1 << "#" << arg2 << std::endl;
     std::string temp_op = "";
     std::string str = op;
-
     std::string q;
-
     str.pop_back();
     if (op != "=")
     {
         temp_op = str;
-        q = getTempVariable(type);
+        if (op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
+        {
+            if (type1 == "float" && type2 == "int")
+            {
+                std::string q1 = getTempVariable(type1);
+                emit("intToFloat", arg2, "", q1, -1);
+                q = getTempVariable(type);
+                emit("(f)" + temp_op, q, q1, q, -1);
+            }
+            else if (type1 == "float" && type2 == "float")
+            {
+                q = getTempVariable(type);
+                emit("(f)" + temp_op, q, arg2, q, -1);
+            }
+            else
+            {
+                q = getTempVariable(type);
+                emit("(i)" + temp_op, q, arg2, q, -1);
+            }
+        }
+        else
+            q = getTempVariable(type);
     }
     else
     {
-        q = arg2;
+        if (type1 == "float" && type2 == "int")
+        {
+            q = getTempVariable(type1);
+            emit("intToFloat", arg2, "", q, -1);
+        }
+        else
+            q = arg2;
     }
-
-    if (op != "=")
-    {
-        emit(temp_op, arg1, arg2, q, -1);
-    }
-    
-    int x = emit("=", q, "", arg1, -1);
-
+    int x;
+    if (type == "float")
+        x = emit("(f)=", q, "", arg1, -1);
+    else
+        x = emit("(i)=", q, "", arg1, -1);
     return x;
 }
 
