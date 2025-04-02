@@ -6,6 +6,7 @@
 
 extern FILE *yyin;
 bool print_ast = false;
+bool debug_enabled = false; 
 std::string inputFilename;
 std::string outputDir = std::filesystem::current_path().string() + "/";
 std::string astDir = std::filesystem::current_path().string() + "/";
@@ -39,6 +40,7 @@ int main(int argc, char *argv[])
                       << "  -l, --lex        Print lexical analysis table\n"
                       << "  -a, --ast        Print abstract syntax tree\n"
                       << "  -s, --symtab     Print symbol tables\n"
+                      << "  -d, --debug      Print debug trace\n"    
                       // << "  -t, --tac        Print three address code\n"
                       << "  -f, --force      Forcefully continue even if errors are present\n";
             return 0;
@@ -70,6 +72,8 @@ int main(int argc, char *argv[])
             print_ast = true;
         else if (arg == "-s" || arg == "--symtab")
             print_symtab = true;
+        else if (arg == "-d" || arg == "--debug")
+            debug_enabled = true;
         else if (arg == "-t" || arg == "--tac")
             print_ir = true;
         else if (arg == "-f" || arg == "--force")
