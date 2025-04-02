@@ -58,6 +58,10 @@ int previous_if_found = 0; // TODO: May need later
 std::vector<std::string> list_values;
 std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
+
+template <typename T>void debug(T x){std::cerr<<x<<'\n';}template <typename T>void debugsp(T x) {std::cerr << x << ' ';}
+template <typename T1, typename... T2>void debug(T1 x, T2... y){debugsp(x);if (sizeof...(y) == 1) debug(y...);}
+
 %}
 
 %define parse.error detailed
@@ -117,7 +121,6 @@ primary_expression
 		
 		// Semantics
 		string temp = primaryExpression(string($1));
-		std::cout<<string($1)<<std::endl;
 		if(temp == ""){
 			yyerror(("Undeclared Identifier " + string($1)).c_str(), "scope error");
 		}
@@ -235,16 +238,12 @@ postfix_expression
 		// Semantics
 		$$->isInit = 1;
 		string temp = postfixExpression($1->type, 2);
-		std::cout<<$1->type<<" "<<temp<<std::endl;
-		std::cout<<$1->temp_name<<std::endl;
 		if(!temp.empty()){	
 			$$->type = temp;
 			if($1->expType == 3){
 				std::string mangledName = mangleFunctionName($1->temp_name,currArgs);
 				vector<string> funcArg = getFuncArgs(mangledName);
-				std::cout<<funcArg.size()<<std::endl;
-				for(auto i:funcArg)std::cout<<i<<" ";
-				std::cout<<std::endl;
+				
 				if(currArgs.size()!=funcArg.size()){
 					yyerror(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
@@ -270,14 +269,11 @@ postfix_expression
 		// Semantics
 		$$->isInit = $3->isInit;
 		
-		std::cout<<$1->type<<std::endl; //this is wrong type 
-		std::cout<<$1->temp_name<<std::endl;
+		// std::cout<<$1->type<<std::endl; //this is wrong type 
 		// Create mangled name with current arguments
 	    std::string mangledName = mangleFunctionName($1->temp_name, currArgs);
-	    std::cout << "Trying to resolve: " << mangledName << std::endl;
 
 		string temp = primaryExpression(mangledName);
-		std::cout<<"temp "<<temp<<std::endl;
 		if(temp == ""){
 			//yyerror(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
 		}
@@ -322,7 +318,8 @@ postfix_expression
 				$$->temp_name = $1->temp_name;
 				$$->place = q;
 				$$->nextlist.clear();
-				emit("CALL", $$->temp_name, std::to_string(funcArgs.size()), q, -1);
+
+				emit("CALL", $$->temp_name, std::to_string(currArgs.size()), q, -1);
 			}
 		}
 		else{
@@ -355,7 +352,6 @@ postfix_expression
     	// First check if it's a regular class
 		else if (type.substr(0, 6) == "CLASS_") {
     	    int ret = lookupClass(type, temp);
-			std::cout<<type<<" "<<temp<<std::endl;
     	    if (ret == 1) {
     	        string memberAccess = ClassAttrAccess(type, temp);
         
@@ -444,7 +440,6 @@ postfix_expression
 			std::string manglemethod=mangleFunctionName(methodName,currArgs);
 			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
 	        int ret = lookupClass(classType, manglemethod);
-			std::cout<<classType<<" "<<methodName<<" "<<manglemethod<<std::endl;
 
 	        if (ret == 1) {
 				string memberAccess = ClassAttrAccess(classType, manglemethod);
@@ -508,7 +503,6 @@ postfix_expression
     	     classType.substr(6) == className)) {
 			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
 			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
-			std::cout<<manglemethod<<" "<<currArgs.size()<<std::endl;
 
     	    // We're inside a class method calling another method through 'this'
     	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
@@ -555,7 +549,6 @@ postfix_expression
 			std::string manglemethod=mangleFunctionName(methodName,currArgs);
 			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
 	        int ret = lookupClass(classType, manglemethod);
-			std::cout<<classType<<" "<<methodName<<" "<<manglemethod<<std::endl;
 	        if (ret == 1) {
 				string memberAccess = ClassAttrAccess(classType, manglemethod);
 
@@ -714,8 +707,9 @@ argument_expression_list
 		$$->type = "void";
 		//3AC
 		$$->nextlist.clear();
+	
         int Label = emit("param", $3->place, "", "", -1);
-		backpatch($1->nextlist, Label);
+		backpatch($3->nextlist, Label);
 	}
 	;
 
@@ -774,7 +768,6 @@ unary_expression
 		$$->isInit = $2->isInit;
 			// Special handling for dereferencing class pointers (this pointer)
     	if ($1->node_name == "*" && $2->type.substr(0, 6) == "CLASS_" && $2->type.back() == '*') {
-			std::cout<<"type: "<<$2->type<<std::endl;
     	    // For class pointers, preserve the class type without the trailing *
     	    $$->type = $2->type.substr(0, $2->type.size() - 1);
     	} else {
@@ -1519,7 +1512,6 @@ declaration_specifiers
 	}
 	| storage_class_specifier declaration_specifiers {
 		DBG("declaration_specifiers -> storage_class_specifier declaration_specifiers");
-		std::cout << tdstring << '\n';
 		$$ = getNode("declaration_specifiers", mergeAttrs($1, $2));
 	}
 	| type_specifier {
@@ -1561,7 +1553,6 @@ init_declarator
 		//
 		$$ = $1;  // Just pass the node directly
 		if(flag3){
-			//std::cout << tdstring2 << " haaaaa " << tdstring << endl;
 			typedefTable.push_back(make_pair(tdstring2,tdstring));
 			flag3=0;
 		}
@@ -1598,6 +1589,7 @@ init_declarator
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 			//3AC
 			std::string type = $1->type;
+			// debug(type,$1->temp_name);
 			if(type.find("int[]") != std::string::npos){
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
@@ -1956,7 +1948,6 @@ class_member
 		    ));
 		}
 		manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
-		std::cout<<manglemethod<<std::endl;
         insertClassAttr(manglemethod, "FUNC_"+$1->type, $1->size, 0,currentAccess);
 		classMethodArgs.clear();
 		$$ = $1; 
@@ -2058,7 +2049,6 @@ G
 		structName = $1;
 		if (flag==1){
 			tdstring = std::string($1);
-			//std::cout << tdstring << "  " << flag << '\n';
 			//flag++;
 		}
 		else if (flag==2) {
@@ -2239,6 +2229,7 @@ declarator
 			$$->expType = 2;
 		}
 		//3AC
+		debug($$->temp_name);
 		$$->place = $$->temp_name;
 	}
 	| direct_declarator {
@@ -2255,16 +2246,11 @@ direct_declarator
 		$$ = getNode($1);
 		std::string check = std::string($1);
 		tdstring2=check;
-		std::cout << check << '\n';
 		if (flag==1){
 			tdstring = std::string($1);
-			//std::cout << tdstring << "  " << flag << '\n';
-			//flag++;
 		}
 		else if (flag==2) {
-			//std::cout << tdstring << "  " << flag << '\n';
 			typedefTable.push_back(make_pair(check, tdstring));
-			//std::cout << typedefTable.size() << '\n';
 			flag = 0;
 		} else {
 			addToSymbolTable(check, currentDataType);
@@ -2341,7 +2327,6 @@ direct_declarator
         if (!className.empty()) {
             	mangledName=mangleFunctionName(baseName, funcArgs);
 				mangledName="FUNC_" + std::to_string(className.size()) + className + "_" + mangledName.substr(5);
-				std::cout<<baseName<<" "<<mangledName<<std::endl;
         		// Add implicit 'this' pointer as first parameter
         		string thisType = "CLASS_" + className + "*";
         		vector<string> newFuncArgs;
@@ -2361,20 +2346,13 @@ direct_declarator
         		insertSymbol(*curr_table, "this", thisType, 4, true, NULL);
         }
 		else mangledName = mangleFunctionName(baseName, funcArgs);
-		std::cout<<mangledName<<std::endl;
 		if($1->expType == 1) {
 			$$->temp_name = $1->temp_name;
 			$$->expType = 3;
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
-			std::cout<<$1->type<<std::endl;
 			vector<string> temp = getFuncArgs(mangledName);
-			for(auto i:temp){
-				std::cout<<i<<std::endl;
-			}
-			for(auto i:funcArgs){
-				std::cout<<i<<std::endl;
-			}
+			
 			if(temp.size() == 1 && temp[0] == "#NO_FUNC"){
 				insertFuncArg(mangledName, funcArgs);
 				funcName = string(baseName);
@@ -2903,11 +2881,9 @@ CHANGE_TABLE
 		else {
 			if (!className.empty() && funcName != "") {
                 inMethodBody = true;  // We're entering a method body in a class
-				std::cout<<"here"<<std::endl;
             }
 		}
 		func_flag++;
-		std::cout<<"func_flag "<<func_flag<<std::endl;
 		$$ = strdup("");
 	}
 	;
@@ -3245,10 +3221,7 @@ function_definition
 
 		type = "";
 		string fName = string($3);
-		std::cout<<funcName<<" "<<funcType<<" "<<fn_decl<<" "<<func_flag<<std::endl;
-		for(auto i:funcArgs)std::cout<<i<<" ";
-		for(auto i:currArgs)std::cout<<i<<" ";
-		std::cout<<std::endl;
+		
 		printSymbolTable(curr_table, fName + ".csv");
 		updSymbolTable(fName);
 		inMethodBody = false;
@@ -3285,7 +3258,7 @@ function_definition
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
 		}
-        emit("FUNC_" + fName + " end", "", "", "", -1);
+        emit("FUNC_" + $$->temp_name + " end", "", "", "", -1);
         remainingBackpatch();
 	}
 	| declarator F declaration_list compound_statement {
@@ -3301,7 +3274,7 @@ function_definition
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
 		}
-        emit("FUNC_" + fName + " end", "", "", "", -1);
+        emit("FUNC_" + $$->temp_name + " end", "", "", "", -1);
         remainingBackpatch();
 	}
 	| declarator F compound_statement {
@@ -3317,7 +3290,7 @@ function_definition
 		for (auto &i : gotolablelist) {
 			backpatch(i.second, gotolabel[i.first]);
         }
-        emit("FUNC_" + fName + " end", "", "", "", -1);
+        emit("FUNC_" + $$->temp_name + " end", "", "", "", -1);
         remainingBackpatch();
 	}
 	;
@@ -3338,7 +3311,6 @@ F
 		}
 		else qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
 		funcArgs.clear();
-		std::cout<<qualifiedFuncName<<std::endl;
 		if (gst.find(qualifiedFuncName) != gst.end()){
 			yyerror(("Redefinition of function " + funcName).c_str(), "scope error");
 		}

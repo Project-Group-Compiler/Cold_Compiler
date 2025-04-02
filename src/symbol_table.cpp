@@ -113,8 +113,8 @@ void makeSymbolTable(string name, string f_type)
             std::cerr << "Error: curr_table not found in parent_table during makeSymbolTable.\n";
             exit(EXIT_FAILURE);
         }
-        std::cout<<"Function name: " << name << std::endl;
-        std::cout<<"Function type: " << f_type << std::endl;
+        // std::cout<<"Function name: " << name << std::endl;
+        // std::cout<<"Function type: " << f_type << std::endl;
         (*parent_table[curr_table]).erase("dummyF_name");
         // Only add to parent table if not in class context
         if (!inClassContext) {

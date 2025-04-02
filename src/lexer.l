@@ -201,7 +201,6 @@ void count()
 
 std::string type_check(){
     std::string str = searchTypedefTable(yytext);
-    std::cout << str << " jijijiji\n";
     if(str.empty()){
         return std::string(yytext);
     }
