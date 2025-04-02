@@ -2,20 +2,20 @@ int foo(){
 
 }
 int foo(int a){
-    
+
 }
 
-// int f(){
-//     float f = 1.5;
-//     int a = 5;
-//     int b;
-//     float g = f*a;
-//     b = a*5;
-//     b = a-5;
-//     g = f+5;
-//     g = f-g;
-//     g += f;
-// }
+int f(){
+    float f = 1.5;
+    int a = 5;
+    int b;
+    float g = f*a;
+    b = a*5;
+    b = a-5;
+    g = f+5;
+    g = f-g;
+    g += f;
+}
 
 // int main(){
 
