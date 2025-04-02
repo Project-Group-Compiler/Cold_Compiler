@@ -26,6 +26,7 @@ extern std::string outputDir;
 extern bool has_error;
 
 //Semantics
+bool array_decl = 0;
 string funcName = "";
 string structName = "";
 string className="";
@@ -1658,6 +1659,7 @@ init_declarator_list
 	: init_declarator {
 		DBG("init_declarator_list -> init_declarator");
 		$$ = $1;
+		array_decl = 0;
 	}
 	| init_declarator_list ',' NEXT_QUAD init_declarator {
 		DBG("init_declarator_list -> init_declarator_list ',' init_declarator");
@@ -1713,10 +1715,11 @@ init_declarator
 			//3AC
 			std::string type = $1->type;
 			// debug(type,$1->temp_name);
-			if(type.find("int[]") != std::string::npos){
+			if(array_decl){
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
 				}
+				array_decl = 0;
 			}else{
 				assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
 			}
@@ -2421,6 +2424,7 @@ direct_declarator
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
 			$$->size = $1->size * $3->intVal;
+			array_decl = 1;
 			//3AC
 			$$->place = $$->temp_name;
 		} else {
@@ -2441,6 +2445,7 @@ direct_declarator
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
 			$$->size = 4;
+			array_decl = 1;
 			//3AC
 			$$->place = $$->temp_name;
 		}
