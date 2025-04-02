@@ -1,3 +1,5 @@
+// SEMNATICS WORKING
+
 void testGoto() 
 {
     int x = 5;

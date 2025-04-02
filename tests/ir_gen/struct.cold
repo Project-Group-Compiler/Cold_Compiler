@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 struct node{
     int x;
     int y;

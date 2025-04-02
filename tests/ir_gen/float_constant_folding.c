@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 void foo()
 {
     float f = 1.5 + 6;
