@@ -1,5 +1,6 @@
 #include "tac.hpp"
 #include <unordered_map>
+#include <unordered_set>
 #include <stack>
 
 std::vector<std::vector<quad>> basic_blocks;
@@ -216,9 +217,17 @@ void constant_folding()
                 else if (curr_op[0] == '*')
                     arg1 = arg1 * arg2;
                 else if (curr_op[0] == '/')
+                {
+                    if (arg2 == 0)
+                        continue;
                     arg1 = arg1 / arg2;
+                }
                 else if (curr_op[0] == '%')
+                {
+                    if (arg2 == 0)
+                        continue;
                     arg1 = arg1 % arg2;
+                }
                 curr_op = "=";
                 instr.arg1 = std::to_string(arg1);
                 instr.arg2 = "";
@@ -387,6 +396,8 @@ void dead_code_elimination()
                     break;
                 }
             }
+            if (basic_blocks[i - 1].back().op == "GOTO" && basic_blocks[i - 1].back().gotoLabel == block[0].Label)
+                keep_label = true;
             if (!keep_label)
             {
                 std::vector<quad> new_block; // add all except first (label)
@@ -401,6 +412,31 @@ void dead_code_elimination()
     compute_basic_blocks();
     build_cfg();
 }
+
+// TO FIX : reaching copies analysis
+// void transfer(const std::vector<quad> &block, std::unordered_set<std::pair<std::string, std::string>> initial_copies)
+// {
+//     auto copies = initial_copies;
+//     for (const auto &instr : block)
+//     {
+//         if (instr.op == "=")
+//         {
+//             if (copies.find(std::make_pair(instr.arg1, instr.result)) != copies.end())
+//                 continue;
+//             std::string dst = instr.result;
+//             auto it = copies.begin();
+//             while (it != copies.end())
+//             {
+//                 const auto &[res, src] = *it;
+//                 if (res == dst || src == dst)
+//                     it = copies.erase(it);
+//                 else
+//                     ++it;
+//             }
+//             copies.insert(std::make_pair(instr.result, instr.arg1));
+//         }
+//     }
+// }
 
 void run_optimisations()
 {

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <map>
 #include "tac.hpp"
-#include "symbol_table.h"
+#include "symbol_table.hpp"
 
 extern std::string outputDir;
 std::vector<quad> tac_code;

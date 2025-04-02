@@ -15,7 +15,7 @@ IS			(u|U|l|L)*
 #include "AST.hpp"
 #include "parser.hpp"
 #include "data_structures.hpp"
-#include "typecheck.h"
+#include "typecheck.hpp"
 
 extern std::string outputDir;
 extern bool has_error;

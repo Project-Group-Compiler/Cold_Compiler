@@ -12,7 +12,9 @@ AST_HPP = $(SRC_DIR)/AST.hpp
 AST_CPP = $(SRC_DIR)/AST.cpp
 DS_HPP = $(SRC_DIR)/data_structures.hpp
 DS_CPP = $(SRC_DIR)/data_structures.cpp
+SYM_TABLE_HPP = $(SRC_DIR)/symbol_table.hpp
 SYM_TABLE = $(SRC_DIR)/symbol_table.cpp
+TYPECHECK_HPP = $(SRC_DIR)/typecheck.hpp
 TYPECHECK = $(SRC_DIR)/typecheck.cpp
 TAC_HPP = $(SRC_DIR)/tac.hpp
 TAC_GEN_CPP = $(SRC_DIR)/tac_gen.cpp
@@ -61,7 +63,7 @@ $(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(LEXER_CPP)
 
 # Compile parser object file
-$(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP)
+$(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP) $(SYM_TABLE_HPP) $(TYPECHECK_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(PARSER_CPP)
 
 # Compile AST object file
@@ -72,24 +74,16 @@ $(BUILD_DIR)/AST.o: $(AST_CPP) $(AST_HPP)
 $(BUILD_DIR)/data_structures.o: $(DS_CPP) $(DS_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(DS_CPP)
 
-# Compile the TAC generator object file
-$(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP)
-	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_GEN_CPP)
-
-# Compile the TAC optimizer object file
-$(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP) $(DS_HPP)
-	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
-
 # Compile symbol_table object file
-$(BUILD_DIR)/symbol_table.o: $(SYM_TABLE) $(SRC_DIR)/symbol_table.h
-	$(CXX) $(CXXFLAGS) -c -o $@ $(SYM_TABLE)
+$(BUILD_DIR)/symbol_table.o: $(SYM_TABLE) $(SYM_TABLE_HPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(SYM_TABLE)
 
 # Compile typecheck object file
-$(BUILD_DIR)/typecheck.o: $(TYPECHECK) $(SRC_DIR)/typecheck.h
-	$(CXX) $(CXXFLAGS) -c -o $@ $(TYPECHECK)
+$(BUILD_DIR)/typecheck.o: $(TYPECHECK) $(TYPECHECK_HPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(TYPECHECK)
 
 # Compile the TAC generator object file
-$(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP)
+$(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP) $(SYM_TABLE_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_GEN_CPP)
 
 # Compile the TAC optimizer object file
@@ -98,19 +92,16 @@ $(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP) $(DS_HPP)
 
 # Compile driver object file
 $(BUILD_DIR)/driver.o: $(DRIVER) $(DS_HPP)
-	$(CXX) $(CXXFLAGS) -c -o $@ $(DRIVER)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(DRIVER)
 
 # Link all object files into the final binary
 $(OUTPUT): $(OBJS)
 	@mkdir -p $(BIN_DIR)
 	@$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Clean up generated files
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-.PHONY: all clean
-# Clean up generated CSV files
 csv_clean:
 	rm -f *.csv
 
