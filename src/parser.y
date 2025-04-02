@@ -921,15 +921,33 @@ multiplicative_expression
 			if(temp == "int"){
 				$$->type = "long long";
 			}
-			else if(temp == "float"){
+			else if(isFloat(temp)){
 				$$->type = "long double";
 			}
+
 			//3AC
-			std::string q = getTempVariable($$->type); //TODO not always int
-			$$->place = q;
-			$$->temp_name = q;
+			if(isFloat(temp)){
+				std::string q = getTempVariable($$->type);
+				if(checkInt($1->type)){
+					std::string q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,"",q1,-1);					
+					emit("(f)*", q1, $3->place, q, -1);
+				}else if(checkInt($3->type)){
+					std::string q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,"",q1,-1);
+					emit("(f)*", $1->place, q1, q, -1);
+				}else{
+					emit("(f)*", $1->place, $3->place, q, -1);
+				}
+				$$->place = q;
+				$$->temp_name = q;
+			}else{ 
+				std::string q = getTempVariable($$->type); //TODO not always int
+				$$->place = q;
+				$$->temp_name = q;
+				emit("(i)*", $1->place, $3->place, q, -1);
+			}
 			$$->nextlist.clear();
-			emit("*", $1->place, $3->place, q, -1);
 		}
 		else{
 			yyerror("Incompatible type for * operator", "type error");
@@ -947,15 +965,32 @@ multiplicative_expression
 			if(temp == "int"){
 				$$->type = "long long";
 			}
-			else if(temp == "float"){
+			else if(isFloat(temp)){
 				$$->type = "long double";
 			}
 			//3AC
-			std::string q = getTempVariable($$->type); //TODO not always int
-			$$->place = q;
-			$$->temp_name = q;
+			if(isFloat(temp)){
+				std::string q = getTempVariable($$->type);
+				if(checkInt($1->type)){
+					std::string q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,"",q1,-1);					
+					emit("(f)/", q1, $3->place, q, -1);
+				}else if(checkInt($3->type)){
+					std::string q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,"",q1,-1);
+					emit("(f)/", $1->place, q1, q, -1);
+				}else{
+					emit("(f)/", $1->place, $3->place, q, -1);
+				}
+				$$->place = q;
+				$$->temp_name = q;
+			}else{ 
+				std::string q = getTempVariable($$->type); //TODO not always int
+				$$->place = q;
+				$$->temp_name = q;
+				emit("(i)/", $1->place, $3->place, q, -1);
+			}
 			$$->nextlist.clear();
-			emit("/", $1->place, $3->place, q, -1);
 		}
 		else{
 			yyerror("Incompatible type for / operator", "type error");
@@ -972,11 +1007,28 @@ multiplicative_expression
 		if(temp == "int"){
 			$$->type = "long long";
 			//3AC
-			std::string q = getTempVariable($$->type); //TODO not always int
-			$$->place = q;
-			$$->temp_name = q;
+			if(isFloat(temp)){
+				std::string q = getTempVariable($$->type);
+				if(checkInt($1->type)){
+					std::string q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,"",q1,-1);					
+					emit("(f)%", q1, $3->place, q, -1);
+				}else if(checkInt($3->type)){
+					std::string q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,"",q1,-1);
+					emit("(f)%", $1->place, q1, q, -1);
+				}else{
+					emit("(f)%", $1->place, $3->place, q, -1);
+				}
+				$$->place = q;
+				$$->temp_name = q;
+			}else{ 
+				std::string q = getTempVariable($$->type); //TODO not always int
+				$$->place = q;
+				$$->temp_name = q;
+				emit("(i)%", $1->place, $3->place, q, -1);
+			}
 			$$->nextlist.clear();
-			emit("%", $1->place, $3->place, q, -1);
 		}
 		else{
 			yyerror("Incompatible type for % operator", "type error");
@@ -1010,7 +1062,22 @@ additive_expression
 				emit("*", $3->place, getSizeOfType($1->type.substr(0, $1->type.size()-1)), q2, -1);
 				emit("ptr+", $1->place, q2, q, -1);
 			}else{
-				emit("+", $1->place, $3->place, q, -1);
+				//TODO : Handle float pointer 
+				if(isFloat(temp)){
+					if(checkInt($1->type)){
+						std::string q1 = getTempVariable($$->type);
+						emit("intToFloat",$1->place,"",q1,-1);					
+						emit("(f)+", q1, $3->place, q, -1);
+					}else if(checkInt($3->type)){
+						std::string q1 = getTempVariable($$->type);
+						emit("intToFloat",$3->place,"",q1,-1);
+						emit("(f)+", $1->place, q1, q, -1);
+					}else{
+						emit("(f)+", $1->place, $3->place, q, -1);
+					}
+				}else{ 
+					emit("(i)+", $1->place, $3->place, q, -1);
+				}
 			}
 			$$->nextlist.clear();
         } else {
@@ -1033,8 +1100,22 @@ additive_expression
 			std::string q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
 			$$->temp_name = q;
+			if(isFloat(temp)){
+				if(checkInt($1->type)){
+					std::string q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,"",q1,-1);					
+					emit("(f)-", q1, $3->place, q, -1);
+				}else if(checkInt($3->type)){
+					std::string q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,"",q1,-1);
+					emit("(f)-", $1->place, q1, q, -1);
+				}else{
+					emit("(f)-", $1->place, $3->place, q, -1);
+				}
+			}else{ 
+				emit("(i)-", $1->place, $3->place, q, -1);
+			}
 			$$->nextlist.clear();
-			emit("-", $1->place, $3->place, q, -1);
         } else {
             yyerror("Incompatible type for - operator", "type error");
         }
@@ -2375,7 +2456,7 @@ direct_declarator
 			//3 AC
 			$$->place =$$->temp_name;
 			backpatch($4->nextlist,$6);
-			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
+			emit(mangledName + " start :", "", "", "", -2);
 		}
 		else{
 			if($1->expType == 2){
@@ -2466,7 +2547,7 @@ direct_declarator
 			}
 			//3 AC
 			$$->place =$$->temp_name;
-			emit("FUNC_" + $$->temp_name + " start :", "", "", "", -2);
+			emit(mangledName + " start :", "", "", "", -2);
 		} else {
 			if ($1->expType == 2) {
 				yyerror(($1->temp_name + " declared as array of function").c_str(), "type error");
@@ -3229,7 +3310,7 @@ function_definition
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
 		}
-        emit("FUNC_" + fName + " end", "", "", "", -1);
+        emit(fName + " end", "", "", "", -1);
         remainingBackpatch();
 	}
 	| declaration_specifiers declarator F compound_statement {
@@ -3258,7 +3339,7 @@ function_definition
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
 		}
-        emit("FUNC_" + $$->temp_name + " end", "", "", "", -1);
+        emit(fName + " end", "", "", "", -1);
         remainingBackpatch();
 	}
 	| declarator F declaration_list compound_statement {
@@ -3274,7 +3355,7 @@ function_definition
 		for(auto i: gotolablelist){
 			backpatch(i.second, gotolabel[i.first]);
 		}
-        emit("FUNC_" + $$->temp_name + " end", "", "", "", -1);
+        emit(fName + " end", "", "", "", -1);
         remainingBackpatch();
 	}
 	| declarator F compound_statement {
@@ -3290,7 +3371,7 @@ function_definition
 		for (auto &i : gotolablelist) {
 			backpatch(i.second, gotolabel[i.first]);
         }
-        emit("FUNC_" + $$->temp_name + " end", "", "", "", -1);
+        emit(fName + " end", "", "", "", -1);
         remainingBackpatch();
 	}
 	;

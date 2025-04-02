@@ -95,7 +95,7 @@ string mulExp(string a, string b, char op){
 
 string addExp(string a, string b, char op){
     if(checkInt(a) && checkInt(b)) return "int";
-    else if((checkInt(a) || isFloat(a)) && (checkInt(b) || isFloat(b))) return "real";
+    else if((checkInt(a) || isFloat(a)) && (checkInt(b) || isFloat(b))) return "float";
     else if((checkInt(a) && b=="char") || (a=="char" && checkInt(b))) return "char";
     else if(checkInt(a) && b.back()=='*') return b;
     else if(a.back()=='*' && checkInt(b)) return a;

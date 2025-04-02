@@ -2,10 +2,14 @@ class Person
 {
     private{
         int age;
+
     };
     public{
-        int returnAge()  { return this->age;}
+        int returnAge()  { 
+            return this->age;
+        }
     };
+    
 };
 
 int main()
