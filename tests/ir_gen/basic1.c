@@ -1,22 +1,44 @@
-int add(int a, int b) {
-    return a + b;
+int foo(){
+
+}
+int foo(int a){
+
 }
 
-int multiply(int a, int b) {
-    return a * b;
+int f(){
+    float f = 1.5;
+    int a = 5;
+    int b;
+    float g = f*a;
+    b = a*5;
+    b = a-5;
+    g = f+5;
+    g = f-g;
+    g += f;
 }
 
-int main() {
-    // Function pointer declaration
-    int x,y;
-    int (*operation)(int, int) = add;
-    x = operation(3,4);
+// int main(){
+
+// }
+// int add(int a, int b) {
+//     return a + b;
+// }
+
+// int multiply(int a, int b) {
+//     return a * b;
+// }
+
+// int main() {
+//     // Function pointer declaration
+//     int x,y;
+//     int (*operation)(int, int) = add;
+//     x = operation(3,4);
     
-    operation = multiply;
-    y = operation(3,4);
+//     operation = multiply;
+//     y = operation(3,4);
 
-    return 0;
-}
+//     return 0;
+// }
 
 // Function definitions
 
