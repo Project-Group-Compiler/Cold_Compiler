@@ -1,0 +1,9 @@
+void add(int a, int b){
+    return a+b;
+}
+
+int main(){
+    int x,y;
+    char* a=add(x,y); // should give error
+    return 0;
+}
