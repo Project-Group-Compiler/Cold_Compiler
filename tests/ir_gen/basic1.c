@@ -1,10 +1,3 @@
-int foo(){
-
-}
-int foo(int a){
-
-}
-
 int f(){
     float f = 1.5;
     int a = 5;

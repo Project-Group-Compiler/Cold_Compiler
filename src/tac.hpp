@@ -54,16 +54,21 @@ inline std::string stringify(const quad &instr)
         s += instr.result + " = " + curr_op + " " + instr.arg1;
     else if (curr_op.substr(0, 5) == "unary")
         s += instr.result + " = " + curr_op.back() + " " + instr.arg1;
-    else if (curr_op == "=")
-        s += instr.result + " = " + instr.arg1;
     else if (curr_op.length() == 4 && curr_op[0] == '(')
     {
-        s += instr.result + " = " + instr.arg1 + " " + curr_op.back() + " " + instr.arg2 + "\t(";
+        if (curr_op.back() == '=')
+            s += instr.result + " = " + instr.arg1 + "\t\t(";
+        else
+            s += instr.result + " = " + instr.arg1 + " " + curr_op.back() + " " + instr.arg2 + "\t\t(";
         if (curr_op[1] == 'f')
             s += "float)";
         else if (curr_op[1] == 'i')
             s += "int)";
     }
+    else if (curr_op == "=")
+        s += instr.result + " = " + instr.arg1;
+    else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
+        s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
     else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+")
         s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
     else if (curr_op == "RETURN" || curr_op == "param")
@@ -81,8 +86,8 @@ inline std::string stringify(const quad &instr)
     }
     else if (curr_op == "CopyToOffset")
         s += "Copy " + instr.arg1 + " to offset " + instr.arg2 + " of " + instr.result;
-    else if(curr_op == "intToFloat")
-        s += instr.result + " = intToFloat (" + instr.arg1 + ")";
+    else if (curr_op == "intToFloat")
+        s += instr.result + " = intToFloat(" + instr.arg1 + ")";
     return s;
 }
 

@@ -63,58 +63,46 @@ std::string getTempVariable(std::string type)
 // TODO: Handle float
 int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2)
 {
-    // std::cerr<<"assign_exp: "<<op<<"#"<<type<<"#"<<type1<<"#"<<type2<<"#"<<arg1<<"#"<<arg2<<std::endl;
+    // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1 << "#" << arg2 << std::endl;
     std::string temp_op = "";
     std::string str = op;
-
     std::string q;
-
     str.pop_back();
     if (op != "=")
     {
         temp_op = str;
-        q = getTempVariable(type);
+        if (op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
+        {
+            if (type1 == "float" && type2 == "int")
+            {
+                std::string q1 = getTempVariable(type1);
+                emit("intToFloat", arg2, "", q1, -1);
+                q = getTempVariable(type);
+                emit("(f)" + temp_op, q, q1, q, -1);
+            }
+            else if (type1 == "float" && type2 == "float")
+            {
+                q = getTempVariable(type);
+                emit("(f)" + temp_op, q, arg2, q, -1);
+            }
+            else
+            {
+                q = getTempVariable(type);
+                emit("(i)" + temp_op, q, arg2, q, -1);
+            }
+        }
+        else
+            q = getTempVariable(type);
     }
     else
     {
-        q = arg2;
-    }
-
-    if (op != "=")
-    {
-        // f += a;
-        // t0 = inttofloat a;
-        // t1 = f + t0; (f)
-        // f = t1; (f)
-
-        if(op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
+        if (type1 == "float" && type2 == "int")
         {
-            // if()
-            if((type1 == "int" || type2 == "float"))
-            {
-                std::string q1 = getTempVariable("float");
-            emit("intToFloat", arg1, "", q1, -1);
-
-            }
-
-
+            q = getTempVariable(type1);
+            emit("intToFloat", arg2, "", q, -1);
         }
-        if(type1== "int" && type2 == "int")
-        emit("(i)"+temp_op, arg1, arg2, q, -1);
-        else if(type1 == "float" && type2 == "float")
-        emit("(f)"+temp_op, arg1, arg2, q, -1);
-        else if(type1 == "int" && type2 == "float")
-        {
-            std::string q1 = getTempVariable("float");
-            emit("intToFloat", arg1, "", q1, -1);
-            emit("(f)"+temp_op, q1, arg2, q, -1);
-        }
-        else if(type1 == "float" && type2 == "int")
-        {
-            std::string q1 = getTempVariable("float");
-            emit("intToFloat", arg2, "", q1, -1);
-            emit("(f)"+temp_op, arg1, q1, q, -1);
-        }
+        else
+            q = arg2;
     }
     int x;
     if (type == "float")
