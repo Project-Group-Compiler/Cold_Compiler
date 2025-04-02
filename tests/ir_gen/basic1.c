@@ -1,23 +1,83 @@
-// SEMANTICS WORKING
+int f() {
+    char op;
+    int a, b, c;
 
-int foo(){
+    switch (op) {
+        case '+':
+            c = a + b;
+            c = 10;
+            break;
+        case '-':
+            c = a + b;
+            c = 10;
+            break;
+        default:
+            c = 11;
+    }
 
+    // switch (op) {
+    //     case '+':
+    //         c = a + b;
+    //         c = 10;
+    //         break;
+    //     default:
+    //         c = 10;
+    // }
+
+    // switch (op) {
+    //     case '+':
+    //         c = a + b;
+    //         c = 10;
+    //         break;
+    // }
+
+    // switch (op) {
+    //     case '+':
+    //         c = a + b;
+    //         c = 10;
+    //     case '-':
+    //         c = a + b;
+    //         c = 10;
+    //         break;
+    //     default:
+    //         c = 11;
+    // }
+
+    // switch (op) {
+    //     case '+':
+    //         c = a + b;
+    //         c = 10;
+    //     case '-':
+    //         c = a + b;
+    //         c = 10;
+    //     default:
+    //         c = 11;
+    // }
 }
-int foo(int a){
 
-}
+// case '-':
+//     c = a-b;
+//     // printf("%d\n",c);
+//     break;
 
-int f(){
-    float f = 1.5;
-    int a = 5;
-    int b;
-    float g = f*a;
-    b = a*5;
-    b = a-5;
-    g = f+5;
-    g = f-g;
-    g += f;
-}
+// int foo(){
+
+// }
+// int foo(int a){
+
+// }
+
+// int f(){
+//     float f = 1.5;
+//     int a = 5;
+//     int b;
+//     float g = f*a;
+//     b = a*5;
+//     b = a-5;
+//     g = f+5;
+//     g = f-g;
+//     g += f;
+// }
 
 // int main(){
 
@@ -35,7 +95,7 @@ int f(){
 //     int x,y;
 //     int (*operation)(int, int) = add;
 //     x = operation(3,4);
-    
+
 //     operation = multiply;
 //     y = operation(3,4);
 
@@ -43,7 +103,6 @@ int f(){
 // }
 
 // Function definitions
-
 
 // void test_loops(int x,int y,int z,int b) {
 //     int a;
@@ -54,7 +113,7 @@ int f(){
 
 // void solve() {
 //     int x = 0;
-//     x = 10; 
+//     x = 10;
 //     if (x == 5)
 //         x = 6;
 // }
