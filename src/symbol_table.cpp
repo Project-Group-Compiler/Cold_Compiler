@@ -260,27 +260,27 @@ void insertKeywords()
 
 	// file io functions
 	type = {"char*", "char*"};
-	insert_imp_func("fopen", type, "FILE*");
+	insert_imp_func("fopen", type, "file*");
 
-	type = {"char*", "FILE*"};
+	type = {"char*", "file*"};
 	insert_imp_func("fputs", type, "int");
 	
-    type = {"char*", "int", "FILE*"};
+    type = {"char*", "int", "file*"};
 	insert_imp_func("fgets", type, "int");
 	
-    type = {"FILE*"};
+    type = {"file*"};
 	insert_imp_func("fclose", type, "int");
 	
-    type = {"FILE*", "char*", "..."};
+    type = {"file*", "char*", "..."};
 	insert_imp_func("fprintf", type, "int");
 	
-    type = {"FILE*", "char*", "..."};
+    type = {"file*", "char*", "..."};
 	insert_imp_func("fscanf", type, "int");
 	
-    type = {"FILE*"};
+    type = {"file*"};
 	insert_imp_func("fgetc", type, "char");
 	
-    type = {"char", "FILE*"};
+    type = {"char", "file*"};
 	insert_imp_func("fputc", type, "char");
 
 	// string Functions

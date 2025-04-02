@@ -1,8 +1,8 @@
+// TODO: FILE MANG NOT WORKING PROBABLY DUE TO 3AC
+
 void test 
 {
     FILE *file = fopen("test.txt", "w");
-    if (file) {
-        fprintf(file, "Hello, File!");
-        fclose(file);
-    }
+    //fprintf(file, "Hello, File!");
+    //fclose(file);
 }

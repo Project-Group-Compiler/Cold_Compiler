@@ -44,7 +44,7 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 1; // Flag to enable or disable debugging
+bool debug_enabled = 0; // Flag to enable or disable debugging
 #define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 int yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -148,16 +148,14 @@ primary_expression
 			$$->nextlist.clear();
 		}
     }
-	/* | CONSTANT IDENTIFIER {
+	| CONSTANT IDENTIFIER {
 		DBG("primary_expression -> CONSTANT IDENTIFIER");
 		yyerror("invalid identifier", "syntax error");
-		$$ = getNode($1);
 	}
 	| CONSTANT CONSTANT {
 		DBG("primary_expression -> CONSTANT CONSTANT");
 		yyerror("invalid constant", "syntax error");
-		$$ = getNode($1);
-	} */
+	}
 	| CONSTANT {
 		std::string tp = std::string($1->str);
 		$$ = getNode(tp);

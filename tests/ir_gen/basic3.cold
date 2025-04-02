@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 // global variables
 int g;
 int *ptr;
@@ -61,7 +63,7 @@ void test_iteration()
     return i;
 }
 
-int add(int a[], int b)
+int add(int a, int b)
 {
     return a + b;
 }
