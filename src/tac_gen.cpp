@@ -26,7 +26,7 @@ void setResult(int ind, std::string value)
 
 void extendList(std::vector<int> &list1, std::vector<int> &list2)
 {
-    for(auto &it : list2)
+    for (auto &it : list2)
         list1.push_back(it);
 }
 
@@ -82,11 +82,45 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
 
     if (op != "=")
     {
-        emit(temp_op, arg1, arg2, q, -1);
-    }
-    
-    int x = emit("=", q, "", arg1, -1);
+        // f += a;
+        // t0 = inttofloat a;
+        // t1 = f + t0; (f)
+        // f = t1; (f)
 
+        if(op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
+        {
+            // if()
+            if((type1 == "int" || type2 == "float"))
+            {
+                std::string q1 = getTempVariable("float");
+            emit("intToFloat", arg1, "", q1, -1);
+
+            }
+
+
+        }
+        if(type1== "int" && type2 == "int")
+        emit("(i)"+temp_op, arg1, arg2, q, -1);
+        else if(type1 == "float" && type2 == "float")
+        emit("(f)"+temp_op, arg1, arg2, q, -1);
+        else if(type1 == "int" && type2 == "float")
+        {
+            std::string q1 = getTempVariable("float");
+            emit("intToFloat", arg1, "", q1, -1);
+            emit("(f)"+temp_op, q1, arg2, q, -1);
+        }
+        else if(type1 == "float" && type2 == "int")
+        {
+            std::string q1 = getTempVariable("float");
+            emit("intToFloat", arg2, "", q1, -1);
+            emit("(f)"+temp_op, arg1, q1, q, -1);
+        }
+    }
+    int x;
+    if (type == "float")
+        x = emit("(f)=", q, "", arg1, -1);
+    else
+        x = emit("(i)=", q, "", arg1, -1);
     return x;
 }
 

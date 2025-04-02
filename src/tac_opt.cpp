@@ -2,22 +2,11 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <stack>
+#include <regex>
 
 std::vector<std::vector<quad>> basic_blocks;
 std::unordered_map<int, int> leader_block_map;
 std::vector<std::vector<int>> adj, rev_adj;
-
-bool is_int_constant(const std::string &s)
-{
-    if (s.empty())
-        return false;
-    for (auto c : s)
-    {
-        if (!isdigit(c))
-            return false;
-    }
-    return true;
-}
 
 void compute_map()
 {
@@ -193,6 +182,23 @@ void print_cfg()
         }
         std::cout << "\n\n";
     }
+}
+
+std::regex hex_integer("0[xX][0-9a-fA-F]+");
+std::regex octal_integer("0[0-9]+");
+std::regex decimal_integer("[0-9]+");
+std::regex scientific_float("[0-9]+[Ee][+-]?[0-9]+");
+std::regex float_leading_decimal("[0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?");
+std::regex float_trailing_decimal("[0-9]*\\.[0-9]+([Ee][+-]?[0-9]+)?");
+
+bool is_int_constant(const std::string &s)
+{
+    return std::regex_match(s, hex_integer) || std::regex_match(s, octal_integer) || std::regex_match(s, decimal_integer);
+}
+
+bool is_float_constant(const std::string &s)
+{
+    return std::regex_match(s, scientific_float) || std::regex_match(s, float_leading_decimal) || std::regex_match(s, float_trailing_decimal);
 }
 
 void constant_folding()

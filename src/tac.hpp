@@ -19,8 +19,6 @@ public:
     quad(int Label, std::string op, std::string arg1, std::string arg2, std::string result, int gotoLabel) : Label(Label), op(op), arg1(arg1), arg2(arg2), result(result), gotoLabel(gotoLabel) {}
 };
 
-// extern std::vector<quad> tac_code;
-
 void run_optimisations();
 
 std::string getTempVariable(std::string);
@@ -58,9 +56,15 @@ inline std::string stringify(const quad &instr)
         s += instr.result + " = " + curr_op.back() + " " + instr.arg1;
     else if (curr_op == "=")
         s += instr.result + " = " + instr.arg1;
-    else if (fi == '+' || fi == '-' || fi == '*' || fi == '/' || fi == '%')
-        s += instr.result + " = " + instr.arg1 + " " + fi + " " + instr.arg2;
-    else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+" )
+    else if (curr_op.length() == 4 && curr_op[0] == '(')
+    {
+        s += instr.result + " = " + instr.arg1 + " " + curr_op.back() + " " + instr.arg2 + "\t(";
+        if (curr_op[1] == 'f')
+            s += "float)";
+        else if (curr_op[1] == 'i')
+            s += "int)";
+    }
+    else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+")
         s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
     else if (curr_op == "RETURN" || curr_op == "param")
         s += curr_op + " " + instr.arg1;
@@ -76,9 +80,9 @@ inline std::string stringify(const quad &instr)
             s += "GOTO " + std::to_string(instr.gotoLabel);
     }
     else if (curr_op == "CopyToOffset")
-    {
         s += "Copy " + instr.arg1 + " to offset " + instr.arg2 + " of " + instr.result;
-    }
+    else if(curr_op == "intToFloat")
+        s += instr.result + " = intToFloat (" + instr.arg1 + ")";
     return s;
 }
 
