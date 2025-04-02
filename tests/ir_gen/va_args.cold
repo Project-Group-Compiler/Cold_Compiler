@@ -1,15 +1,17 @@
+// TODO: CHECK ... and FIX FUNC VA_ARG
+
 int find_sum(int count, ...) 
 {
     va_list args;
     int sum = 0, i = 0;
     va_start(args, count);
-    for (int i = 0; i < count; i++)
+    for (i = 0; i < count; i++)
         sum += va_arg(args, "int");
     va_end(args);
     return sum;
 }
 
 int main() {
-	int ans = sum(3, 2, 4, 6);
+	int ans = find_sum(3, 2, 4, 6);
     return 0;
 }

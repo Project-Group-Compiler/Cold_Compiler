@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 struct Node {
     int val;
     struct Node* L;

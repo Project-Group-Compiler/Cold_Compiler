@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 void test() 
 {
     int *ptr = (int *)malloc(sizeof(int));

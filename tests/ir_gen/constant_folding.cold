@@ -1,4 +1,4 @@
-//TODO : "NOT OP" NOT WORKING
+// LINE 18 AND 19 NOT "NOT" OP NOT WORKING
 
 int main()
 {
@@ -10,11 +10,11 @@ int main()
     int add_res = 100 + 200;                     // 300
     int sub_res = 2 - 2147483647;                // -2147483645
     int mult_res = 1000 * 1000;                  // 1000000
-    int div_res = 1111 / 0;                      // 277
+    int div_res = 1111 / 4;                      // 277
     int rem_res = 10 % 3;                        // 1
     int eq_true_res = 2147483647 == 2147483647;  // 1
     int eq_false_res = 2147483647 == 2147483646; // 0
     int negate_res = -3;                         // -3
-    //int not_res = !1024;                         // 0
-    //int complement_res = ~1;                     // -2
+    int not_res = !1024;                         // 0
+    int complement_res = ~1;                     // -2
 }

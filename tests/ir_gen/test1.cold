@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 //these tests were failing at some point of time
 struct a{
     int x;

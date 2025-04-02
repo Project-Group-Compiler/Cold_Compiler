@@ -1,3 +1,5 @@
+// SEMANTICS WORKING -- ARRAY ARGS ADDED AS * 
+
 int main(int argc, char* argv[])
 {   
     char* x = argv[2];

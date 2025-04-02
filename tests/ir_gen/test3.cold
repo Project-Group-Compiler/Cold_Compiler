@@ -1,3 +1,5 @@
+// TODO: STRUCT AS ARGS NOW WORKING
+
 //check different return types of functions
 struct a{
     int a;

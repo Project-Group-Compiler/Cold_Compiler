@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 // Function overloading example
 int func(int x) {
     char c;
@@ -24,7 +26,7 @@ void solve() {
     func(num2);
     func(num1, num1);
     func2(z);
-    func(b);//gives error
+    //func(b);//gives error
 }
 
 int main() {
