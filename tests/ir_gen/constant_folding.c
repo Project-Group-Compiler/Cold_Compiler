@@ -1,4 +1,4 @@
-//TODO : "NOT OP" NOT WORKING
+// SEMANTICS WORKING
 
 int main()
 {
@@ -15,6 +15,6 @@ int main()
     int eq_true_res = 2147483647 == 2147483647;  // 1
     int eq_false_res = 2147483647 == 2147483646; // 0
     int negate_res = -3;                         // -3
-    //int not_res = !1024;                         // 0
-    //int complement_res = ~1;                     // -2
+    int not_res = !1024;                         // 0
+    int complement_res = ~1;                     // -2
 }

@@ -44,7 +44,7 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 0; // Flag to enable or disable debugging
+bool debug_enabled = 1; // Flag to enable or disable debugging
 #define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 void semantic_error(const char* s, const std::string &errorType="semantic error");
@@ -1733,6 +1733,7 @@ type_specifier
 		: VOID {
 			DBG("type_specifier -> VOID");
 			$$ = getNode($1);
+			$$->type = "void";
 			currentDataType = "void";
 			if(type.empty()) type = "void";
 			else type += " void";
@@ -1740,6 +1741,7 @@ type_specifier
 		| CHAR {
 			DBG("type_specifier -> CHAR");
 			$$ = getNode($1);
+			$$->type = "char";
 			if(flag==1){ 
 				flag++;
 				tdstring = std::string($1);
@@ -1752,6 +1754,7 @@ type_specifier
 		| SHORT {
 			DBG("type_specifier -> SHORT");
 			$$ = getNode($1);
+			$$->type = "short";
 			if(flag==1){ 
 				flag++;
 				tdstring = std::string($1);
@@ -1764,6 +1767,7 @@ type_specifier
 		| INT {
 			DBG("type_specifier -> INT");
 			$$ = getNode($1);
+			$$->type = "int";
 			if(flag==1){ 
 				flag++;
 				tdstring = std::string($1);
@@ -1776,6 +1780,7 @@ type_specifier
 		| LONG {
 			DBG("type_specifier -> LONG");
 			$$ = getNode($1);
+			$$->type = "long";
 			if(flag==1){ 
 				flag++;
 				tdstring = std::string($1);
@@ -1788,6 +1793,7 @@ type_specifier
 		| FLOAT {
 			DBG("type_specifier -> FLOAT");
 			$$ = getNode($1);
+			$$->type = "float";
 			if(flag==1){ 
 				flag++;
 				tdstring = std::string($1);
@@ -1800,6 +1806,7 @@ type_specifier
 		| DOUBLE {
 			DBG("type_specifier -> DOUBLE");
 			$$ = getNode($1);
+			$$->type = "double";
 			if(flag==1){ 
 				flag++;
 				tdstring = std::string($1);
@@ -2201,6 +2208,7 @@ specifier_qualifier_list
 	| type_specifier {
 		DBG("specifier_qualifier_list -> type_specifier");
 		$$ = $1;
+		std::cout << std::string($1->type) << '\n';
 	}
 	| type_qualifier specifier_qualifier_list {
 		DBG("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
