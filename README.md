@@ -20,18 +20,23 @@ The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-
 **List of advanced features supported apart from basic features** :
 
 - recursive function call
-- classes and objects including constructors
-- inheritance (including multiple inheritance)
+- classes and objects
+- inheritance (including multi-level inheritance)
 - dynamic memory allocation
 - command line input
 - public, private and protected keywords
-- typedef for primitive data types
-- enum, union and struct
+- typedef
+- struct
 - file manipulation
 - until loop
 - multi-level pointers
 - multi-dimensional arrays
-- const, signed, unsigned, extern and static
+<!-- - const, signed, unsigned, extern and static -->
+
+**Optimizations implemented** :
+
+- Constant folding
+- Dead code elimination
 
 Additionally, since we are crafting a new language, we have taken the liberty to slightly *modify normal C operator precedence*. More details in `docs/operator_precedence.md`.
 

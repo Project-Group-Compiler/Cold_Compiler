@@ -1,4 +1,4 @@
-#include "typecheck.h"
+#include "typecheck.hpp"
 
 
 string primaryExpression(string id) {

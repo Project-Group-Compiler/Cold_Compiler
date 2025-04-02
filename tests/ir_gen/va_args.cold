@@ -1,28 +1,15 @@
-int average(int count, ...) {
+int find_sum(int count, ...) 
+{
     va_list args;
-    int sum;
-    int avg;
-    int i;
-    sum=0;
-    // Initialize va_list
+    int sum = 0, i = 0;
     va_start(args, count);
-
-    // Iterate through the arguments
-    for (i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++)
         sum += va_arg(args, "int");
-    }
-
-    // Clean up va_list
     va_end(args);
-
-    avg=sum/count;
-
-    return avg;
+    return sum;
 }
 
 int main() {
-    int x;
-    x=average(3, 10, 20, 30);
-    printf("Average: %f\n", x); // Output: Average: 20.000000
+	int ans = sum(3, 2, 4, 6);
     return 0;
 }

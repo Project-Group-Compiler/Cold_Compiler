@@ -1,7 +1,7 @@
 #include <iostream>
 #include <filesystem>
 #include "data_structures.hpp"
-#include "symbol_table.h"
+#include "symbol_table.hpp"
 #include "tac.hpp"
 
 extern FILE *yyin;

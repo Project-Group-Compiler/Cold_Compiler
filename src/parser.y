@@ -8,8 +8,8 @@
 #include <cstring>
 #include "AST.hpp"
 #include "data_structures.hpp"
-#include "typecheck.h"
-#include "symbol_table.h"
+#include "typecheck.hpp"
+#include "symbol_table.hpp"
 #include "tac.hpp"
 
 std::string currentDataType="";

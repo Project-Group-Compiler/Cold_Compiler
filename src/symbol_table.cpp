@@ -1,4 +1,4 @@
-#include "symbol_table.h"
+#include "symbol_table.hpp"
 #include <iostream>
 
 // Global symbol table variables remain as before.

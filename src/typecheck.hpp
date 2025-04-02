@@ -1,4 +1,4 @@
-#include "symbol_table.h"
+#include "symbol_table.hpp"
 #include <bits/stdc++.h>
 using namespace std;
 
