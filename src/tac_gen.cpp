@@ -3,6 +3,7 @@
 #include <map>
 #include "tac.hpp"
 #include "symbol_table.hpp"
+#include "typecheck.hpp"
 
 extern std::string outputDir;
 std::vector<quad> tac_code;
@@ -73,14 +74,14 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
         temp_op = str;
         if (op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
         {
-            if (type1 == "float" && type2 == "int")
+            if (isFloat(type1) && checkInt(type2))
             {
                 std::string q1 = getTempVariable(type1);
                 emit("intToFloat", arg2, "", q1, -1);
                 q = getTempVariable(type);
                 emit("(f)" + temp_op, q, q1, q, -1);
             }
-            else if (type1 == "float" && type2 == "float")
+            else if (isFloat(type1) && isFloat(type2))
             {
                 q = getTempVariable(type);
                 emit("(f)" + temp_op, q, arg2, q, -1);
@@ -96,7 +97,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
     }
     else
     {
-        if (type1 == "float" && type2 == "int")
+        if (isFloat(type1) && checkInt(type2))
         {
             q = getTempVariable(type1);
             emit("intToFloat", arg2, "", q, -1);
@@ -105,7 +106,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
             q = arg2;
     }
     int x;
-    if (type == "float")
+    if (isFloat(type))
         x = emit("(f)=", q, "", arg1, -1);
     else
         x = emit("(i)=", q, "", arg1, -1);
