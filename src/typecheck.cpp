@@ -47,6 +47,7 @@ string postfixExpression(string type_name, int rule_num) {
 }
 
 string checkType(string a, string b){
+    std:: cout << "checkType: " << a << " " << b << std::endl;
     if(a == b)return "ok";
     if((a == "void*" && b.back()=='*')||(a.back()=='*' && b == "void"))return "ok";
     if(a.back()=='*' && b.back()=='*')return "warning";
