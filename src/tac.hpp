@@ -74,7 +74,11 @@ inline std::string stringify(const quad &instr)
     else if (curr_op == "RETURN" || curr_op == "param")
         s += curr_op + " " + instr.arg1;
     else if (curr_op == "CALL")
-        s += instr.result + " = " + curr_op + " " + instr.arg1 + " " + instr.arg2;
+    {
+        s += curr_op + " " + instr.arg1 + " " + instr.arg2;
+        if (instr.result != "")
+            s += instr.result + " = ";
+    }
     else if (curr_op == "[ ]")
         s += instr.result + " = " + instr.arg1 + "[" + instr.arg2 + "]";
     else if (curr_op == "GOTO")

@@ -250,12 +250,20 @@ postfix_expression
 					semantic_error(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
 				}
 				else{
-					//3AC_5
-					std::string q = getTempVariable($1->type);
-					$$->place = q;
+					//3AC
 					$$->temp_name = $1->temp_name;
+					if($$->type != "void")
+					{
+						std::string q2 = getTempVariable($$->type);
+						emit("CALL", $$->temp_name, "0", q2, -1);
+        				$$->place = q2;
+					}
+					else
+					{
+						emit("CALL", $$->temp_name, "0", "", -1);
+						//	$$->place = "";
+					}
 					$$->nextlist.clear();
-					emit("CALL", $$->temp_name, "0", q, -1);
 				}
 			}
 		}
@@ -319,13 +327,19 @@ postfix_expression
 						break;
 					}
 				}
-				//3AC_6
-				std::string q = getTempVariable($1->type);
+				//3AC
 				$$->temp_name = $1->temp_name;
-				$$->place = q;
+				if($$->type != "void")
+				{
+					std::string q2 = getTempVariable($$->type);
+					emit("CALL", $$->temp_name, std::to_string(currArgs.size()), q2, -1);
+					$$->place = q2;
+				}
+				else
+				{
+					emit("CALL", $$->temp_name, std::to_string(currArgs.size()), "", -1);
+				}
 				$$->nextlist.clear();
-
-				emit("CALL", $$->temp_name, std::to_string(currArgs.size()), q, -1);
 			}
 		}
 		else{
@@ -489,11 +503,17 @@ postfix_expression
 		std::string q = getTempVariable($1->type+'*'); 
 		emit("unary&", $1->place, "", q, -1);
 		emit("param", q, "", "", -1); 
-		std::string q2 = getTempVariable($$->type);
-		emit("CALL", std::string($3), "1", q2, -1);
-        $$->place = q2;
-		//$$->nextlist.clear();
-
+		if($$->type != "void")
+		{
+			std::string q2 = getTempVariable($$->type);
+			emit("CALL", std::string($3), "1", q2, -1);
+        	$$->place = q2;
+		}
+		else
+		{
+			emit("CALL", std::string($3), "1", "", -1);
+		}
+		$$->nextlist.clear();
 	}
 	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
 	    DBG("postfix_expression -> postfix_expression '.' IDENTIFIER '(' argument_expression_list ')'");
@@ -610,10 +630,17 @@ postfix_expression
 		std::string q = getTempVariable($1->type+'*'); 
 		emit("unary&", $1->place, "", q, -1);
 		emit("param", q, "", "", -1); 
-		std::string q2 = getTempVariable($$->type);
-		emit("CALL", std::string($3), std::to_string(currArgs.size()+1), q2, -1);
-        $$->place = q2;
-		//$$->nextlist.clear();
+		if($$->type != "void")
+		{
+			std::string q2 = getTempVariable($$->type);
+			emit("CALL", std::string($3), std::to_string(currArgs.size()+1), q2, -1);
+        	$$->place = q2;
+		}
+		else
+		{
+			emit("CALL", std::string($3), std::to_string(currArgs.size()+1), "", -1);
+		}
+		$$->nextlist.clear();
 	    currArgs.clear();
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
@@ -842,9 +869,11 @@ unary_expression
 		$$->intVal = $3->size;
 		//3AC
         std::string q = getTempVariable("int");
+		std::string temp = std::string($3->type);
+		std::cout<<"gangnam style "<<temp<<"\n";
         $$->place = q;
         $$->nextlist.clear();
-        emit("SIZEOF", $3->place, "", q, -1);
+        emit("SIZEOF", $3->type, "", q, -1);
 	}
 	;
 
@@ -901,10 +930,11 @@ cast_expression
 		$$->isInit = $4->isInit;
 		//3AC
 		//TODO: Try to do CAST_typename
+		std::cout<<"gangnam style "<<$2->type<<"\n";
 		std::string q = getTempVariable($2->type);
         $$->place = q;
 		$4->nextlist.clear();
-        emit("CAST", $4->place, "", q, -1);
+        emit("CAST_" +$2->type, $4->place, "", q, -1);
 	}
 	;
 
