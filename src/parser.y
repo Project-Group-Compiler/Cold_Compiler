@@ -44,7 +44,7 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 1; // Flag to enable or disable debugging
+bool debug_enabled = 0; // Flag to enable or disable debugging
 #define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
 
 void semantic_error(const char* s, const std::string &errorType="semantic error");

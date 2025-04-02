@@ -1,4 +1,4 @@
-// SEMANTICS WORKING -- ARRAY ARGS ADDED AS * 
+// SEMANTICS WORKING 
 
 int main(int argc, char* argv[])
 {   
