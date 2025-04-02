@@ -125,10 +125,10 @@ int main(int argc, char *argv[])
             // generate asm code fn comes here
         }
         else
-            print_error("\nsyntax or semantic errors present, use -f to forcefully continue");
+            std::cerr<<"\nsyntax or semantic errors present, use -f to forcefully continue\n";
     }
     else
-        print_error("\nlexical errors present, use -f to forcefully continue");
+        std::cerr<<"\nlexical errors present, use -f to forcefully continue\n";
 
     fclose(yyin);
     if (has_error)
