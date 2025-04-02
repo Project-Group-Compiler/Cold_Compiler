@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 void prefixSuffixArray(char* pat, int M, int* pps) {
    int length = 0;
    int i = 1;

@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 void func(int arr[], int n)
 {
     int i, key, j;

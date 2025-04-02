@@ -78,7 +78,9 @@ string unaryExp(string op, string type){
     else if(op=="~"){
         if(!(checkInt(type) || type != "bool")) return "";
     }
-    else if(op=="!" && type!="bool") return "";
+    else if(op=="!"){
+        if(!(checkInt(type) || type != "bool")) return "";
+    } 
     return type;
 }
 

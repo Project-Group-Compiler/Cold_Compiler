@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 //test case for multiple classes, func,structs
 int fun(){
   return 0;

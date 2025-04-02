@@ -1,3 +1,5 @@
+// SEMANTICS WORKING
+
 void foo()
 {
     int x = 0;
