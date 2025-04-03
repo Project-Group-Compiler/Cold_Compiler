@@ -594,10 +594,7 @@ postfix_expression
     	                    if (methodArgs[i] == "...") break;
 	
     	                    string msg = checkType(methodArgs[i], currArgs[i-1]);
-    	                    if (msg == "warning") {
-    	                        warning(("Incompatible conversion of " + currArgs[i-1] + 
-    	                                " to parameter of type " + methodArgs[i]).c_str());
-    	                    } else if (msg.empty()) {
+							if (msg.empty()) {
     	                        semantic_error(("Incompatible argument to method " + methodName).c_str(), 
     	                              "semantic error");
     	                        break;
@@ -660,10 +657,7 @@ postfix_expression
 	            	    for (int i = 1; i < methodArgs.size(); i++) {
 	            	        if (methodArgs[i] == "...") break;
 							string msg = checkType(methodArgs[i], currArgs[i-1]);
-	            	        if (msg == "warning") {
-	            	            warning(("Incompatible conversion of " + currArgs[i-1] + 
-	            	                    " to parameter of type " + methodArgs[i]).c_str());
-	            	        } else if (msg.empty()) {
+							if (msg.empty()) {
 	            	            semantic_error(("Incompatible argument to method " + methodName).c_str(), 
 	            	                   "semantic error");
 	            	            break;
@@ -795,7 +789,6 @@ argument_expression_list
 		$$ = getNode("argument_list", mergeAttrs($1, $3));
 		
 		// Semantics
-		string temp = argExp($1->type, $3->type, 2);
 		
 		if($1->isInit && $3->isInit) $$->isInit=1;
 		currArgs.push_back($3->type);
@@ -969,10 +962,7 @@ cast_expression
 		//TODO: Try to do CAST_typename
 		DBG("DEBUG:type = " + $2->type);
 		DBG("DEBUG:place = " + $4->type);
-		if(checkType($2->type, $4->type) == "warning"){
-			warning(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str());
-		}
-		else if(checkType($2->type, $4->type) == ""){
+		if(checkType($2->type, $4->type) == ""){
 			semantic_error(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
 		}
 		std::string q = getTempVariable($2->type);
@@ -1768,6 +1758,7 @@ init_declarator
 			//3AC
 			// debug(type,$1->temp_name);
 			if(array_decl){
+				DBG("Array declaration  ");
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
 				}
@@ -2902,12 +2893,16 @@ initializer
 	| '{' initializer_list '}' {
 		DBG("initializer -> '{' initializer_list '}'");
 		$$ = $2;
-		$$->isInit = 1; // Semantics
+		 // Semantics
+		$$->type = $2->type+"*"; // For checking array declaration -- {1,2,3} -> int*
+		$$->isInit = 1;
 	}
 	| '{' initializer_list ',' '}' {
 		DBG("initializer -> '{' initializer_list ',' '}'");
 		$$ = $2;
-		$$->isInit = 1; // Semantics
+		$$->isInit = 1;
+		// Semantics
+		$$->type = $2->type+"*"; // For checking array declaration  -- {1,2,3} -> int*
 		//3AC
 		$$->place = $2->place;
 		$$->nextlist = $2->nextlist;
@@ -2922,8 +2917,13 @@ initializer_list
 	| initializer_list ',' NEXT_QUAD initializer {
 		DBG("initializer_list -> initializer_list ',' initializer");
 		$$ = getNode("initializer_list", mergeAttrs($1, $4));
-		$$->isInit = ($1->isInit && $4->isInit); // Semantics
-
+		$$->isInit = ($1->isInit && $4->isInit);
+		// Semantics
+		std::string temp = checkType($1->type, $4->type);
+		if (temp.empty()) {
+			semantic_error(("Incompatible types in initializer list: " + temp).c_str(), "type error");
+		}
+		$$->type = $1->type;
 		//3AC
 		backpatch($1->nextlist, $3);
 		$$->nextlist = $4->nextlist;

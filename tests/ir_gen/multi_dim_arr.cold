@@ -4,8 +4,11 @@ void one_d_array()
 {
     int x;
     int v1[3] = {7, 8, 9};
-    v1[2] = v1[0] + v1[1];
-    x = v1[2];
+    //v1[2] = v1[0] + v1[1];
+    //x = v1[2];
+    int vec[2];
+    vec[0]=1;
+    vec[1]=4;
 }
 
 void two_d_array()

@@ -39,23 +39,10 @@ std::string checkType(std::string a, std::string b){
     if(a == b) return "ok";
     if(b == "void") return "";
     if((a == "void*" && b.back()=='*')||(a.back()=='*' && b == "void*")) return "ok";
-    if(a.back()=='*' && b.back()=='*') return "warning";
-    if((checkInt(a) && b.back()=='*')||(checkInt(b) && a.back()=='*')) return "";
     if(a == "char" || checkInt(a)) a = "float";
     if(b == "char" || checkInt(b)) b = "float";
     if(isFloat(a) && isFloat(b)) return "ok";
     return "";
-}
-
-std::string argExp(std::string a, std::string b, int rule_num){
-    if(rule_num == 1){
-        if(a == "void") return a;
-        return "";
-    }
-    else{
-        if(a == "void" && b=="void") return a;
-        return "";
-    }
 }
 
 std::string unaryExp(std::string op, std::string type){
