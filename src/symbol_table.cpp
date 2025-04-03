@@ -728,7 +728,7 @@ string getTypeCode(const string& type) {
     if (type == "bool") return "b";
     if (type.find("*") != string::npos) return "p"; // All pointers
     // Add more types as needed
-    return "u"; // Unknown type
+    return type; // Unknown type
 }
 
 string mangleFunctionName(const string& name, const vector<string>& paramTypes) {
