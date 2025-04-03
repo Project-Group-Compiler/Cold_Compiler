@@ -51,7 +51,7 @@ inline std::string stringify(const quad &instr)
 
     if (curr_op.back() == ':' || curr_op.substr(0, 5) == "FUNC_")
         s += curr_op;
-    else if (curr_op.substr(0, 2) == "++" || curr_op.substr(1, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op.substr(1, 2) == "--" || curr_op == "!" || curr_op == "~" || curr_op == "SIZEOF")
+    else if (curr_op.substr(0, 2) == "++" || curr_op.substr(1, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op.substr(1, 2) == "--" || curr_op == "!" || curr_op == "~")
         s += instr.result + " = " + curr_op + " " + instr.arg1;
     else if (curr_op.substr(0, 5) == "unary")
         s += instr.result + " = " + curr_op.back() + " " + instr.arg1;
@@ -77,8 +77,9 @@ inline std::string stringify(const quad &instr)
     else if (curr_op == "CALL")
     {
         s += curr_op + " " + instr.arg1 + " " + instr.arg2;
+        auto pos = s.find(":  ");
         if (instr.result != "")
-            s += instr.result + " = ";
+            s = s.substr(0, pos + 3) + instr.result + " = " + s.substr(pos + 3);
     }
     else if (curr_op == "[ ]")
         s += instr.result + " = " + instr.arg1 + "[" + instr.arg2 + "]";
@@ -91,8 +92,10 @@ inline std::string stringify(const quad &instr)
     }
     else if (curr_op == "CopyToOffset")
         s += "Copy " + instr.arg1 + " to offset " + instr.arg2 + " of " + instr.result;
-    else if (curr_op == "intToFloat")
-        s += instr.result + " = intToFloat(" + instr.arg1 + ")";
+    else if (curr_op == "intToFloat" || curr_op == "SIZEOF")
+        s += instr.result + " = " + curr_op + "(" + instr.arg1 + ")";
+    else if (curr_op.substr(0, 5) == "CAST_")
+        s += instr.result + " = CAST " + instr.arg1 + " to " + curr_op.substr(5);
     return s;
 }
 
