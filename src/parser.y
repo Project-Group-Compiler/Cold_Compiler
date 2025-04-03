@@ -22,9 +22,11 @@ extern char* yytext;
 extern int column;
 extern int line;
 extern std::string inputFilename;
+extern std::string outputDir;
 extern bool has_error;
 
 //Semantics
+bool array_decl = 0;
 string funcName = "";
 string structName = "";
 string className="";
@@ -44,8 +46,12 @@ vector<string> idList;
 vector<string> currArgs;
 
 // Debug tracking
-bool debug_enabled = 1; // Flag to enable or disable debugging
-#define DBG(rule) if (debug_enabled) printf("DEBUG: Processing rule '%s' at line %d\n", rule, line)
+extern bool debug_enabled; // Flag to enable or disable debugging
+std::ofstream out;
+void DBG(const std::string&rule){
+	 if (debug_enabled) 
+		out<<"DEBUG: Processing rule "<<rule<<" at line "<<line<<"\n";
+}
 
 void semantic_error(const char* s, const std::string &errorType="semantic error");
 void yyerror(const char* s, const std::string &errorType = "syntax error");
@@ -1650,6 +1656,7 @@ init_declarator_list
 	: init_declarator {
 		DBG("init_declarator_list -> init_declarator");
 		$$ = $1;
+		array_decl = 0;
 	}
 	| init_declarator_list ',' NEXT_QUAD init_declarator {
 		DBG("init_declarator_list -> init_declarator_list ',' init_declarator");
@@ -1705,10 +1712,11 @@ init_declarator
 			//3AC
 			std::string type = $1->type;
 			// debug(type,$1->temp_name);
-			if(type.find("int[]") != std::string::npos){
+			if(array_decl){
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
 				}
+				array_decl = 0;
 			}else{
 				assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
 			}
@@ -2413,6 +2421,7 @@ direct_declarator
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
 			$$->size = $1->size * $3->intVal;
+			array_decl = 1;
 			//3AC
 			$$->place = $$->temp_name;
 		} else {
@@ -2433,6 +2442,7 @@ direct_declarator
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
 			$$->size = 4;
+			array_decl = 1;
 			//3AC
 			$$->place = $$->temp_name;
 		}
@@ -3458,6 +3468,8 @@ F
 void performParsing(const std::string &inputFile)
 {
 	onlyLexin = false;
+	if(debug_enabled)
+		out = std::ofstream(outputDir + inputFile + "_debug_file.txt");
     beginAST(inputFile);
     yyparse();
     endAST();

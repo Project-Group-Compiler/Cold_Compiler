@@ -1,0 +1,230 @@
+DEBUG: Processing rule type_specifier -> INT at line 1
+DEBUG: Processing rule declaration_specifiers -> type_specifier at line 1
+DEBUG: Processing rule direct_declarator -> IDENTIFIER at line 1
+DEBUG: Processing rule A -> %empty at line 1
+DEBUG: Processing rule direct_declarator -> direct_declarator '(' A ')' at line 1
+DEBUG: Processing rule declarator -> direct_declarator at line 1
+DEBUG: Processing rule F -> %empty at line 1
+DEBUG: Processing rule CHANGE_TABLE -> %empty at line 2
+DEBUG: Processing rule type_specifier -> CHAR at line 2
+DEBUG: Processing rule declaration_specifiers -> type_specifier at line 2
+DEBUG: Processing rule direct_declarator -> IDENTIFIER at line 2
+DEBUG: Processing rule declarator -> direct_declarator at line 2
+DEBUG: Processing rule init_declarator -> declarator at line 2
+DEBUG: Processing rule init_declarator_list -> init_declarator at line 2
+DEBUG: Processing rule declaration -> declaration_specifiers init_declarator_list ';' at line 2
+DEBUG: Processing rule declaration_list -> declaration at line 2
+DEBUG: Processing rule type_specifier -> INT at line 3
+DEBUG: Processing rule declaration_specifiers -> type_specifier at line 3
+DEBUG: Processing rule direct_declarator -> IDENTIFIER at line 3
+DEBUG: Processing rule declarator -> direct_declarator at line 3
+DEBUG: Processing rule init_declarator -> declarator at line 3
+DEBUG: Processing rule init_declarator_list -> init_declarator at line 3
+DEBUG: Processing rule direct_declarator -> IDENTIFIER at line 3
+DEBUG: Processing rule declarator -> direct_declarator at line 3
+DEBUG: Processing rule init_declarator -> declarator at line 3
+DEBUG: Processing rule init_declarator_list -> init_declarator_list ',' init_declarator at line 3
+DEBUG: Processing rule direct_declarator -> IDENTIFIER at line 3
+DEBUG: Processing rule declarator -> direct_declarator at line 3
+DEBUG: Processing rule init_declarator -> declarator at line 3
+DEBUG: Processing rule init_declarator_list -> init_declarator_list ',' init_declarator at line 3
+DEBUG: Processing rule declaration -> declaration_specifiers init_declarator_list ';' at line 3
+DEBUG: Processing rule declaration_list -> declaration_list declaration at line 3
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 5
+DEBUG: Processing rule postfix_expression -> primary_expression at line 5
+DEBUG: Processing rule unary_expression -> postfix_expression at line 5
+DEBUG: Processing rule cast_expression -> unary_expression at line 5
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 5
+DEBUG: Processing rule additive_expression -> multiplicative_expression at line 5
+DEBUG: Processing rule shift_expression -> additive_expression at line 5
+DEBUG: Processing rule and_expression -> shift_expression at line 5
+DEBUG: Processing rule exclusive_or_expression -> and_expression at line 5
+DEBUG: Processing rule inclusive_or_expression -> exclusive_or_expression at line 5
+DEBUG: Processing rule relational_expression -> inclusive_or_expression at line 5
+DEBUG: Processing rule equality_expression -> relational_expression at line 5
+DEBUG: Processing rule logical_and_expression -> equality_expression at line 5
+DEBUG: Processing rule logical_or_expression -> logical_and_expression at line 5
+DEBUG: Processing rule conditional_expression -> logical_or_expression at line 5
+DEBUG: Processing rule assignment_expression -> conditional_expression at line 5
+DEBUG: Processing rule expression -> assignment_expression at line 5
+DEBUG: Processing rule CHANGE_TABLE -> %empty at line 6
+DEBUG: Processing rule postfix_expression -> primary_expression at line 6
+DEBUG: Processing rule unary_expression -> postfix_expression at line 6
+DEBUG: Processing rule cast_expression -> unary_expression at line 6
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 6
+DEBUG: Processing rule additive_expression -> multiplicative_expression at line 6
+DEBUG: Processing rule shift_expression -> additive_expression at line 6
+DEBUG: Processing rule and_expression -> shift_expression at line 6
+DEBUG: Processing rule exclusive_or_expression -> and_expression at line 6
+DEBUG: Processing rule inclusive_or_expression -> exclusive_or_expression at line 6
+DEBUG: Processing rule relational_expression -> inclusive_or_expression at line 6
+DEBUG: Processing rule equality_expression -> relational_expression at line 6
+DEBUG: Processing rule logical_and_expression -> equality_expression at line 6
+DEBUG: Processing rule logical_or_expression -> logical_and_expression at line 6
+DEBUG: Processing rule conditional_expression -> logical_or_expression at line 6
+DEBUG: Processing rule constant_expression -> conditional_expression at line 6
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 7
+DEBUG: Processing rule postfix_expression -> primary_expression at line 7
+DEBUG: Processing rule unary_expression -> postfix_expression at line 7
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 7
+DEBUG: Processing rule postfix_expression -> primary_expression at line 7
+DEBUG: Processing rule unary_expression -> postfix_expression at line 7
+DEBUG: Processing rule cast_expression -> unary_expression at line 7
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 7
+DEBUG: Processing rule additive_expression -> multiplicative_expression at line 7
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 7
+DEBUG: Processing rule postfix_expression -> primary_expression at line 7
+DEBUG: Processing rule unary_expression -> postfix_expression at line 7
+DEBUG: Processing rule cast_expression -> unary_expression at line 7
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 7
+DEBUG: Processing rule additive_expression -> additive_expression '+' multiplicative_expression at line 7
+DEBUG: Processing rule shift_expression -> additive_expression at line 7
+DEBUG: Processing rule and_expression -> shift_expression at line 7
+DEBUG: Processing rule exclusive_or_expression -> and_expression at line 7
+DEBUG: Processing rule inclusive_or_expression -> exclusive_or_expression at line 7
+DEBUG: Processing rule relational_expression -> inclusive_or_expression at line 7
+DEBUG: Processing rule equality_expression -> relational_expression at line 7
+DEBUG: Processing rule logical_and_expression -> equality_expression at line 7
+DEBUG: Processing rule logical_or_expression -> logical_and_expression at line 7
+DEBUG: Processing rule conditional_expression -> logical_or_expression at line 7
+DEBUG: Processing rule assignment_expression -> conditional_expression at line 7
+DEBUG: Processing rule assignment_expression -> unary_expression assignment_operator assignment_expression at line 7
+DEBUG: Processing rule expression -> assignment_expression at line 7
+DEBUG: Processing rule expression_statement -> expression ';' at line 7
+DEBUG: Processing rule statement -> expression_statement at line 7
+DEBUG: Processing rule labeled_statement -> CASE constant_expression ':' statement at line 7
+DEBUG: Processing rule statement -> labeled_statement at line 7
+DEBUG: Processing rule statement_list -> statement at line 7
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 8
+DEBUG: Processing rule postfix_expression -> primary_expression at line 8
+DEBUG: Processing rule unary_expression -> postfix_expression at line 8
+DEBUG: Processing rule postfix_expression -> primary_expression at line 8
+DEBUG: Processing rule unary_expression -> postfix_expression at line 8
+DEBUG: Processing rule cast_expression -> unary_expression at line 8
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 8
+DEBUG: Processing rule additive_expression -> multiplicative_expression at line 8
+DEBUG: Processing rule shift_expression -> additive_expression at line 8
+DEBUG: Processing rule and_expression -> shift_expression at line 8
+DEBUG: Processing rule exclusive_or_expression -> and_expression at line 8
+DEBUG: Processing rule inclusive_or_expression -> exclusive_or_expression at line 8
+DEBUG: Processing rule relational_expression -> inclusive_or_expression at line 8
+DEBUG: Processing rule equality_expression -> relational_expression at line 8
+DEBUG: Processing rule logical_and_expression -> equality_expression at line 8
+DEBUG: Processing rule logical_or_expression -> logical_and_expression at line 8
+DEBUG: Processing rule conditional_expression -> logical_or_expression at line 8
+DEBUG: Processing rule assignment_expression -> conditional_expression at line 8
+DEBUG: Processing rule assignment_expression -> unary_expression assignment_operator assignment_expression at line 8
+DEBUG: Processing rule expression -> assignment_expression at line 8
+DEBUG: Processing rule expression_statement -> expression ';' at line 8
+DEBUG: Processing rule statement -> expression_statement at line 8
+DEBUG: Processing rule statement_list -> statement_list statement at line 8
+DEBUG: Processing rule jump_statement -> BREAK ';' at line 9
+DEBUG: Processing rule statement -> jump_statement at line 9
+DEBUG: Processing rule statement_list -> statement_list statement at line 9
+DEBUG: Processing rule postfix_expression -> primary_expression at line 10
+DEBUG: Processing rule unary_expression -> postfix_expression at line 10
+DEBUG: Processing rule cast_expression -> unary_expression at line 10
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 10
+DEBUG: Processing rule additive_expression -> multiplicative_expression at line 10
+DEBUG: Processing rule shift_expression -> additive_expression at line 10
+DEBUG: Processing rule and_expression -> shift_expression at line 10
+DEBUG: Processing rule exclusive_or_expression -> and_expression at line 10
+DEBUG: Processing rule inclusive_or_expression -> exclusive_or_expression at line 10
+DEBUG: Processing rule relational_expression -> inclusive_or_expression at line 10
+DEBUG: Processing rule equality_expression -> relational_expression at line 10
+DEBUG: Processing rule logical_and_expression -> equality_expression at line 10
+DEBUG: Processing rule logical_or_expression -> logical_and_expression at line 10
+DEBUG: Processing rule conditional_expression -> logical_or_expression at line 10
+DEBUG: Processing rule constant_expression -> conditional_expression at line 10
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 11
+DEBUG: Processing rule postfix_expression -> primary_expression at line 11
+DEBUG: Processing rule unary_expression -> postfix_expression at line 11
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 11
+DEBUG: Processing rule postfix_expression -> primary_expression at line 11
+DEBUG: Processing rule unary_expression -> postfix_expression at line 11
+DEBUG: Processing rule cast_expression -> unary_expression at line 11
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 11
+DEBUG: Processing rule additive_expression -> multiplicative_expression at line 11
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 11
+DEBUG: Processing rule postfix_expression -> primary_expression at line 11
+DEBUG: Processing rule unary_expression -> postfix_expression at line 11
+DEBUG: Processing rule cast_expression -> unary_expression at line 11
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 11
+DEBUG: Processing rule additive_expression -> additive_expression '+' multiplicative_expression at line 11
+DEBUG: Processing rule shift_expression -> additive_expression at line 11
+DEBUG: Processing rule and_expression -> shift_expression at line 11
+DEBUG: Processing rule exclusive_or_expression -> and_expression at line 11
+DEBUG: Processing rule inclusive_or_expression -> exclusive_or_expression at line 11
+DEBUG: Processing rule relational_expression -> inclusive_or_expression at line 11
+DEBUG: Processing rule equality_expression -> relational_expression at line 11
+DEBUG: Processing rule logical_and_expression -> equality_expression at line 11
+DEBUG: Processing rule logical_or_expression -> logical_and_expression at line 11
+DEBUG: Processing rule conditional_expression -> logical_or_expression at line 11
+DEBUG: Processing rule assignment_expression -> conditional_expression at line 11
+DEBUG: Processing rule assignment_expression -> unary_expression assignment_operator assignment_expression at line 11
+DEBUG: Processing rule expression -> assignment_expression at line 11
+DEBUG: Processing rule expression_statement -> expression ';' at line 11
+DEBUG: Processing rule statement -> expression_statement at line 11
+DEBUG: Processing rule labeled_statement -> CASE constant_expression ':' statement at line 11
+DEBUG: Processing rule statement -> labeled_statement at line 11
+DEBUG: Processing rule statement_list -> statement_list statement at line 11
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 12
+DEBUG: Processing rule postfix_expression -> primary_expression at line 12
+DEBUG: Processing rule unary_expression -> postfix_expression at line 12
+DEBUG: Processing rule postfix_expression -> primary_expression at line 12
+DEBUG: Processing rule unary_expression -> postfix_expression at line 12
+DEBUG: Processing rule cast_expression -> unary_expression at line 12
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 12
+DEBUG: Processing rule additive_expression -> multiplicative_expression at line 12
+DEBUG: Processing rule shift_expression -> additive_expression at line 12
+DEBUG: Processing rule and_expression -> shift_expression at line 12
+DEBUG: Processing rule exclusive_or_expression -> and_expression at line 12
+DEBUG: Processing rule inclusive_or_expression -> exclusive_or_expression at line 12
+DEBUG: Processing rule relational_expression -> inclusive_or_expression at line 12
+DEBUG: Processing rule equality_expression -> relational_expression at line 12
+DEBUG: Processing rule logical_and_expression -> equality_expression at line 12
+DEBUG: Processing rule logical_or_expression -> logical_and_expression at line 12
+DEBUG: Processing rule conditional_expression -> logical_or_expression at line 12
+DEBUG: Processing rule assignment_expression -> conditional_expression at line 12
+DEBUG: Processing rule assignment_expression -> unary_expression assignment_operator assignment_expression at line 12
+DEBUG: Processing rule expression -> assignment_expression at line 12
+DEBUG: Processing rule expression_statement -> expression ';' at line 12
+DEBUG: Processing rule statement -> expression_statement at line 12
+DEBUG: Processing rule statement_list -> statement_list statement at line 12
+DEBUG: Processing rule jump_statement -> BREAK ';' at line 13
+DEBUG: Processing rule statement -> jump_statement at line 13
+DEBUG: Processing rule statement_list -> statement_list statement at line 13
+DEBUG: Processing rule primary_expression -> IDENTIFIER at line 15
+DEBUG: Processing rule postfix_expression -> primary_expression at line 15
+DEBUG: Processing rule unary_expression -> postfix_expression at line 15
+DEBUG: Processing rule postfix_expression -> primary_expression at line 15
+DEBUG: Processing rule unary_expression -> postfix_expression at line 15
+DEBUG: Processing rule cast_expression -> unary_expression at line 15
+DEBUG: Processing rule multiplicative_expression -> cast_expression at line 15
+DEBUG: Processing rule additive_expression -> multiplicative_expression at line 15
+DEBUG: Processing rule shift_expression -> additive_expression at line 15
+DEBUG: Processing rule and_expression -> shift_expression at line 15
+DEBUG: Processing rule exclusive_or_expression -> and_expression at line 15
+DEBUG: Processing rule inclusive_or_expression -> exclusive_or_expression at line 15
+DEBUG: Processing rule relational_expression -> inclusive_or_expression at line 15
+DEBUG: Processing rule equality_expression -> relational_expression at line 15
+DEBUG: Processing rule logical_and_expression -> equality_expression at line 15
+DEBUG: Processing rule logical_or_expression -> logical_and_expression at line 15
+DEBUG: Processing rule conditional_expression -> logical_or_expression at line 15
+DEBUG: Processing rule assignment_expression -> conditional_expression at line 15
+DEBUG: Processing rule assignment_expression -> unary_expression assignment_operator assignment_expression at line 15
+DEBUG: Processing rule expression -> assignment_expression at line 15
+DEBUG: Processing rule expression_statement -> expression ';' at line 15
+DEBUG: Processing rule statement -> expression_statement at line 15
+DEBUG: Processing rule labeled_statement -> DEFAULT ':' statement at line 15
+DEBUG: Processing rule statement -> labeled_statement at line 15
+DEBUG: Processing rule statement_list -> statement_list statement at line 15
+DEBUG: Processing rule compound_statement -> '{' CHANGE_TABLE statement_list '}' at line 16
+DEBUG: Processing rule statement -> compound_statement at line 16
+DEBUG: Processing rule selection_statement -> SWITCH '(' expression ')' statement at line 16
+DEBUG: Processing rule statement -> selection_statement at line 16
+DEBUG: Processing rule statement_list -> statement at line 16
+DEBUG: Processing rule compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}' at line 56
+DEBUG: Processing rule function_definition -> declaration_specifiers declarator F compound_statement at line 56
+DEBUG: Processing rule external_declaration -> function_definition at line 56
+DEBUG: Processing rule translation_unit -> external_declaration at line 56
