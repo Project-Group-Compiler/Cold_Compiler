@@ -155,18 +155,22 @@ void set_int_type(int t){
 	yylval.num->type = string("long long");
 	switch(t){
 		case 0 : {
+            yylval.num->type = string("char");
 			sscanf(yytext, "%lld", &(yylval.num->intVal));
 			break;
 		}
 		case 1 : {
+            yylval.num->type = string("long long");
 			sscanf(yytext, "%lld", &(yylval.num->intVal));
 			break;
 		}
 		case 2 : {
+            yylval.num->type = string("long long");
 			sscanf(yytext, "%llo", &(yylval.num->intVal));
 			break;
 		}
 		case 3 : {
+            yylval.num->type = string("long long");
 			sscanf(yytext, "%llx", &(yylval.num->intVal));
 			break;
 		}

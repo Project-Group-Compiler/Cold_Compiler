@@ -176,7 +176,15 @@ primary_expression
 		$$->realVal = $1->realVal;
 		$$->expType = 4;
 		$$->temp_name = $1->str;
-
+		
+		if($$->type=="char"){
+			DBG("DEBUG: Constant type = " + std::string($1->str));
+			std::string temp = std::string($1->str);
+			if (!checkChar(temp)) {
+				yyerror(("Invalid character constant: " + temp + ". Character constants must be a single character.").c_str(),"syntax error");
+				// Set to a default value to prevent further errors
+			}
+		}
 		//3AC
 		$$->place = $$->temp_name;
 		$$->nextlist.clear();
