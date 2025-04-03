@@ -14,8 +14,8 @@
 
 std::string currentDataType="";
 std::string currentAccess = "", tdstring="", tdstring2="";//for classes
-int noArgs=0;
-int flag=0,flag2=0, flag3=0;
+int noArgs = 0;
+int flag = 0, flag2 = 0, flag3 = 0;
 
 extern int yyleng;
 extern char* yytext;
@@ -1714,10 +1714,6 @@ init_declarator
 		//$$=getNode($1);
 		//
 		$$ = $1;  // Just pass the node directly
-		if(flag3){
-			typedefTable.push_back(make_pair(tdstring2,tdstring));
-			flag3=0;
-		}
 		// Semantics
 		if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
@@ -1734,7 +1730,16 @@ init_declarator
             // 1. No class context - normal insertion
             // 2. In class but not in method body - class member (handled in insertClassAttr)
             // 3. In class and in method body - local variable
-			if(className.empty() || inMethodBody)insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+			if((className.empty() || inMethodBody) && !flag && !flag3){
+				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+			}
+		}
+		if(flag3){
+			typedefTable.push_back(make_pair(tdstring2,tdstring));
+			flag3 = 0;
+		}
+		if(flag){
+			flag = 0;
 		}
 		//3AC
 		$$->place = $1->temp_name;
@@ -1749,6 +1754,7 @@ init_declarator
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
 		else{
+			DBG("Inserting into symbol table: " + $1->temp_name);
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 			//3AC
 			std::string type = $1->type;
@@ -2044,6 +2050,7 @@ class_definition
 			if(type == "") type = "CLASS_" + $1->temp_name;
 			else type += " CLASS_" + $1->temp_name; //won't occur but need to confirm
 			//size not getting registered correctly
+			DBG("Inserting into symbol table: " + $1->temp_name);
 			insertSymbol(*curr_table, "CLASS_" + $1->temp_name, "class", getSize("CLASS_" + $1->temp_name), true, nullptr);
 		}
 		else{
@@ -2162,6 +2169,7 @@ struct_or_union_specifier
 		if(printStructTable("STRUCT_" + string($2)) == 1){
 			if(type == "") type = "STRUCT_" + string($2);
 			else type += " STRUCT_" + string($2);
+			DBG("Inserting into symbol table: " + string($2));
 			insertSymbol(*curr_table, "STRUCT_" + string($2), "struct", getSize("STRUCT_" + string($2)), true, nullptr);
 		}
 		else{
@@ -2186,6 +2194,7 @@ struct_or_union_specifier
 		if(printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1){
 			if(type == "") type = "STRUCT_" + to_string(Anon_StructCounter);
 			else type += " STRUCT_" + to_string(Anon_StructCounter);
+			DBG("Inserting into symbol table: " + to_string(Anon_StructCounter));
 			insertSymbol(*curr_table, "STRUCT_" + to_string(Anon_StructCounter), "struct", getSize("STRUCT_" + to_string(Anon_StructCounter)), true, nullptr);
 		}
 		else{
@@ -2246,8 +2255,10 @@ struct_or_union
 	: STRUCT {
         DBG("struct_or_union -> STRUCT");
         $$ = $1; currentDataType="struct";
-		flag3 = 1;
-		flag=0;
+		if(flag==1){
+			flag3 = 1;
+			flag = 0;
+		}
     }
 	| UNION {
         DBG("struct_or_union -> UNION");
@@ -2427,7 +2438,7 @@ direct_declarator
 		}
 		else if (flag==2) {
 			typedefTable.push_back(make_pair(check, tdstring));
-			flag = 0;
+			//flag = 0;
 		} else {
 			addToSymbolTable(check, currentDataType);
 		}
@@ -2749,6 +2760,7 @@ parameter_declaration
 			if (currLookup($2->temp_name)) {
 				semantic_error(("Redeclaration of Parameter " + $2->temp_name).c_str(), "scope error");
 			} else {
+				DBG("Inserting into symbol table: " + $2->temp_name);
 				insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
 			}
 			funcArgs.push_back($2->type);

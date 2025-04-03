@@ -9,9 +9,10 @@ void solve(){
     //char d='adsfdsa';
     int x;
     char c='n';
+    int y='c';
     float f=x;
     add(2,3);
     add(2+3,4+3);
     add(x+1,3);
-    add('c',x);
+    add(y,x);
 }
