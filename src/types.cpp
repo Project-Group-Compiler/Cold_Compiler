@@ -105,6 +105,7 @@ std::string checkType(std::string a, std::string b){
     if(a == b) return "ok";
     if(b == "void") return "";
     if((a == "void*" && b.back()=='*')||(a.back()=='*' && b == "void*")) return "ok";
+    if((checkInt(a) && b=="bool") || (a=="bool" && checkInt(b))) return "ok";//bool to int conversion possible
     if(a == "char" || checkInt(a)) a = "float";
     if(b == "char" || checkInt(b)) b = "float";
     if(isFloat(a) && isFloat(b)) return "ok";
@@ -153,22 +154,22 @@ std::string shiftExp(std::string a, std::string b){
 }
 
 std::string relExp(std::string a, std::string b){
-    if((checkInt(a) || isFloat(a) || a=="char") && (checkInt(b) || isFloat(b) ||b=="char")) return "bool";
-    if((checkInt(a) || a=="char") && b.back()=='*') return "Bool";
-    if((checkInt(b) || b=="char") && a.back()=='*') return "Bool";
+    if((checkInt(a) || isFloat(a) || a=="char") && (checkInt(b) || isFloat(b) ||b=="char")) return "ok";
+    if((checkInt(a) || a=="char") && b.back()=='*') return "warning";
+    if((checkInt(b) || b=="char") && a.back()=='*') return "warning";
     return "";
 }
 
 std::string eqExp(std::string a, std::string b){
-    if(a==b) return "Ok";
-    if((checkInt(a) || isFloat(a) || a=="char") && (checkInt(b) || isFloat(b) ||b=="char")) return "Ok";
-    if((checkInt(a) && b.back()=='*') || (a.back()=='*' && checkInt(b))) return "ok";
+    if(a==b) return "ok";
+    if((checkInt(a) || isFloat(a) || a=="char") && (checkInt(b) || isFloat(b) ||b=="char")) return "ok";
+    if((checkInt(a) && b.back()=='*') || (a.back()=='*' && checkInt(b))) return "warning";
     return "";
 }
 
 std::string bitExp(std::string a, std::string b){
     if(a=="bool" && b=="bool") return "ok";
-    if((a=="bool" || checkInt(a)) && (b=="bool" || checkInt(b))) return "Ok";
+    if((a=="bool" || checkInt(a)) && (b=="bool" || checkInt(b))) return "int";
     return "";
 }
 
@@ -197,9 +198,9 @@ std::string assignExp(std::string a, std::string b, std::string op){
 
 std::string condExp(std::string a, std::string b){
     if(a == b) return a;
-    if(a == "char"|| checkInt(a)) a = "long double";
-    if(b == "char"|| checkInt(b)) b = "long double";
-    if(isFloat(a) && isFloat(b)) return "long double";
+    if(a == "char"|| checkInt(a)) a = "float";
+    if(b == "char"|| checkInt(b)) b = "float";
+    if(isFloat(a) && isFloat(b)) return "float";
     if(a.back() == '*' && b.back() == '*') return "void*";
     return "";
 }
