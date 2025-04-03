@@ -266,15 +266,18 @@ postfix_expression
 				else{
 					//3AC
 					$$->temp_name = $1->temp_name;
+					std::cout<<"ye hai type : "<<$$->type<<"\n";
 					if($$->type != "void")
 					{
+						DBG("not to void");
 						std::string q2 = getTempVariable($$->type);
-						emit("CALL", $$->temp_name, "0", q2, -1);
+						emit("CALL", mangledName, "0", q2, -1);
         				$$->place = q2;
 					}
 					else
 					{
-						emit("CALL", $$->temp_name, "0", "", -1);
+						DBG("to void");
+						emit("CALL", mangledName, "0", "", -1);
 						//	$$->place = "";
 					}
 					$$->nextlist.clear();
@@ -345,15 +348,18 @@ postfix_expression
 				}
 				//3AC
 				$$->temp_name = $1->temp_name;
+				std::cout<<"ye hai type : " <<$$->type<<std::endl;
 				if($$->type != "void")
 				{
+					DBG("not to void");
 					std::string q2 = getTempVariable($$->type);
-					emit("CALL", $$->temp_name, std::to_string(currArgs.size()), q2, -1);
+					emit("CALL", mangledName, std::to_string(currArgs.size()), q2, -1);
 					$$->place = q2;
 				}
 				else
 				{
-					emit("CALL", $$->temp_name, std::to_string(currArgs.size()), "", -1);
+					DBG("to void");
+					emit("CALL", mangledName, std::to_string(currArgs.size()), "", -1);
 				}
 				$$->nextlist.clear();
 			}
@@ -463,6 +469,23 @@ postfix_expression
     	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
     	                semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
     	            }
+
+					//3AC
+					std::cout<<"this ye le " + $1->temp_name<<std::endl;
+					std::string q = getTempVariable($1->type+'*'); 
+					emit("unary&", $1->place, "", q, -1);
+					emit("param", q, "", "", -1);
+					std::cout<<"ye hai type : " <<$$->type<<std::endl;
+					if($$->type != "void")
+					{
+						std::string q2 = getTempVariable($$->type);
+						emit("CALL", manglemethod, "1", q2, -1);
+        				$$->place = q2;
+					}
+					else
+					{
+						emit("CALL", manglemethod, "1", "", -1);
+					}
     	        } else {
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
@@ -502,6 +525,22 @@ postfix_expression
 	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
                 	    	semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
                 		}
+
+						//3AC
+						std::string q = getTempVariable($1->type+'*'); 
+						emit("unary&", $1->place, "", q, -1);
+						emit("param", q, "", "", -1); 
+						std::cout<<"ye hai type : " <<$$->type<<std::endl;
+						if($$->type != "void")
+						{
+							std::string q2 = getTempVariable($$->type);
+							emit("CALL", manglemethod, "1", q2, -1);
+							$$->place = q2;
+						}
+						else
+						{
+							emit("CALL", manglemethod, "1", "", -1);
+						}
 	            	} else {
 	            	    semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
 	            	}
@@ -515,20 +554,6 @@ postfix_expression
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 	    currArgs.clear();
-		//3AC
-		std::string q = getTempVariable($1->type+'*'); 
-		emit("unary&", $1->place, "", q, -1);
-		emit("param", q, "", "", -1); 
-		if($$->type != "void")
-		{
-			std::string q2 = getTempVariable($$->type);
-			emit("CALL", std::string($3), "1", q2, -1);
-        	$$->place = q2;
-		}
-		else
-		{
-			emit("CALL", std::string($3), "1", "", -1);
-		}
 		$$->nextlist.clear();
 	}
 	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
@@ -577,6 +602,23 @@ postfix_expression
     	                        break;
     	                    }
     	                }
+						//3AC
+						std::cout<< "this ye le " + $1->temp_name<<std::endl;
+						std::cout<<"ye hai type : " <<$$->type<<std::endl;
+						std::string q = getTempVariable($1->type+'*'); 
+						emit("unary&", $1->place, "", q, -1);
+						emit("param", q, "", "", -1); 
+						std::cout<<"ye hai type : " <<$$->type<<std::endl;
+						if($$->type != "void")
+						{
+							std::string q2 = getTempVariable($$->type);
+							emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
+							$$->place = q2;
+						}
+						else
+						{
+							emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
+						}
     	            }
     	        } else {
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
@@ -626,6 +668,23 @@ postfix_expression
 	            	            break;
 	            	        }
 	            	    }
+						//3AC
+						std::cout<<"ye hai type : " <<$$->type<<std::endl;
+						std::string q = getTempVariable($1->type+'*'); 
+						emit("unary&", $1->place, "", q, -1);
+						emit("param", q, "", "", -1); 
+						std::cout<<"ye hai type : " <<$$->type<<std::endl;
+						if($$->type != "void")
+						{
+							std::string q2 = getTempVariable($$->type);
+							emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
+							$$->place = q2;
+						}
+						else
+						{
+							emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
+						}
+
 					}
 	            	    $$->type = returnType;
 	            	    $$->temp_name = $1->temp_name + "." + methodName;
@@ -642,20 +701,6 @@ postfix_expression
 	    } else {
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
-		//3AC
-		std::string q = getTempVariable($1->type+'*'); 
-		emit("unary&", $1->place, "", q, -1);
-		emit("param", q, "", "", -1); 
-		if($$->type != "void")
-		{
-			std::string q2 = getTempVariable($$->type);
-			emit("CALL", std::string($3), std::to_string(currArgs.size()+1), q2, -1);
-        	$$->place = q2;
-		}
-		else
-		{
-			emit("CALL", std::string($3), std::to_string(currArgs.size()+1), "", -1);
-		}
 		$$->nextlist.clear();
 	    currArgs.clear();
 	}
@@ -815,50 +860,27 @@ unary_expression
 		
 		// Semantics
 		$$->isInit = $2->isInit;
-			// Special handling for dereferencing class pointers (this pointer)
-    	if ($1->node_name == "*" && $2->type.substr(0, 6) == "CLASS_" && $2->type.back() == '*') {
-    	    // For class pointers, preserve the class type without the trailing *
-    	    $$->type = $2->type.substr(0, $2->type.size() - 1);
-    	} else {
-    	    // Normal unary expression handling
-    	    string temp = unaryExp($1->node_name, $2->type);
-    	    if(!temp.empty()){
-    	        $$->type = temp;
-    	        $$->intVal = $2->intVal;
-				//3AC
-				//TODO : Check Later
-					/* TODO : need to add or not??
-			//3AC
-			if($1->place == "unary*"){
-			// Reduce one level of pointer indirection for $$->type
-			if($2->type.back() == '*') {
-				$$->type = $2->type.substr(0, $2->type.size() - 1);
-			} else {
-				yyerror("syntax error, Invalid dereference of non-pointer type");
-				$$->type = "ERROR";
+		
+    	// Normal unary expression handling
+    	string temp = unaryExp($1->node_name, $2->type);
+    	if(!temp.empty()){
+    	    $$->type = temp;
+    	    $$->intVal = $2->intVal;
+			if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
+				$$->temp_name = $2->temp_name;
+				$$->place = "*" + $2->place;
+				$$->nextlist.clear();
 			}
-			*/
-		//} else if($1->place == "unary&") {
-			// Add one level of pointer indirection for $$->type
-		//	$$->type = $2->type + "*";
-		//}else{
-		//	$$->type = $2->type;
-		//}
-				if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
-					$$->temp_name = $2->temp_name;
-					$$->place = "*" + $2->place;
-					$$->nextlist.clear();
-				}else{
-					std::string q = getTempVariable($2->type);
-					$$->temp_name = $2->temp_name;
-					$$->place = q;
-					$$->nextlist.clear();
-					emit($1->place, $2->place, "", q, -1);
-				}
-    	    }
-    	    else{
-    	        semantic_error("Type inconsistent with operator", "type error");
-    	    }
+			else{
+				std::string q = getTempVariable(temp);
+				$$->temp_name = $2->temp_name;
+				$$->place = q;
+				$$->nextlist.clear();
+				emit($1->place, $2->place, "", q, -1);
+			}
+    	}
+    	else{
+    	    semantic_error("Type inconsistent with operator", "type error");
     	}
 	}
 	| SIZEOF unary_expression {
