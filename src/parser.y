@@ -869,8 +869,6 @@ unary_expression
 		$$->intVal = $3->size;
 		//3AC
         std::string q = getTempVariable("int");
-		std::string temp = std::string($3->type);
-		std::cout<<"gangnam style "<<temp<<"\n";
         $$->place = q;
         $$->nextlist.clear();
         emit("SIZEOF", $3->type, "", q, -1);
@@ -930,7 +928,6 @@ cast_expression
 		$$->isInit = $4->isInit;
 		//3AC
 		//TODO: Try to do CAST_typename
-		std::cout<<"gangnam style "<<$2->type<<"\n";
 		std::string q = getTempVariable($2->type);
         $$->place = q;
 		$4->nextlist.clear();
