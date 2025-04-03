@@ -266,19 +266,15 @@ postfix_expression
 				else{
 					//3AC
 					$$->temp_name = $1->temp_name;
-					std::cout<<"ye hai type : "<<$$->type<<"\n";
 					if($$->type != "void")
 					{
-						DBG("not to void");
 						std::string q2 = getTempVariable($$->type);
 						emit("CALL", mangledName, "0", q2, -1);
         				$$->place = q2;
 					}
 					else
 					{
-						DBG("to void");
 						emit("CALL", mangledName, "0", "", -1);
-						//	$$->place = "";
 					}
 					$$->nextlist.clear();
 				}
@@ -348,17 +344,14 @@ postfix_expression
 				}
 				//3AC
 				$$->temp_name = $1->temp_name;
-				std::cout<<"ye hai type : " <<$$->type<<std::endl;
 				if($$->type != "void")
 				{
-					DBG("not to void");
 					std::string q2 = getTempVariable($$->type);
 					emit("CALL", mangledName, std::to_string(currArgs.size()), q2, -1);
 					$$->place = q2;
 				}
 				else
 				{
-					DBG("to void");
 					emit("CALL", mangledName, std::to_string(currArgs.size()), "", -1);
 				}
 				$$->nextlist.clear();
@@ -446,13 +439,13 @@ postfix_expression
 	    // Semantics - check if it's a class method call
 	    string classType = $1->type;
 	    string methodName = string($3);
-	
+		std::string manglemethod;
     	// Special case for 'this' pointer access within a class definition
     	if ($1->temp_name == "this" || 
     	    ($1->type.substr(0, 6) == "CLASS_" && !className.empty() && 
     	     $1->type.substr(6) == className)) {
 			
-			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
+			manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
 			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
 
     	    // We're inside a class method calling another method through 'this'
@@ -469,23 +462,6 @@ postfix_expression
     	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
     	                semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
     	            }
-
-					//3AC
-					std::cout<<"this ye le " + $1->temp_name<<std::endl;
-					std::string q = getTempVariable($1->type+'*'); 
-					emit("unary&", $1->place, "", q, -1);
-					emit("param", q, "", "", -1);
-					std::cout<<"ye hai type : " <<$$->type<<std::endl;
-					if($$->type != "void")
-					{
-						std::string q2 = getTempVariable($$->type);
-						emit("CALL", manglemethod, "1", q2, -1);
-        				$$->place = q2;
-					}
-					else
-					{
-						emit("CALL", manglemethod, "1", "", -1);
-					}
     	        } else {
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
@@ -496,7 +472,7 @@ postfix_expression
 	    // First check if it's a class
 	    else if (classType.substr(0, 6) == "CLASS_") {
 	        // Look up method in class
-			std::string manglemethod=mangleFunctionName(methodName,currArgs);
+			manglemethod=mangleFunctionName(methodName,currArgs);
 			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
 	        int ret = lookupClass(classType, manglemethod);
 
@@ -525,23 +501,8 @@ postfix_expression
 	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
                 	    	semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
                 		}
-
-						//3AC
-						std::string q = getTempVariable($1->type+'*'); 
-						emit("unary&", $1->place, "", q, -1);
-						emit("param", q, "", "", -1); 
-						std::cout<<"ye hai type : " <<$$->type<<std::endl;
-						if($$->type != "void")
-						{
-							std::string q2 = getTempVariable($$->type);
-							emit("CALL", manglemethod, "1", q2, -1);
-							$$->place = q2;
-						}
-						else
-						{
-							emit("CALL", manglemethod, "1", "", -1);
-						}
-	            	} else {
+	            	} 
+					else {
 	            	    semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
 	            	}
 				}
@@ -553,6 +514,23 @@ postfix_expression
 	    } else {
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
+		//3AC
+		if(!has_error)
+		{
+			std::string q = getTempVariable($1->type+'*'); 
+			emit("unary&", $1->place, "", q, -1);
+			emit("param", q, "", "", -1);
+			if($$->type != "void")
+			{
+				std::string q2 = getTempVariable($$->type);
+				emit("CALL", manglemethod, "1", q2, -1);
+				$$->place = q2;
+			}
+			else
+			{
+				emit("CALL", manglemethod, "1", "", -1);
+			}
+		}
 	    currArgs.clear();
 		$$->nextlist.clear();
 	}
@@ -563,12 +541,12 @@ postfix_expression
 	    // Semantics - check if it's a class method call with arguments
 	    string classType = $1->type;
 	    string methodName = string($3);
-
+		std::string manglemethod;
     	// Special case for 'this' pointer access within a class definition
     	if (($1->temp_name == "this") || 
     	    (classType.substr(0, 6) == "CLASS_" && !className.empty() && 
     	     classType.substr(6) == className)) {
-			std::string manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
+			manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
 			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
 
     	    // We're inside a class method calling another method through 'this'
@@ -602,25 +580,9 @@ postfix_expression
     	                        break;
     	                    }
     	                }
-						//3AC
-						std::cout<< "this ye le " + $1->temp_name<<std::endl;
-						std::cout<<"ye hai type : " <<$$->type<<std::endl;
-						std::string q = getTempVariable($1->type+'*'); 
-						emit("unary&", $1->place, "", q, -1);
-						emit("param", q, "", "", -1); 
-						std::cout<<"ye hai type : " <<$$->type<<std::endl;
-						if($$->type != "void")
-						{
-							std::string q2 = getTempVariable($$->type);
-							emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
-							$$->place = q2;
-						}
-						else
-						{
-							emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
-						}
     	            }
-    	        } else {
+    	        } 
+				else {
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
@@ -630,7 +592,7 @@ postfix_expression
 	    // First check if it's a class
 	    else if (classType.substr(0, 6) == "CLASS_") {
 	        // Look up method in class
-			std::string manglemethod=mangleFunctionName(methodName,currArgs);
+			manglemethod=mangleFunctionName(methodName,currArgs);
 			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
 	        int ret = lookupClass(classType, manglemethod);
 	        if (ret == 1) {
@@ -668,23 +630,6 @@ postfix_expression
 	            	            break;
 	            	        }
 	            	    }
-						//3AC
-						std::cout<<"ye hai type : " <<$$->type<<std::endl;
-						std::string q = getTempVariable($1->type+'*'); 
-						emit("unary&", $1->place, "", q, -1);
-						emit("param", q, "", "", -1); 
-						std::cout<<"ye hai type : " <<$$->type<<std::endl;
-						if($$->type != "void")
-						{
-							std::string q2 = getTempVariable($$->type);
-							emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
-							$$->place = q2;
-						}
-						else
-						{
-							emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
-						}
-
 					}
 	            	    $$->type = returnType;
 	            	    $$->temp_name = $1->temp_name + "." + methodName;
@@ -701,6 +646,23 @@ postfix_expression
 	    } else {
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
+		//3AC
+		if(!has_error)
+		{
+			std::string q = getTempVariable($1->type+'*'); 
+			emit("unary&", $1->place, "", q, -1);
+			emit("param", q, "", "", -1); 
+			if($$->type != "void")
+			{
+				std::string q2 = getTempVariable($$->type);
+				emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
+				$$->place = q2;
+			}
+			else
+			{
+				emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
+			}
+		}
 		$$->nextlist.clear();
 	    currArgs.clear();
 	}
