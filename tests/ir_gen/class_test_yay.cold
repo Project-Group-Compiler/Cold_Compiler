@@ -1,0 +1,46 @@
+class person{
+    public{
+        /*
+        void f(){}
+        void g(int x){}
+        void foo()
+        {
+        }
+        */
+        void bar(int a, int b)
+        {
+        }
+    };
+};
+
+
+int main()
+{	
+	class person p1;
+    int x = 4, y = 6;
+    p1.bar(x, y);
+//	(*ptr).age = 6;
+//	(*ptr).foo(x);
+//	(*ptr).bar(x, y);
+	return 0;
+}
+
+
+
+/*
+
+
+struct person{
+    int age;
+};
+
+int main()
+{
+    struct person p1;
+    struct person *ptr;
+    p1.age = 6;
+    (*ptr).age = 6;
+    return 0;
+}
+
+*/
