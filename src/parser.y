@@ -6,6 +6,7 @@ using namespace std;
 #include <fstream>
 #include <vector>
 #include <map>
+#include <algorithm>
 #include <cstring>
 #include "AST.hpp"
 #include "data_structures.hpp"
@@ -986,7 +987,7 @@ multiplicative_expression
 				std::string q = getTempVariable($$->type); //TODO not always int
 				$$->place = q;
 				$$->temp_name = q;
-				emit("(i)*", $1->place, $3->place, q, -1);
+				emit("*", $1->place, $3->place, q, -1);
 			}
 			$$->nextlist.clear();
 		}
@@ -1029,7 +1030,7 @@ multiplicative_expression
 				std::string q = getTempVariable($$->type); //TODO not always int
 				$$->place = q;
 				$$->temp_name = q;
-				emit("(i)/", $1->place, $3->place, q, -1);
+				emit("/", $1->place, $3->place, q, -1);
 			}
 			$$->nextlist.clear();
 		}
@@ -1067,7 +1068,7 @@ multiplicative_expression
 				std::string q = getTempVariable($$->type); //TODO not always int
 				$$->place = q;
 				$$->temp_name = q;
-				emit("(i)%", $1->place, $3->place, q, -1);
+				emit("%", $1->place, $3->place, q, -1);
 			}
 			$$->nextlist.clear();
 		}
@@ -1117,7 +1118,7 @@ additive_expression
 						emit("(f)+", $1->place, $3->place, q, -1);
 					}
 				}else{ 
-					emit("(i)+", $1->place, $3->place, q, -1);
+					emit("+", $1->place, $3->place, q, -1);
 				}
 			}
 			$$->nextlist.clear();
@@ -1154,7 +1155,7 @@ additive_expression
 					emit("(f)-", $1->place, $3->place, q, -1);
 				}
 			}else{ 
-				emit("(i)-", $1->place, $3->place, q, -1);
+				emit("-", $1->place, $3->place, q, -1);
 			}
 			$$->nextlist.clear();
         } else {
