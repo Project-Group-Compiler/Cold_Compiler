@@ -11,3 +11,5 @@ bin/
 outputs/
 ast/
 *.csv
+*.png
+*_debug_file.txt

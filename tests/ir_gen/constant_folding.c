@@ -7,7 +7,7 @@ int main()
     int xor_res = 252645135 ^ 16711935;          // 267390960
     int shift_left_res = 291 << 18;              //  76283904
     int shift_right_res = 252645135 >> 9;        // 493447
-    int add_res = 100 + 200;                     // 300
+    float add_res = 100.1 + 200.2;                     // 300
     int sub_res = 2 - 2147483647;                // -2147483645
     int mult_res = 1000 * 1000;                  // 1000000
     int div_res = 1111 / 0;                      // 277

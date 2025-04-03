@@ -176,7 +176,15 @@ primary_expression
 		$$->realVal = $1->realVal;
 		$$->expType = 4;
 		$$->temp_name = $1->str;
-
+		
+		if($$->type=="char"){
+			DBG("DEBUG: Constant type = " + std::string($1->str));
+			std::string temp = std::string($1->str);
+			if (!checkChar(temp)) {
+				yyerror(("Invalid character constant: " + temp + ". Character constants must be a single character.").c_str(),"syntax error");
+				// Set to a default value to prevent further errors
+			}
+		}
 		//3AC
 		$$->place = $$->temp_name;
 		$$->nextlist.clear();
@@ -305,6 +313,7 @@ postfix_expression
 			else $1->expType = 1;
 			//printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
 			$1->type = temp;
+			DBG("DEBUG: Function call type = " + $1->type);
 			$1->isInit = lookup(mangledName)->init;
 			$1->size = getSize(temp);
 		}
@@ -314,6 +323,7 @@ postfix_expression
 		
 		if(!temp.empty()){	
 			$$->type = temp;
+			DBG("DEBUG: Function call type = " + $$->type);
 			if($1->expType == 3){
 				vector<string> funcArgs = getFuncArgs(mangledName);
 				std::cout << mangledName << std::endl;
@@ -956,6 +966,14 @@ cast_expression
 		$$->isInit = $4->isInit;
 		//3AC
 		//TODO: Try to do CAST_typename
+		DBG("DEBUG:type = " + $2->type);
+		DBG("DEBUG:place = " + $4->type);
+		if(checkType($2->type, $4->type) == "warning"){
+			warning(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str());
+		}
+		else if(checkType($2->type, $4->type) == ""){
+			semantic_error(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
+		}
 		std::string q = getTempVariable($2->type);
         $$->place = q;
 		$4->nextlist.clear();
@@ -980,10 +998,10 @@ multiplicative_expression
 		
 		if(!temp.empty()){
 			if(temp == "int"){
-				$$->type = "long long";
+				$$->type = "int";
 			}
 			else if(isFloat(temp)){
-				$$->type = "long double";
+				$$->type = "float";
 			}
 
 			//3AC
@@ -1024,10 +1042,10 @@ multiplicative_expression
 		string temp = mulExp($1->type, $3->type, '/');
 		if(!temp.empty()){
 			if(temp == "int"){
-				$$->type = "long long";
+				$$->type = "int";
 			}
 			else if(isFloat(temp)){
-				$$->type = "long double";
+				$$->type = "float";
 			}
 			//3AC
 			if(isFloat(temp)){
@@ -1066,7 +1084,7 @@ multiplicative_expression
 		if($3->intVal != 0) $$->intVal = $1->intVal % $3->intVal;
 		string temp = mulExp($1->type, $3->type, '%');
 		if(temp == "int"){
-			$$->type = "long long";
+			$$->type = "int";
 			//3AC
 			if(isFloat(temp)){
 				std::string q = getTempVariable($$->type);
@@ -1111,8 +1129,8 @@ additive_expression
         $$->intVal = $1->intVal + $3->intVal;
         string temp = addExp($1->type, $3->type, '+');
         if(!temp.empty()){
-            if(temp == "int") $$->type = "long long";
-			else if(temp == "real") $$->type = "long double";
+            if(temp == "int") $$->type = "int";
+			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
 			//3AC
 			std::string q = getTempVariable($$->type);//TODO not always int
@@ -1154,8 +1172,8 @@ additive_expression
         $$->intVal = $1->intVal - $3->intVal;
         string temp = addExp($1->type, $3->type, '-');
         if(!temp.empty()){
-            if(temp == "int") $$->type = "long long";
-			else if(temp == "real") $$->type = "long double";
+            if(temp == "int") $$->type = "int";
+			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
 			//3AC
 			std::string q = getTempVariable($$->type);//TODO not always int
@@ -1370,7 +1388,7 @@ and_expression
             if(temp == "ok"){
                 $$->type = "bool";
             }
-            else $$->type = "long long";
+            else $$->type = "int";
 			// 3AC
 			std::string q = getTempVariable($$->type);
 			emit("&", $1->place, $3->place, q, -1);
@@ -1399,7 +1417,7 @@ exclusive_or_expression
 				$$->type = "bool";
 			}
 			else {
-				$$->type = "long long";
+				$$->type = "int";
 			}
 
 			// -3AC ---
@@ -1426,7 +1444,7 @@ inclusive_or_expression
         if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
         string temp = bitExp($1->type, $3->type);
         if(!temp.empty()){
-            $$->type = (temp == "ok") ? "bool" : "long long";
+            $$->type = (temp == "ok") ? "bool" : "int";
 			// -3AC ---
 			std::string q = getTempVariable($$->type); 
 			emit("|", $1->place, $3->place, q, -1);
@@ -1733,7 +1751,14 @@ init_declarator
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 			//3AC
 			std::string type = $1->type;
-			// debug(type,$1->temp_name);
+			DBG("Type of variable: " + $1->type);
+			DBG("Type of initializer: " + $5->type);
+			// Check if types are compatible for initialization
+            string compatible = assignExp($1->type, $5->type, "=");
+            if (compatible.empty()) {
+                semantic_error(("Cannot initialize variable of type '" + $1->type + 
+                               "' with expression of type '" + $5->type + "'").c_str(), "type error");
+            }
 			if(array_decl){
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
@@ -2564,6 +2589,7 @@ direct_declarator
 		if (args.size() == 1 && args[0] == "#NO_FUNC") {
 			args.clear();
 			for (int i = 0; i < idList.size(); i++) {
+				DBG("Adding argument " + idList[i]);
 				insertSymbol(*curr_table, idList[i], "int", 4, 1, NULL);
 				args.push_back("int");
 			}
@@ -2575,6 +2601,7 @@ direct_declarator
 					semantic_error(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 					break;
 				}
+				DBG("Adding argument " + idList[i]);
 				insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
 			}
 			idList.clear();
@@ -2769,6 +2796,7 @@ type_name
 	| specifier_qualifier_list abstract_declarator {
 		DBG("type_name -> specifier_qualifier_list abstract_declarator");
 		$$ = getNode("type_name", mergeAttrs($1, $2));
+		$$->type=$1->type+$2->type;
 	}
 	;
 

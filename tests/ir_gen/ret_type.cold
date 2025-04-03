@@ -1,10 +1,26 @@
-//function return type when assigned to Variable
+//function return type when assigned to Variable Semantics workings
 void add(int a, int b) {
     return a + b;
 }
-
+int sub(int a,int b){
+    return a-b;
+}
 int main() {
-    int x,y;
+    int x=5,y;
     char* a=add(x,y);//should give error
+    int c;
+    char b="Hello";
+    c=add(x,y);
+    c=sub(x,y);
     return 0;
 }
+
+//error recovery failing on
+//int main() {
+//    int x=5,y;
+//    char* a=add(x,y);//should give error
+//    int c;
+//    c=add(x,y);
+//    char b="Hello";
+//    return 0;
+//}
