@@ -1,5 +1,71 @@
 #include "types.hpp"
 
+int checkInt(std::string type){
+    if(type=="int") return 1;
+    if(type=="long") return 1;
+    if(type=="long long") return 1;
+    if(type=="long int") return 1;
+    if(type=="long long int") return 1;
+    if(type=="unsigned int") return 1;
+    if(type=="unsigned long") return 1;
+    if(type=="unsigned long long") return 1;
+    if(type=="unsigned long int") return 1;
+    if(type=="unsigned long long int") return 1;
+    if(type=="signed int") return 1;
+    if(type=="signed long") return 1;
+    if(type=="signed long long") return 1;
+    if(type=="signed long int") return 1;
+    if(type=="signed long long int") return 1;
+    if(type=="short") return 1;
+    if(type=="short int") return 1;
+    if(type=="signed short") return 1;
+    if(type=="unsigned short") return 1;
+    if(type=="unsigned short int") return 1;
+    if(type=="signed short int") return 1;
+    return 0;
+ }
+ 
+ bool isFloat(std::string type){
+    if(type=="float") return 1;
+    if(type=="double") return 1;
+    if(type=="long double") return 1;
+    if(type=="unsigned float") return 1;
+    if(type=="unsigned double") return 1;
+    if(type=="unsigned long double") return 1;
+    if(type=="signed float") return 1;
+    if(type=="signed double") return 1;
+    if(type=="signed long double") return 1;
+    return 0;
+ }
+ 
+ bool checkChar(std::string temp){
+    // Validate character constant
+    bool valid = false;
+    // Simple character: 'x'
+    if (temp.size() == 3 && temp[0] == '\'' && temp[2] == '\'') {
+        return true;
+    }
+    // Escape sequence: '\n', '\t', etc.
+    else if (temp.size() == 4 && temp[0] == '\'' && temp[3] == '\'' && temp[1] == '\\') {
+        char esc = temp[2];
+        return (esc == 'n' || esc == 't' || esc == 'r' || esc == '0' || 
+                esc == '\\' || esc == '\'' || esc == '\"' || esc == 'a' || 
+                esc == 'b' || esc == 'f' || esc == 'v');
+    }
+    // Hex escape sequence: '\xhh'
+    else if (temp.size() >= 5 && temp.size() <= 8 && temp[0] == '\'' && temp.back() == '\'' && temp[1] == '\\' && temp[2] == 'x') {
+         valid = true;
+         for (size_t i = 3; i < temp.size() - 1; i++) {
+             if (!std::isxdigit(temp[i])) {
+                 valid = false;
+                 return false;
+                 break;
+             }
+         }
+     }
+     return valid;
+ }
+
 std::string searchIdentifierType(std::string id) {
     sym_entry* n = lookup(id);
     if(n) {
@@ -60,24 +126,24 @@ std::string unaryExp(std::string op, std::string type){
     return type;
 }
 
-std::string mulExp(std::string a, std::string b, char op){
-    if(op=='*' || op =='/'){
+std::string Exp(std::string a, std::string b, std::string op){
+    if(op=="*" || op =="/"){
         if(checkInt(a) && checkInt(b)) return "int";
         else if((checkInt(a) || isFloat(a)) && (checkInt(b) || isFloat(b))) return "float";
         return "";
     }
-    else if(op=='%'){
+    else if(op=="%"){
         if(checkInt(a) && checkInt(b)) return "int";
+        return "";
     }
-    return "";
-}
-
-std::string addExp(std::string a, std::string b, char op){
-    if(checkInt(a) && checkInt(b)) return "int";
-    else if((checkInt(a) || isFloat(a)) && (checkInt(b) || isFloat(b))) return "float";
-    else if((checkInt(a) && b=="char") || (a=="char" && checkInt(b))) return "char";
-    else if(checkInt(a) && b.back()=='*') return b;
-    else if(a.back()=='*' && checkInt(b)) return a;
+    else if(op=="+" || op=="-"){
+        if(checkInt(a) && checkInt(b)) return "int";
+        else if((checkInt(a) || isFloat(a)) && (checkInt(b) || isFloat(b))) return "float";
+        else if((checkInt(a) && b=="char") || (a=="char" && checkInt(b))) return "char";
+        else if(checkInt(a) && b.back()=='*') return b;
+        else if(a.back()=='*' && checkInt(b)) return a;
+        return "";
+    }
     return "";
 }
 
@@ -111,11 +177,11 @@ std::string assignExp(std::string a, std::string b, std::string op){
         return checkType(a,b);
     }
     if(op == "*=" || op == "/=" || op == "%="){
-        if(mulExp(a, b, op[0])=="") return "";
+        if(Exp(a, b, std::string(1, op[0]))=="") return "";
         else return "ok";
     }
     if(op == "+=" || op == "-="){
-        if(addExp(a, b, op[0])=="") return "";
+        if(Exp(a, b, std::string(1, op[0]))=="") return "";
         else return "ok";
     }
     if(op == ">>=" || op == "<<="){
@@ -138,68 +204,3 @@ std::string condExp(std::string a, std::string b){
     return "";
 }
 
-int checkInt(std::string type1){
-   if(type1=="int") return 1;
-   if(type1=="long") return 1;
-   if(type1=="long long") return 1;
-   if(type1=="long int") return 1;
-   if(type1=="long long int") return 1;
-   if(type1=="unsigned int") return 1;
-   if(type1=="unsigned long") return 1;
-   if(type1=="unsigned long long") return 1;
-   if(type1=="unsigned long int") return 1;
-   if(type1=="unsigned long long int") return 1;
-   if(type1=="signed int") return 1;
-   if(type1=="signed long") return 1;
-   if(type1=="signed long long") return 1;
-   if(type1=="signed long int") return 1;
-   if(type1=="signed long long int") return 1;
-   if(type1=="short") return 1;
-   if(type1=="short int") return 1;
-   if(type1=="signed short") return 1;
-   if(type1=="unsigned short") return 1;
-   if(type1=="unsigned short int") return 1;
-   if(type1=="signed short int") return 1;
-   return 0;
-}
-
-bool isFloat(std::string type){
-   if(type=="float") return 1;
-   if(type=="double") return 1;
-   if(type=="long double") return 1;
-   if(type=="unsigned float") return 1;
-   if(type=="unsigned double") return 1;
-   if(type=="unsigned long double") return 1;
-   if(type=="signed float") return 1;
-   if(type=="signed double") return 1;
-   if(type=="signed long double") return 1;
-   return 0;
-}
-
-bool checkChar(std::string temp){
-   // Validate character constant
-   bool valid = false;
-   // Simple character: 'x'
-   if (temp.size() == 3 && temp[0] == '\'' && temp[2] == '\'') {
-       return true;
-   }
-   // Escape sequence: '\n', '\t', etc.
-   else if (temp.size() == 4 && temp[0] == '\'' && temp[3] == '\'' && temp[1] == '\\') {
-       char esc = temp[2];
-       return (esc == 'n' || esc == 't' || esc == 'r' || esc == '0' || 
-               esc == '\\' || esc == '\'' || esc == '\"' || esc == 'a' || 
-               esc == 'b' || esc == 'f' || esc == 'v');
-   }
-   // Hex escape sequence: '\xhh'
-   else if (temp.size() >= 5 && temp.size() <= 8 && temp[0] == '\'' && temp.back() == '\'' && temp[1] == '\\' && temp[2] == 'x') {
-        valid = true;
-        for (size_t i = 3; i < temp.size() - 1; i++) {
-            if (!std::isxdigit(temp[i])) {
-                valid = false;
-                return false;
-                break;
-            }
-        }
-    }
-    return valid;
-}

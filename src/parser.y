@@ -985,7 +985,7 @@ multiplicative_expression
 		$$->intVal = $1->intVal * $3->intVal;
 		
 		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		string temp = mulExp($1->type, $3->type, '*');
+		string temp = Exp($1->type, $3->type, "*");
 		
 		if(!temp.empty()){
 			if(temp == "int"){
@@ -1030,7 +1030,7 @@ multiplicative_expression
 		// Semantic
 		if($3->intVal != 0) $$->intVal = $1->intVal / $3->intVal;
 		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-		string temp = mulExp($1->type, $3->type, '/');
+		string temp = Exp($1->type, $3->type,"/");
 		if(!temp.empty()){
 			if(temp == "int"){
 				$$->type = "int";
@@ -1073,7 +1073,7 @@ multiplicative_expression
 		// Semantic
 		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
 		if($3->intVal != 0) $$->intVal = $1->intVal % $3->intVal;
-		string temp = mulExp($1->type, $3->type, '%');
+		string temp = Exp($1->type, $3->type, "%");
 		if(temp == "int"){
 			$$->type = "int";
 			//3AC
@@ -1118,7 +1118,7 @@ additive_expression
         // Semantic
         if($1->isInit && $3->isInit) $$->isInit = 1;
         $$->intVal = $1->intVal + $3->intVal;
-        string temp = addExp($1->type, $3->type, '+');
+        string temp = Exp($1->type, $3->type, "+");
         if(!temp.empty()){
             if(temp == "int") $$->type = "int";
 			else if(temp == "real") $$->type = "float";
@@ -1161,7 +1161,7 @@ additive_expression
         // Semantic
         if($1->isInit && $3->isInit) $$->isInit = 1;
         $$->intVal = $1->intVal - $3->intVal;
-        string temp = addExp($1->type, $3->type, '-');
+        string temp = Exp($1->type, $3->type, "-");
         if(!temp.empty()){
             if(temp == "int") $$->type = "int";
 			else if(temp == "real") $$->type = "float";
