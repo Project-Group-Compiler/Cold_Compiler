@@ -976,10 +976,10 @@ multiplicative_expression
 		
 		if(!temp.empty()){
 			if(temp == "int"){
-				$$->type = "long long";
+				$$->type = "int";
 			}
 			else if(isFloat(temp)){
-				$$->type = "long double";
+				$$->type = "float";
 			}
 
 			//3AC
@@ -1020,10 +1020,10 @@ multiplicative_expression
 		string temp = mulExp($1->type, $3->type, '/');
 		if(!temp.empty()){
 			if(temp == "int"){
-				$$->type = "long long";
+				$$->type = "int";
 			}
 			else if(isFloat(temp)){
-				$$->type = "long double";
+				$$->type = "float";
 			}
 			//3AC
 			if(isFloat(temp)){
@@ -1062,7 +1062,7 @@ multiplicative_expression
 		if($3->intVal != 0) $$->intVal = $1->intVal % $3->intVal;
 		string temp = mulExp($1->type, $3->type, '%');
 		if(temp == "int"){
-			$$->type = "long long";
+			$$->type = "int";
 			//3AC
 			if(isFloat(temp)){
 				std::string q = getTempVariable($$->type);
@@ -1107,8 +1107,8 @@ additive_expression
         $$->intVal = $1->intVal + $3->intVal;
         string temp = addExp($1->type, $3->type, '+');
         if(!temp.empty()){
-            if(temp == "int") $$->type = "long long";
-			else if(temp == "real") $$->type = "long double";
+            if(temp == "int") $$->type = "int";
+			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
 			//3AC
 			std::string q = getTempVariable($$->type);//TODO not always int
@@ -1150,8 +1150,8 @@ additive_expression
         $$->intVal = $1->intVal - $3->intVal;
         string temp = addExp($1->type, $3->type, '-');
         if(!temp.empty()){
-            if(temp == "int") $$->type = "long long";
-			else if(temp == "real") $$->type = "long double";
+            if(temp == "int") $$->type = "int";
+			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
 			//3AC
 			std::string q = getTempVariable($$->type);//TODO not always int
@@ -1366,7 +1366,7 @@ and_expression
             if(temp == "ok"){
                 $$->type = "bool";
             }
-            else $$->type = "long long";
+            else $$->type = "int";
 			// 3AC
 			std::string q = getTempVariable($$->type);
 			emit("&", $1->place, $3->place, q, -1);
@@ -1395,7 +1395,7 @@ exclusive_or_expression
 				$$->type = "bool";
 			}
 			else {
-				$$->type = "long long";
+				$$->type = "int";
 			}
 
 			// -3AC ---
@@ -1422,7 +1422,7 @@ inclusive_or_expression
         if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
         string temp = bitExp($1->type, $3->type);
         if(!temp.empty()){
-            $$->type = (temp == "ok") ? "bool" : "long long";
+            $$->type = (temp == "ok") ? "bool" : "int";
 			// -3AC ---
 			std::string q = getTempVariable($$->type); 
 			emit("|", $1->place, $3->place, q, -1);
