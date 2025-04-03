@@ -1,14 +1,21 @@
 class person{
     public{
-        /*
-        void f(){}
-        void g(int x){}
+        int age;
+        void f(){
+            (*this).age = 5;
+        }
+        int g(int x){
+            int a = x;
+        }
         void foo()
         {
+            (*this).f();
+            (*this).g(5);
         }
-        */
         void bar(int a, int b)
         {
+            (*this).f();
+            (*this).g(b);
         }
     };
 };
@@ -17,24 +24,25 @@ class person{
 int main()
 {	
 	class person p1;
+    class person *ptr;
     int x = 4, y = 6;
+    p1.age = 6;
+    p1.foo();
     p1.bar(x, y);
-//	(*ptr).age = 6;
-//	(*ptr).foo(x);
-//	(*ptr).bar(x, y);
+    (*ptr).age = 6;
+    (*ptr).foo();
+    (*ptr).bar(x, y);
 	return 0;
 }
 
 
-
-/*
 
 
 struct person{
     int age;
 };
 
-int main()
+int main2()
 {
     struct person p1;
     struct person *ptr;
@@ -42,5 +50,3 @@ int main()
     (*ptr).age = 6;
     return 0;
 }
-
-*/
