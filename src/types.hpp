@@ -9,7 +9,6 @@
 std::string searchIdentifierType(std::string id);
 std::string postfixExpression(std::string type_name, int rule_num);
 std::string checkType(std::string a, std::string b);
-std::string argExp(std::string a, std::string b, int rule_num);
 std::string unaryExp(std::string op, std::string type);
 std::string mulExp(std::string a, std::string b, char op);
 std::string addExp(std::string a, std::string b, char op);
