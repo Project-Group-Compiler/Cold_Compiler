@@ -93,7 +93,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
             else
             {
                 q = getTempVariable(type);
-                emit("(i)" + temp_op, q, arg2, q, -1);
+                emit(temp_op, q, arg2, q, -1);
             }
         }
         else
@@ -113,7 +113,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
     if (isFloat(type))
         x = emit("(f)=", q, "", arg1, -1);
     else
-        x = emit("(i)=", q, "", arg1, -1);
+        x = emit("=", q, "", arg1, -1);
     return x;
 }
 
@@ -169,19 +169,19 @@ void print_tac_code(const std::string &inputFile)
     // }
 
     // out << "Three Address Code:\n\n";
-    std::cout << std::setw(5) << "Label" << std::setw(20) << "Op" << std::setw(20) << "Arg1"
-              << std::setw(20) << "Arg2" << std::setw(20) << "Result" << std::setw(20) << "Goto" << "\n";
-    std::cout << "-------------------------------------------------------------------------------------------------------------\n";
+    // std::cout << std::setw(5) << "Label" << std::setw(20) << "Op" << std::setw(20) << "Arg1"
+            //   << std::setw(20) << "Arg2" << std::setw(20) << "Result" << std::setw(20) << "Goto" << "\n";
+    // std::cout << "-------------------------------------------------------------------------------------------------------------\n";
 
-    for (size_t i = 0; i < tac_code.size(); i++)
-    { // FUNC -2 is also suppressed
-        const auto &q = tac_code[i];
-        std::cout << std::setw(5) << q.Label << std::setw(20) << q.op
-                  << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
-                  << std::setw(20) << q.result
-                  << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
-                  << "\n";
-    }
+    // for (size_t i = 0; i < tac_code.size(); i++)
+    // { // FUNC -2 is also suppressed
+    //     const auto &q = tac_code[i];
+    //     std::cout << std::setw(5) << q.Label << std::setw(20) << q.op
+    //               << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
+    //               << std::setw(20) << q.result
+    //               << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
+    //               << "\n";
+    // }
 
     // for (auto &instr : tac_code)
     // {

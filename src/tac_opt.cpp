@@ -215,65 +215,62 @@ void constant_folding()
     {
         bool add_instr = true;
         std::string &curr_op = instr.op;
-        if (curr_op.length() == 4 && curr_op.back() != '=')
+        if (curr_op.substr(0, 3) == "(f)" && curr_op.back() != '=')
         {
-            if (curr_op[1] == 'i')
+            if (is_num_constant(instr.arg1) && is_num_constant(instr.arg2))
             {
-                if (is_int_constant(instr.arg1) && is_int_constant(instr.arg2))
+                char actual_op = curr_op.back();
+                float arg1 = std::stof(instr.arg1);
+                float arg2 = std::stof(instr.arg2);
+                if (actual_op == '+')
+                    arg1 = arg1 + arg2;
+                else if (actual_op == '-')
+                    arg1 = arg1 - arg2;
+                else if (actual_op == '*')
+                    arg1 = arg1 * arg2;
+                else if (actual_op == '/')
                 {
-                    char actual_op = curr_op.back();
-                    int arg1 = std::stoi(instr.arg1);
-                    int arg2 = std::stoi(instr.arg2);
-                    if (actual_op == '+')
-                        arg1 = arg1 + arg2;
-                    else if (actual_op == '-')
-                        arg1 = arg1 - arg2;
-                    else if (actual_op == '*')
-                        arg1 = arg1 * arg2;
-                    else if (actual_op == '/')
-                    {
-                        if (arg2 == 0)
-                            continue;
-                        arg1 = arg1 / arg2;
-                    }
-                    else if (actual_op == '%')
-                    {
-                        if (arg2 == 0)
-                            continue;
-                        arg1 = arg1 % arg2;
-                    }
-                    if (std::isnan(arg1) || std::isinf(arg1))
+                    if (fabs(arg2) < 1e-9)
                         continue;
-                    curr_op = "=";
-                    instr.arg1 = std::to_string(arg1);
-                    instr.arg2 = "";
+                    arg1 = arg1 / arg2;
                 }
+                if (std::isnan(arg1) || std::isinf(arg1))
+                    continue;
+                curr_op = "=";
+                instr.arg1 = std::to_string(arg1);
+                instr.arg2 = "";
             }
-            else if (curr_op[1] == 'f')
+        }
+        else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
+        {
+            if (is_int_constant(instr.arg1) && is_int_constant(instr.arg2))
             {
-                if (is_num_constant(instr.arg1) && is_num_constant(instr.arg2))
+                char actual_op = curr_op.back();
+                int arg1 = std::stoi(instr.arg1);
+                int arg2 = std::stoi(instr.arg2);
+                if (actual_op == '+')
+                    arg1 = arg1 + arg2;
+                else if (actual_op == '-')
+                    arg1 = arg1 - arg2;
+                else if (actual_op == '*')
+                    arg1 = arg1 * arg2;
+                else if (actual_op == '/')
                 {
-                    char actual_op = curr_op.back();
-                    float arg1 = std::stof(instr.arg1);
-                    float arg2 = std::stof(instr.arg2);
-                    if (actual_op == '+')
-                        arg1 = arg1 + arg2;
-                    else if (actual_op == '-')
-                        arg1 = arg1 - arg2;
-                    else if (actual_op == '*')
-                        arg1 = arg1 * arg2;
-                    else if (actual_op == '/')
-                    {
-                        if (fabs(arg2) < 1e-9)
-                            continue;
-                        arg1 = arg1 / arg2;
-                    }
-                    if (std::isnan(arg1) || std::isinf(arg1))
+                    if (arg2 == 0)
                         continue;
-                    curr_op = "=";
-                    instr.arg1 = std::to_string(arg1);
-                    instr.arg2 = "";
+                    arg1 = arg1 / arg2;
                 }
+                else if (actual_op == '%')
+                {
+                    if (arg2 == 0)
+                        continue;
+                    arg1 = arg1 % arg2;
+                }
+                if (std::isnan(arg1) || std::isinf(arg1))
+                    continue;
+                curr_op = "=";
+                instr.arg1 = std::to_string(arg1);
+                instr.arg2 = "";
             }
         }
         else if (curr_op.substr(0, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op == "!" || curr_op == "~" || curr_op == "unary-" || curr_op == "unary+")

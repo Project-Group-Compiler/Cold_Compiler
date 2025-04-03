@@ -55,16 +55,12 @@ inline std::string stringify(const quad &instr)
         s += instr.result + " = " + curr_op + " " + instr.arg1;
     else if (curr_op.substr(0, 5) == "unary")
         s += instr.result + " = " + curr_op.back() + " " + instr.arg1;
-    else if (curr_op.length() == 4 && curr_op[0] == '(')
+    else if (curr_op.substr(0, 3) == "(f)")
     {
         if (curr_op.back() == '=')
-            s += instr.result + " = " + instr.arg1 + "\t\t(";
+            s += instr.result + " = " + instr.arg1 + "\t\t(float)";
         else
-            s += instr.result + " = " + instr.arg1 + " " + curr_op.back() + " " + instr.arg2 + "\t\t(";
-        if (curr_op[1] == 'f')
-            s += "float)";
-        else if (curr_op[1] == 'i')
-            s += "int)";
+            s += instr.result + " = " + instr.arg1 + " " + curr_op.back() + " " + instr.arg2 + "\t\t(float)";
     }
     else if (curr_op == "=")
         s += instr.result + " = " + instr.arg1;
