@@ -302,6 +302,7 @@ postfix_expression
 			else $1->expType = 1;
 			//printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
 			$1->type = temp;
+			DBG("DEBUG: Function call type = " + $1->type);
 			$1->isInit = lookup(mangledName)->init;
 			$1->size = getSize(temp);
 		}
@@ -311,6 +312,7 @@ postfix_expression
 		
 		if(!temp.empty()){	
 			$$->type = temp;
+			DBG("DEBUG: Function call type = " + $$->type);
 			if($1->expType == 3){
 				vector<string> funcArgs = getFuncArgs(mangledName);
 				std::cout << mangledName << std::endl;
@@ -934,6 +936,14 @@ cast_expression
 		$$->isInit = $4->isInit;
 		//3AC
 		//TODO: Try to do CAST_typename
+		DBG("DEBUG:type = " + $2->type);
+		DBG("DEBUG:place = " + $4->type);
+		if(checkType($2->type, $4->type) == "warning"){
+			warning(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str());
+		}
+		else if(checkType($2->type, $4->type) == ""){
+			semantic_error(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
+		}
 		std::string q = getTempVariable($2->type);
         $$->place = q;
 		$4->nextlist.clear();
@@ -2549,6 +2559,7 @@ direct_declarator
 		if (args.size() == 1 && args[0] == "#NO_FUNC") {
 			args.clear();
 			for (int i = 0; i < idList.size(); i++) {
+				DBG("Adding argument " + idList[i]);
 				insertSymbol(*curr_table, idList[i], "int", 4, 1, NULL);
 				args.push_back("int");
 			}
@@ -2560,6 +2571,7 @@ direct_declarator
 					semantic_error(("Conflicting types for function " + $1->temp_name).c_str(), "type error");
 					break;
 				}
+				DBG("Adding argument " + idList[i]);
 				insertSymbol(*curr_table, idList[i], args[i], getSize(args[i]), 1, NULL);
 			}
 			idList.clear();
@@ -2754,7 +2766,7 @@ type_name
 	| specifier_qualifier_list abstract_declarator {
 		DBG("type_name -> specifier_qualifier_list abstract_declarator");
 		$$ = getNode("type_name", mergeAttrs($1, $2));
-		$$->type = $1->type + $2->type;
+		$$->type=$1->type+$2->type;
 	}
 	;
 
