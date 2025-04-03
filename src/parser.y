@@ -2754,6 +2754,7 @@ type_name
 	| specifier_qualifier_list abstract_declarator {
 		DBG("type_name -> specifier_qualifier_list abstract_declarator");
 		$$ = getNode("type_name", mergeAttrs($1, $2));
+		$$->type = $1->type + $2->type;
 	}
 	;
 
