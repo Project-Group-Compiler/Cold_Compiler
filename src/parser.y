@@ -13,6 +13,7 @@ using namespace std;
 #include "types.hpp"
 #include "symbol_table.hpp"
 #include "tac.hpp"
+#include <algorithm>
 
 std::string currentDataType="";
 std::string currentAccess = "", tdstring="", tdstring2="";//for classes
@@ -265,7 +266,7 @@ postfix_expression
 				vector<string> funcArg = getFuncArgs(mangledName);
 				
 				if(currArgs.size()!=funcArg.size()){
-					semantic_error(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
+					semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
 				}
 				else{
 					//3AC
@@ -334,18 +335,17 @@ postfix_expression
 				else if(currArgs.size()!=funcArgs.size()){
 					std::cout << "currArgs.size() = " << currArgs.size() << std::endl;
 					std::cout << "funcArgs.size() = " << funcArgs.size() << std::endl;
-					semantic_error(("Incorrect number of arguments to Function " + $1->temp_name).c_str(), "semantic error");
+					semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
 				}
-				for(int i=0; i<funcArgs.size(); i++){
+				else{
+					for(int i=0; i<funcArgs.size(); i++){
 					if(funcArgs[i]=="...")break;
 					string msg = checkType(funcArgs[i],currArgs[i]);
-					if(msg =="warning"){
-						warning(("Incompatible conversion of " +  currArgs[i] + " to parameter of type " + funcArgs[i]).c_str());
-					}
-					else if(msg.empty()){
-						semantic_error(("Incompatible Argument to the function " + $1->temp_name).c_str(), "semantic error");
+					if(msg.empty()){
+						semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
 						break;
 					}
+				}
 				}
 				//3AC
 				$$->temp_name = $1->temp_name;
@@ -469,13 +469,13 @@ postfix_expression
     	            // Check arguments
     	            vector<string> methodArgs = getFuncArgs(manglemethod);
     	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
-    	                semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+						semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
     	            }
     	        } else {
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
+    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
     	    }
     	}
 	    // First check if it's a class
@@ -508,7 +508,7 @@ postfix_expression
 	            	    // Check arguments (none for this rule)
 	            	    vector<string> methodArgs = getFuncArgs(manglemethod);
 	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
-                	    	semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+							semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
                 		}
 	            	} 
 					else {
@@ -516,7 +516,7 @@ postfix_expression
 	            	}
 				}
 	        } else if (ret == 0) {
-	            semantic_error(("Method '" + methodName + "' not found in class").c_str(), "scope error");
+	            semantic_error(("Method '" + methodName + "' not found in class with this signature").c_str(), "scope error");
 	        } else {
 	            semantic_error(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
 	        }
@@ -571,7 +571,7 @@ postfix_expression
 	
     	            // Check number of arguments (account for implicit 'this')
     	            if (currArgs.size() != methodArgs.size() - 1) {
-    	                semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+    	                semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
     	            } else {
     	                // Type check arguments
     	                for (int i = 1; i < methodArgs.size(); i++) { // Start from 1 to skip 'this'
@@ -579,8 +579,7 @@ postfix_expression
 	
     	                    string msg = checkType(methodArgs[i], currArgs[i-1]);
 							if (msg.empty()) {
-    	                        semantic_error(("Incompatible argument to method " + methodName).c_str(), 
-    	                              "semantic error");
+    	                        semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
     	                        break;
     	                    }
     	                }
@@ -590,7 +589,7 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "'").c_str(), "scope error");
+    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature ").c_str(), "scope error");
     	    }
     	}
 	    // First check if it's a class
@@ -619,15 +618,14 @@ postfix_expression
 	            	    // Check arguments against parameter types
 	            	    vector<string> methodArgs = getFuncArgs(manglemethod);//gives className_func ->className empty right now
 						if(currArgs.size() != methodArgs.size()-1)
-							semantic_error(("Incorrect number of arguments to method " + methodName).c_str(), "semantic error");
+							semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
 					else{
 
 	            	    for (int i = 1; i < methodArgs.size(); i++) {
 	            	        if (methodArgs[i] == "...") break;
 							string msg = checkType(methodArgs[i], currArgs[i-1]);
 							if (msg.empty()) {
-	            	            semantic_error(("Incompatible argument to method " + methodName).c_str(), 
-	            	                   "semantic error");
+	            	            semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
 	            	            break;
 	            	        }
 	            	    }
@@ -640,7 +638,7 @@ postfix_expression
 	            	}
 				}
 	        } else if (ret == 0) {
-	            semantic_error(("Method '" + methodName + "' not found in class").c_str(), "scope error");
+	            semantic_error(("Method '" + methodName + "' not found in class with this signature").c_str(), "scope error");
 	        } else {
 	            semantic_error(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
 	        }
