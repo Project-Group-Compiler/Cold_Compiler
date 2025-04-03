@@ -938,6 +938,12 @@ cast_expression
 		//TODO: Try to do CAST_typename
 		DBG("DEBUG:type = " + $2->type);
 		DBG("DEBUG:place = " + $4->type);
+		if(checkType($2->type, $4->type) == "warning"){
+			warning(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str());
+		}
+		else if(checkType($2->type, $4->type) == ""){
+			semantic_error(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
+		}
 		std::string q = getTempVariable($2->type);
         $$->place = q;
 		$4->nextlist.clear();

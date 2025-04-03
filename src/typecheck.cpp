@@ -52,7 +52,7 @@ string checkType(string a, string b){
     if(b == "void") return "";
     if((a == "void*" && b.back()=='*')||(a.back()=='*' && b == "void*"))return "ok";
     if(a.back()=='*' && b.back()=='*')return "warning";
-    if((checkInt(a) && b.back()=='*')||(checkInt(b)&&a.back()=='*'))return "warning";
+    if((checkInt(a) && b.back()=='*')||(checkInt(b)&&a.back()=='*'))return "";
     if(a == "char" || checkInt(a)) a = "long double";
     if(b == "char" || checkInt(b)) b = "long double";
     if(isFloat(a) && isFloat(b)) return "ok";
