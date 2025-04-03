@@ -44,6 +44,7 @@ vector<string> classMethodArgs;
 bool inMethodBody = false;  // Set true when inside a method body
 vector<string> idList;
 vector<string> currArgs;
+vector<string> actualArgs;
 
 // Debug tracking
 extern bool debug_enabled; // Flag to enable or disable debugging
@@ -285,6 +286,7 @@ postfix_expression
 			semantic_error(("Function " + $1->temp_name + " not declared in this scope").c_str(), "scope error");
 		}
 		currArgs.clear(); 
+		actualArgs.clear();
 	}
 	| postfix_expression '(' argument_expression_list ')' {//for function calls
         DBG("postfix_expression -> postfix_expression '(' argument_expression_list ')'");
@@ -345,6 +347,9 @@ postfix_expression
 				}
 				//3AC
 				$$->temp_name = $1->temp_name;
+				reverse(actualArgs.begin(), actualArgs.end());
+				for(auto&x : actualArgs)
+					emit("param", x, "", "", -1);
 				if($$->type != "void")
 				{
 					std::string q2 = getTempVariable($$->type);
@@ -362,6 +367,7 @@ postfix_expression
 			semantic_error("Invalid function call", "semantic error");
 		}
 	    currArgs.clear();
+		actualArgs.clear();
 	}
 	| postfix_expression '.' IDENTIFIER {
     	DBG("postfix_expression -> postfix_expression '.' IDENTIFIER");
@@ -516,23 +522,21 @@ postfix_expression
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 		//3AC
-		if(!has_error)
+		std::string q = getTempVariable($1->type+'*'); 
+		emit("unary&", $1->place, "", q, -1);
+		emit("param", q, "", "", -1);
+		if($$->type != "void")
 		{
-			std::string q = getTempVariable($1->type+'*'); 
-			emit("unary&", $1->place, "", q, -1);
-			emit("param", q, "", "", -1);
-			if($$->type != "void")
-			{
-				std::string q2 = getTempVariable($$->type);
-				emit("CALL", manglemethod, "1", q2, -1);
-				$$->place = q2;
-			}
-			else
-			{
-				emit("CALL", manglemethod, "1", "", -1);
-			}
+			std::string q2 = getTempVariable($$->type);
+			emit("CALL", manglemethod, "1", q2, -1);
+			$$->place = q2;
+		}
+		else
+		{
+			emit("CALL", manglemethod, "1", "", -1);
 		}
 	    currArgs.clear();
+		actualArgs.clear();
 		$$->nextlist.clear();
 	}
 	| postfix_expression '.' IDENTIFIER '(' argument_expression_list ')' {
@@ -642,24 +646,26 @@ postfix_expression
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 		//3AC
-		if(!has_error)
+		std::string q = getTempVariable($1->type+'*'); 
+		emit("unary&", $1->place, "", q, -1);
+		reverse(actualArgs.begin(), actualArgs.end());
+		for(auto&x : actualArgs)
+			emit("param", x, "", "", -1);
+		emit("param", q, "", "", -1); 
+		if($$->type != "void")
 		{
-			std::string q = getTempVariable($1->type+'*'); 
-			emit("unary&", $1->place, "", q, -1);
-			emit("param", q, "", "", -1); 
-			if($$->type != "void")
-			{
-				std::string q2 = getTempVariable($$->type);
-				emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
-				$$->place = q2;
-			}
-			else
-			{
-				emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
-			}
+			std::string q2 = getTempVariable($$->type);
+			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
+			$$->place = q2;
+		}
+		else
+		{
+			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
 		}
 		$$->nextlist.clear();
 	    currArgs.clear();
+		actualArgs.clear();
+		$$->nextlist.clear();
 	}
 	| postfix_expression PTR_OP IDENTIFIER {
         DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
@@ -741,10 +747,11 @@ argument_expression_list
 		// Semantics
 		$$->isInit = $1->isInit;
 		currArgs.push_back($1->type);
+		actualArgs.push_back($$->place);
 		$$->type = "void";
 		//3AC
 		$$->nextlist.clear();
-        emit("param", $$->place, "", "", -1);
+        // emit("param", $$->place, "", "", -1);
 	}
 	| argument_expression_list ',' assignment_expression {
         DBG("argument_expression_list -> argument_expression_list ',' assignment_expression");
@@ -754,12 +761,13 @@ argument_expression_list
 		
 		if($1->isInit && $3->isInit) $$->isInit=1;
 		currArgs.push_back($3->type);
+		actualArgs.push_back($3->place);
 		$$->type = "void";
 		//3AC
 		$$->nextlist.clear();
 	
-        int Label = emit("param", $3->place, "", "", -1);
-		backpatch($3->nextlist, Label);
+        // int Label = emit("param", $3->place, "", "", -1);
+		// backpatch($3->nextlist, Label);
 	}
 	;
 

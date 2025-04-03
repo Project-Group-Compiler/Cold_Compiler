@@ -1,0 +1,10 @@
+void foo(int x)
+{
+    int a = 7;
+}
+
+void f(){
+    int x = 0;
+    int y = 0, z = 2;
+    foo((x > 0 ? y : z));
+}

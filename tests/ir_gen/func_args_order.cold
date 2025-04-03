@@ -1,0 +1,12 @@
+int foo(int x, int y, int z){
+    return x + y + z;
+}
+
+int main()
+{
+    int a = 1;
+    int b = 2;
+    int c = 3;
+    int d = foo(a, b, c);
+    return 0;
+}
