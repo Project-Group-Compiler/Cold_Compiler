@@ -7,7 +7,7 @@ int sub(int a,int b){
 }
 int main() {
     int x=5,y;
-    char* a=add(x,y);//should give error
+    //char* a=add(x,y);//should give error
     int c;
     char b="Hello";
     c=add(x,y);

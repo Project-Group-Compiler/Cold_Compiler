@@ -8,7 +8,7 @@
 #include <cstring>
 #include "AST.hpp"
 #include "data_structures.hpp"
-#include "typecheck.hpp"
+#include "types.hpp"
 #include "symbol_table.hpp"
 #include "tac.hpp"
 
@@ -128,8 +128,8 @@ primary_expression
     	$$ = getNode(std::string($1));
 		
 		// Semantics
-		string temp = primaryExpression(string($1));
-		if(temp == ""){
+		string temp = searchIdentifierType(string($1));
+		if(temp.empty()){
 			semantic_error(("Undeclared Identifier " + string($1)).c_str(), "scope error");
 		}
 		else{
@@ -300,8 +300,8 @@ postfix_expression
 		// std::cout<<$1->type<<std::endl; //this is wrong type 
 		// Create mangled name with current arguments
 	    std::string mangledName = mangleFunctionName($1->temp_name, currArgs);
-		string temp = primaryExpression(mangledName);
-		if(temp == ""){
+		string temp = searchIdentifierType(mangledName);
+		if(temp.empty()){
 			//semantic_error(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
 		}
 		else{
@@ -741,7 +741,7 @@ postfix_expression
 		
 		// Semantics
 		$$->isInit = $1->isInit;
-		string temp = postfixExpression($1->type, 6);
+		string temp = postfixExpression($1->type, 3);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $1->intVal + 1;
@@ -761,7 +761,7 @@ postfix_expression
 		
 		// Semantics
 		$$->isInit = $1->isInit;
-		string temp = postfixExpression($1->type, 7);
+		string temp = postfixExpression($1->type, 3);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $1->intVal - 1;
@@ -819,7 +819,7 @@ unary_expression
 		
 		// Semantics
 		$$->isInit = $2->isInit;
-		string temp = postfixExpression($2->type, 6);
+		string temp = postfixExpression($2->type, 3);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal + 1;
@@ -840,7 +840,7 @@ unary_expression
 		
 		// Semantics
 		$$->isInit = $2->isInit;
-		string temp = postfixExpression($2->type, 7);
+		string temp = postfixExpression($2->type, 3);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal - 1;
@@ -1756,8 +1756,16 @@ init_declarator
 		else{
 			DBG("Inserting into symbol table: " + $1->temp_name);
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
-			//3AC
 			std::string type = $1->type;
+			DBG("Type of variable: " + $1->type);
+			DBG("Type of initializer: " + $5->type);
+			// Check if types are compatible for initialization
+			string compatible = assignExp($1->type, $5->type, "=");
+			if (compatible.empty()) {
+				semantic_error(("Cannot initialize variable of type '" + $1->type + 
+							"' with expression of type '" + $5->type + "'").c_str(), "type error");
+			}
+			//3AC
 			// debug(type,$1->temp_name);
 			if(array_decl){
 				for(int i = 0; i<list_values.size();i++){

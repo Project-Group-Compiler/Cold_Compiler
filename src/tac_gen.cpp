@@ -3,7 +3,7 @@
 #include <map>
 #include "tac.hpp"
 #include "symbol_table.hpp"
-#include "typecheck.hpp"
+#include "types.hpp"
 
 extern std::string outputDir;
 std::vector<quad> tac_code;

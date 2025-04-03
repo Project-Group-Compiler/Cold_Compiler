@@ -14,8 +14,8 @@ DS_HPP = $(SRC_DIR)/data_structures.hpp
 DS_CPP = $(SRC_DIR)/data_structures.cpp
 SYM_TABLE_HPP = $(SRC_DIR)/symbol_table.hpp
 SYM_TABLE = $(SRC_DIR)/symbol_table.cpp
-TYPECHECK_HPP = $(SRC_DIR)/typecheck.hpp
-TYPECHECK = $(SRC_DIR)/typecheck.cpp
+types_HPP = $(SRC_DIR)/types.hpp
+types = $(SRC_DIR)/types.cpp
 TAC_HPP = $(SRC_DIR)/tac.hpp
 TAC_GEN_CPP = $(SRC_DIR)/tac_gen.cpp
 TAC_OPT_CPP = $(SRC_DIR)/tac_opt.cpp
@@ -32,7 +32,7 @@ OBJS = \
 	$(BUILD_DIR)/AST.o \
 	$(BUILD_DIR)/data_structures.o \
 	$(BUILD_DIR)/symbol_table.o \
-	$(BUILD_DIR)/typecheck.o \
+	$(BUILD_DIR)/types.o \
 	$(BUILD_DIR)/tac_gen.o \
 	$(BUILD_DIR)/tac_opt.o \
 	$(BUILD_DIR)/driver.o
@@ -63,7 +63,7 @@ $(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(LEXER_CPP)
 
 # Compile parser object file
-$(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP) $(SYM_TABLE_HPP) $(TYPECHECK_HPP)
+$(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP) $(SYM_TABLE_HPP) $(types_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(PARSER_CPP)
 
 # Compile AST object file
@@ -78,9 +78,9 @@ $(BUILD_DIR)/data_structures.o: $(DS_CPP) $(DS_HPP)
 $(BUILD_DIR)/symbol_table.o: $(SYM_TABLE) $(SYM_TABLE_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(SYM_TABLE)
 
-# Compile typecheck object file
-$(BUILD_DIR)/typecheck.o: $(TYPECHECK) $(TYPECHECK_HPP)
-	@$(CXX) $(CXXFLAGS) -c -o $@ $(TYPECHECK)
+# Compile types object file
+$(BUILD_DIR)/types.o: $(types) $(types_HPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(types)
 
 # Compile the TAC generator object file
 $(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP) $(SYM_TABLE_HPP)
