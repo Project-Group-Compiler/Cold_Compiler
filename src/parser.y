@@ -1208,7 +1208,7 @@ relational_expression
         string temp = relExp($1->type, $3->type);
         if (!temp.empty()) {
             $$->type = "bool";
-            if (temp == "Bool") warning("Comparison between pointer and integer");
+            if (temp == "warning") warning("Comparison between pointer and integer");
 			// 3AC 
 			std::string q = getTempVariable($$->type);
 			emit("<", $1->place, $3->place, q, -1);
@@ -1226,7 +1226,7 @@ relational_expression
         string temp = relExp($1->type, $3->type);
         if (!temp.empty()) {
             $$->type = "bool";
-            if (temp == "Bool") warning("Comparison between pointer and integer");
+            if (temp == "warning") warning("Comparison between pointer and integer");
 			// 3AC
 			std::string q = getTempVariable($$->type);
 			emit(">", $1->place, $3->place, q, -1);
@@ -1244,7 +1244,7 @@ relational_expression
         string temp = relExp($1->type, $3->type);
         if (!temp.empty()) {
             $$->type = "bool";
-            if (temp == "Bool") warning("Comparison between pointer and integer");
+            if (temp == "warning") warning("Comparison between pointer and integer");
 			//3AC
 			std::string q = getTempVariable($$->type);
 			emit("<=", $1->place, $3->place, q, -1);
@@ -1262,7 +1262,7 @@ relational_expression
         string temp = relExp($1->type, $3->type);
         if (!temp.empty()) {
             $$->type = "bool";
-            if (temp == "Bool") warning("Comparison between pointer and integer");
+            if (temp == "warning") warning("Comparison between pointer and integer");
 			// 3AC
 			std::string q = getTempVariable($$->type);
 			emit(">=", $1->place, $3->place, q, -1);
@@ -1287,7 +1287,7 @@ equality_expression
         if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
         string temp = eqExp($1->type, $3->type);
         if(!temp.empty()){
-            if(temp == "ok"){
+            if(temp == "warning"){
                 semantic_error("Comparison between pointer and integer", "type error");
             }
             $$->type = "bool";
@@ -1309,7 +1309,7 @@ equality_expression
         if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
         string temp = eqExp($1->type, $3->type);
         if(!temp.empty()){
-            if(temp == "ok"){
+            if(temp == "warning"){
                 semantic_error("Comparison between pointer and integer", "type error");
             }
             $$->type = "bool";
@@ -1536,7 +1536,7 @@ assignment_expression
         if (!temp.empty()) {
             if (temp == "ok") {
                 $$->type = $1->type;
-            } else if (temp == "warning") {
+            } else if (temp == "warning") {//doesn't happen yet
                 $$->type = $1->type;
                 warning("Assignment with incompatible pointer type");
             }
