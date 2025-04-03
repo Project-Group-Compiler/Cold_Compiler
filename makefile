@@ -102,7 +102,7 @@ $(OUTPUT): $(OBJS)
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-csv_clean:
-	rm -f *.csv
+files_clean:
+	rm -f *.csv *.txt
 
 .PHONY: all clean csv_clean

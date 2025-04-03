@@ -1,28 +1,30 @@
 #include "symbol_table.hpp"
 #include <iostream>
+#include <cstdio>
+#include <cstdlib>
 
 // Global symbol table variables remain as before.
 sym_table gst;
 struct_sym_table struct_gst;
-map<sym_table *, sym_table *> parent_table;
-map<struct_sym_table *, struct_sym_table *> struct_parent_table;
+std::map<sym_table *, sym_table *> parent_table;
+std::map<struct_sym_table *, struct_sym_table *> struct_parent_table;
 
-map<string, ull> struct_size;
-map<string, vector<string>> func_arg;
+std::map<std::string, ull> struct_size;
+std::map<std::string, std::vector<std::string>> func_arg;
 ull struct_offset;
 sym_table *curr_table; // store pointer of the current symbol table
 sym_table *curr_structure;
 struct_sym_table *curr_struct_table;
-stack<ull> Goffset, Loffset, blockSz;
+std::stack<ull> Goffset, Loffset, blockSz;
 
 bool inClassContext = false;  // Default: not in a class definition
 typ_table typ_gst;
-map<typ_table *, typ_table *> typ_parent_table;
+std::map<typ_table *, typ_table *> typ_parent_table;
 typ_table *curr_typ;
 
 class_sym_table class_gst;
-map<class_sym_table *, class_sym_table *> class_parent_table;
-map<string, ull> class_size;
+std::map<class_sym_table *, class_sym_table *> class_parent_table;
+std::map<std::string, ull> class_size;
 ull class_offset;
 sym_table *curr_class_structure;
 class_sym_table *curr_class_table;
@@ -32,7 +34,7 @@ int struct_count = 1;
 int avl = 0;
 int blockCnt = 1;
 
-vector<std::string> lib_funcs={"scanf", "printf", "malloc", "calloc", "free", "fopen", "fputs", "fgets",
+std::vector<std::string> lib_funcs={"scanf", "printf", "malloc", "calloc", "free", "fopen", "fputs", "fgets",
      "fclose", "fprintf", "fscanf", "fgetc", "fputc","strlen", "strcmp", "strncmp", "strcpy", "strcat", "va_start", "va_arg", "va_end"};
 
 void symTable_init()
@@ -43,9 +45,9 @@ void symTable_init()
     blockSz.push(0);
 
     // Insert the global symbol table as the root.
-    parent_table.insert(make_pair(&gst, nullptr));
-    struct_parent_table.insert(make_pair(&struct_gst, nullptr));
-    class_parent_table.insert(make_pair(&class_gst, nullptr));
+    parent_table.insert(std::make_pair(&gst, nullptr));
+    struct_parent_table.insert(std::make_pair(&struct_gst, nullptr));
+    class_parent_table.insert(std::make_pair(&class_gst, nullptr));
 
     curr_table = &gst;
     curr_struct_table = &struct_gst;
@@ -55,7 +57,7 @@ void symTable_init()
     insertKeywords();
 }
 
-sym_entry *createEntry(string type, ull size, bool init, ull offset, sym_table *ptr, string access)
+sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access)
 {
     sym_entry *new_sym = new (std::nothrow) sym_entry();
     if (!new_sym)
@@ -72,7 +74,7 @@ sym_entry *createEntry(string type, ull size, bool init, ull offset, sym_table *
     return new_sym;
 }
 
-void makeSymbolTable(string name, string f_type)
+void makeSymbolTable(std::string name, std::string f_type)
 {
     if (!avl)
     {
@@ -98,10 +100,10 @@ void makeSymbolTable(string name, string f_type)
 
         Goffset.push(0);
         blockSz.push(0);
-        parent_table.insert(make_pair(new_table, curr_table));
-        struct_parent_table.insert(make_pair(new_struct_table, curr_struct_table));//is this needed?
-        class_parent_table.insert(make_pair(new_class_table, curr_class_table));//is this needed?
-        typ_parent_table.insert(make_pair(new_typ, curr_typ));
+        parent_table.insert(std::make_pair(new_table, curr_table));
+        struct_parent_table.insert(std::make_pair(new_struct_table, curr_struct_table));//is this needed?
+        class_parent_table.insert(std::make_pair(new_class_table, curr_class_table));//is this needed?
+        typ_parent_table.insert(std::make_pair(new_typ, curr_typ));
 
         curr_table = new_table;
         curr_struct_table = new_struct_table;
@@ -121,7 +123,7 @@ void makeSymbolTable(string name, string f_type)
         (*parent_table[curr_table]).erase("dummyF_name");
         // Only add to parent table if not in class context
         if (!inClassContext) {
-            (*parent_table[curr_table]).insert(make_pair(name, createEntry("FUNC_" + f_type, 0, true, Loffset.top(), curr_table)));
+            (*parent_table[curr_table]).insert(std::make_pair(name, createEntry("FUNC_" + f_type, 0, true, Loffset.top(), curr_table)));
         }
         
         Loffset.pop();
@@ -148,7 +150,7 @@ void removeFuncProto()
         Loffset.pop();
 }
 
-void updSymbolTable(string id)
+void updSymbolTable(std::string id)
 {
     if (Goffset.empty() || blockSz.empty())
     {
@@ -191,7 +193,7 @@ void updSymbolTable(string id)
     }
 }
 
-sym_entry *lookup(string id)
+sym_entry *lookup(std::string id)
 {
     sym_table *temp = curr_table;
     while (temp)
@@ -201,7 +203,7 @@ sym_entry *lookup(string id)
 
         // Added code: Check for overloaded function with base name
         if (id.find("FUNC_") != 0) { // If not already a mangled name
-            string prefix = "FUNC_" + to_string(id.length()) + id + "_";
+            std::string prefix = "FUNC_" + std::to_string(id.length()) + id + "_";
             for (auto& entry : (*temp)) {
                 if (entry.first.find(prefix) == 0) {
                     // Found an overloaded function - return any version temporarily
@@ -217,7 +219,7 @@ sym_entry *lookup(string id)
     return nullptr;
 }
 
-sym_entry *currLookup(string id)
+sym_entry *currLookup(std::string id)
 {
     if (!curr_table)
     {
@@ -231,8 +233,8 @@ sym_entry *currLookup(string id)
 
 void insertKeywords()
 {
-    vector<string> key_words = {"auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "goto", "if", "int", "long", "register", "return", "short", "signed", "sizeof", "static", "struct", "class", "switch", "typedef", "union", "unsigned", "void", "volatile", "while"};
-    vector<string> op = {"...", ">>=", "<<=", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=", ">>", "<<", "++", "--", "->", "&&", "||", "<=", ">=", "==", "!=", ";", "{", "<%", "}", "%>", ",", ":", "=", "(", ")", "[", "<:", "]", ":>", ".", "&", "!", "~", "-", "+", "*", "/", "%", "<", ">", "^", "|", "?"};
+    std::vector<std::string> key_words = {"auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "goto", "if", "int", "long", "register", "return", "short", "signed", "sizeof", "static", "struct", "class", "switch", "typedef", "union", "unsigned", "void", "volatile", "while"};
+    std::vector<std::string> op = {"...", ">>=", "<<=", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=", ">>", "<<", "++", "--", "->", "&&", "||", "<=", ">=", "==", "!=", ";", "{", "<%", "}", "%>", ",", ":", "=", "(", ")", "[", "<:", "]", ":>", ".", "&", "!", "~", "-", "+", "*", "/", "%", "<", ">", "^", "|", "?"};
 
     for (auto h : key_words)
     {
@@ -244,7 +246,7 @@ void insertKeywords()
     }
     
     // important io functions
-	vector<string> type = {"char*", "..."};
+	std::vector<std::string> type = {"char*", "..."};
 	insert_imp_func("printf", type, "int");
 	insert_imp_func("scanf", type, "int");
 
@@ -308,7 +310,7 @@ void insertKeywords()
     insert_imp_func("va_end", type, "void");
 }
 
-void insert_imp_func(string func_name, vector<string> type, string ret_type){
+void insert_imp_func(std::string func_name, std::vector<std::string> type, std::string ret_type){
 	insertSymbol(*curr_table, func_name, "FUNC_"+ret_type, 4, 0, nullptr);
 	//func_arg.insert({func_name, make_pair("FUNC_"+ret_type, type)});
     func_arg.insert({func_name, type});
@@ -316,9 +318,9 @@ void insert_imp_func(string func_name, vector<string> type, string ret_type){
 }
 
 
-string getType(string id){
+std::string getType(std::string id){
     sym_entry* entry = lookup(id);
-    string ret = "";
+    std::string ret = "";
     if (entry)
         ret += entry->type;
     return ret;
@@ -337,7 +339,7 @@ void createStructTable()
 }
 
 // insert struct attributes in struct symbol table
-int insertStructAttr(string attr, string type, ull size, bool init)
+int insertStructAttr(std::string attr, std::string type, ull size, bool init)
 {
     if (!curr_structure)
     {
@@ -350,14 +352,14 @@ int insertStructAttr(string attr, string type, ull size, bool init)
             blockSz.top() += size;
         if (!Goffset.empty())
             Goffset.top() += size;
-        (*curr_structure).insert(make_pair(attr, createEntry(type, size, init, struct_offset, nullptr)));
+        (*curr_structure).insert(std::make_pair(attr, createEntry(type, size, init, struct_offset, nullptr)));
         struct_offset += size;
         return 1;
     }
     return 0;
 }
 
-int printStructTable(string struct_name)
+int printStructTable(std::string struct_name)
 {
     if (!curr_struct_table)
     {
@@ -366,15 +368,15 @@ int printStructTable(string struct_name)
     }
     if ((*curr_struct_table).find(struct_name) == (*curr_struct_table).end())
     {
-        (*curr_struct_table).insert(make_pair(struct_name, make_pair(struct_offset, curr_structure)));
-        printSymbolTable(curr_structure, struct_name + "_" + to_string(struct_count) + ".csv"); // prints structure symbol table
+        (*curr_struct_table).insert(std::make_pair(struct_name, std::make_pair(struct_offset, curr_structure)));
+        printSymbolTable(curr_structure, struct_name + "_" + std::to_string(struct_count) + ".csv"); // prints structure symbol table
         struct_count++;
         return 1;
     }
     return 0;
 }
 
-string StructAttrType(string struct_name, string id)
+std::string StructAttrType(std::string struct_name, std::string id)
 {
     struct_sym_table *temp = curr_struct_table;
     while (temp && ((*temp).find(struct_name) == (*temp).end()))
@@ -400,7 +402,7 @@ string StructAttrType(string struct_name, string id)
     return ((*table)[id]->type);
 }
 
-int findStruct(string struct_name)
+int findStruct(std::string struct_name)
 {
     struct_sym_table *temp = curr_struct_table;
     while (temp)
@@ -414,7 +416,7 @@ int findStruct(string struct_name)
     return 0;
 }
 
-int lookupStruct(string struct_name, string id)
+int lookupStruct(std::string struct_name, std::string id)
 {
     struct_sym_table *temp = curr_struct_table;
     while (temp)
@@ -434,7 +436,7 @@ int lookupStruct(string struct_name, string id)
     return -1; // struct table not found
 }
 
-ull getStructsize(string struct_name)
+ull getStructsize(std::string struct_name)
 {
     struct_sym_table *temp = curr_struct_table;
     while (temp)
@@ -461,7 +463,7 @@ void createClassTable()
     curr_class_structure = new_table;
     class_offset = 0;
 }
-int insertClassAttr(string attr, string type, ull size, bool init, string access)
+int insertClassAttr(std::string attr, std::string type, ull size, bool init, std::string access)
 {
     if (!curr_class_structure)
     {
@@ -474,13 +476,13 @@ int insertClassAttr(string attr, string type, ull size, bool init, string access
             blockSz.top() += size;
         if (!Goffset.empty())
             Goffset.top() += size;
-        (*curr_class_structure).insert(make_pair(attr, createEntry(type, size, init, class_offset, nullptr, access)));
+        (*curr_class_structure).insert(std::make_pair(attr, createEntry(type, size, init, class_offset, nullptr, access)));
         class_offset += size;
         return 1;
     }
     return 0;
 }
-int printClassTable(string class_name)
+int printClassTable(std::string class_name)
 {
     if (!curr_class_table)
     {
@@ -489,14 +491,14 @@ int printClassTable(string class_name)
     }
     if ((*curr_class_table).find(class_name) == (*curr_class_table).end())
     {
-        (*curr_class_table).insert(make_pair(class_name, make_pair(class_offset, curr_class_structure)));
-        printSymbolTable(curr_class_structure, class_name + "_" + to_string(class_count) + ".csv"); // prints class symbol table
+        (*curr_class_table).insert(std::make_pair(class_name, std::make_pair(class_offset, curr_class_structure)));
+        printSymbolTable(curr_class_structure, class_name + "_" + std::to_string(class_count) + ".csv"); // prints class symbol table
         class_count++;
         return 1;
     }
     return 0;
 }
-string ClassAttrType(string class_name, string id)
+std::string ClassAttrType(std::string class_name, std::string id)
 {
     class_sym_table *temp = curr_class_table;
     while (temp && ((*temp).find(class_name) == (*temp).end()))
@@ -521,7 +523,7 @@ string ClassAttrType(string class_name, string id)
     }
     return ((*table)[id]->type);
 }
-string ClassAttrAccess(string className, string attr) {
+std::string ClassAttrAccess(std::string className, std::string attr) {
     // Search through class table hierarchy
     class_sym_table* temp = curr_class_table;
     
@@ -544,7 +546,7 @@ string ClassAttrAccess(string className, string attr) {
     
     return ""; // Class or member not found
 }
-int findClass(string class_name)
+int findClass(std::string class_name)
 {
     class_sym_table *temp = curr_class_table;
     while (temp)
@@ -557,7 +559,7 @@ int findClass(string class_name)
     }
     return 0;
 }
-int lookupClass(string class_name, string id)
+int lookupClass(std::string class_name, std::string id)
 {
     class_sym_table *temp = curr_class_table;
     while (temp)
@@ -576,7 +578,7 @@ int lookupClass(string class_name, string id)
     }
     return -1; // class table not found
 }
-ull getClassSize(string class_name)
+ull getClassSize(std::string class_name)
 {
     class_sym_table *temp = curr_class_table;
     while (temp)
@@ -591,7 +593,7 @@ ull getClassSize(string class_name)
     }
     return 0;
 }
-int inheritFromClass(string childClassName, string parentClassName) {
+int inheritFromClass(std::string childClassName, std::string parentClassName) {
     // Find the parent class symbol table
     class_sym_table* temp = curr_class_table;
     sym_table* parentClassTable = nullptr;
@@ -616,7 +618,7 @@ int inheritFromClass(string childClassName, string parentClassName) {
     
     // Copy public members from parent to child class
     for (auto it : (*parentClassTable)) {
-        string memberName = it.first;
+        std::string memberName = it.first;
         sym_entry* member = it.second;
         
         // Only inherit public and protected members
@@ -627,19 +629,19 @@ int inheritFromClass(string childClassName, string parentClassName) {
                 
                 // Parse the original method name to extract components
                 size_t firstUnderPos = memberName.find('_', 5);  // Skip "FUNC_"
-                if (firstUnderPos != string::npos) {
+                if (firstUnderPos != std::string::npos) {
                     // Extract parent class name length and name
-                    string parentLenStr = memberName.substr(5, firstUnderPos - 5);
+                    std::string parentLenStr = memberName.substr(5, firstUnderPos - 5);
                     std::cout<<"Parent length: " << parentLenStr << std::endl;
-                    int parentNameLen = stoi(parentLenStr);
+                    int parentNameLen = std::stoi(parentLenStr);
                     
                     // Extract method name and signature (everything after parent class name)
-                    string methodSuffix = memberName.substr(5 + parentNameLen + 1 + 1);
+                    std::string methodSuffix = memberName.substr(5 + parentNameLen + 1 + 1);
                     std::cout<<"Method suffix: " << methodSuffix << std::endl;
                     // Create new mangled name with child class
-                    string childClassNameBase = childClassName.substr(6); // Remove "CLASS_" prefix
+                    std::string childClassNameBase = childClassName.substr(6); // Remove "CLASS_" prefix
                     std::cout<<"Child class name base: " << childClassNameBase << std::endl;
-                    string newMangledName = "FUNC_" + to_string(childClassNameBase.length()) + 
+                    std::string newMangledName = "FUNC_" + std::to_string(childClassNameBase.length()) + 
                                            childClassNameBase + "_" + methodSuffix;
                     std::cout<<"New mangled name: " << newMangledName << std::endl;
                     
@@ -689,9 +691,9 @@ void createParamList()
     avl = 1;
 }
 
-void insertSymbol(sym_table &table, string id, string type, ull size, bool is_init, sym_table *ptr)
+void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr)
 {
-    table.insert(make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr)));
+    table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr)));
     if (!blockSz.empty())
         blockSz.top() += size;
     else
@@ -708,9 +710,9 @@ void insertSymbol(sym_table &table, string id, string type, ull size, bool is_in
     }
 }
 
-vector<string> getFuncArgs(string id)
+std::vector<std::string> getFuncArgs(std::string id)
 {
-    vector<string> temp;
+    std::vector<std::string> temp;
     temp.push_back("#NO_FUNC");
     if (func_arg.find(id) != func_arg.end())
         return func_arg[id];
@@ -718,7 +720,7 @@ vector<string> getFuncArgs(string id)
         return temp;
 }
 // Add to symbol_table.cpp
-string getTypeCode(const string& type) {
+std::string getTypeCode(const std::string& type) {
     // Convert full type names to single-character codes
     if (type == "int") return "i";
     if (type == "float") return "f";
@@ -726,19 +728,19 @@ string getTypeCode(const string& type) {
     if (type == "char") return "c";
     if (type == "void") return "v";
     if (type == "bool") return "b";
-    if (type.find("*") != string::npos) return "p"; // All pointers
+    if (type.find("*") != std::string::npos) return "p"; // All pointers
     // Add more types as needed
     return type; // Unknown type
 }
 
-string mangleFunctionName(const string& name, const vector<string>& paramTypes) {
+std::string mangleFunctionName(const std::string& name, const std::vector<std::string>& paramTypes) {
     
     // Check if the function name needs to be mangled (check for printf etc)
     for(auto it : lib_funcs){
         if(name == it) return name;
     }
 
-    string result = "FUNC_" + to_string(name.length()) + name + "_";
+    std::string result = "FUNC_" + std::to_string(name.length()) + name + "_";
     
     // If no parameters, use 'v' for void
     if (paramTypes.empty()) {
@@ -754,7 +756,7 @@ string mangleFunctionName(const string& name, const vector<string>& paramTypes) 
     return result;
 }
 
-void updInit(string id)
+void updInit(std::string id)
 {
     sym_entry *entry = lookup(id);
     if (entry)
@@ -763,7 +765,7 @@ void updInit(string id)
         std::cerr << "Warning: updInit called with unknown id " << id << ".\n";
 }
 
-void updTableSize(string id)
+void updTableSize(std::string id)
 {
     sym_entry *entry = lookup(id);
     if (entry)
@@ -772,9 +774,9 @@ void updTableSize(string id)
         std::cerr << "Warning: updTableSize called with unknown id " << id << ".\n";
 }
 
-void insertFuncArg(string &func, vector<string> &arg)
+void insertFuncArg(std::string &func, std::vector<std::string> &arg)
 {
-    func_arg.insert(make_pair(func, arg));
+    func_arg.insert(std::make_pair(func, arg));
     // std::cout << "Function: " << func << " Args: ";
     // for (auto it : arg)
     // {
@@ -783,17 +785,17 @@ void insertFuncArg(string &func, vector<string> &arg)
     // std::cout << std::endl;
 }
 
-void insertType(string a, string b)
+void insertType(std::string a, std::string b)
 {
     if (curr_typ)
     {
         if ((*curr_typ).find(b) == (*curr_typ).end())
         {
-            (*curr_typ).insert(make_pair(a, b));
+            (*curr_typ).insert(std::make_pair(a, b));
         }
         else
         {
-            (*curr_typ).insert(make_pair(a, (*curr_typ)[b]));
+            (*curr_typ).insert(std::make_pair(a, (*curr_typ)[b]));
         }
     }
     else
@@ -802,7 +804,7 @@ void insertType(string a, string b)
     }
 }
 
-string lookupType(string a)
+std::string lookupType(std::string a)
 {
     typ_table *temp = curr_typ;
     while (temp)
@@ -816,14 +818,14 @@ string lookupType(string a)
     return "";
 }
 
-void printSymbolTable(sym_table *table, string file_name)
+void printSymbolTable(sym_table *table, std::string file_name)
 {
     if (!table)
     {
         std::cerr << "Error: NULL table passed to printSymbolTable.\n";
         return;
     }
-    FILE *file = fopen(file_name.c_str(), "w");
+    FILE *file = std::fopen(file_name.c_str(), "w");
     if (!file)
     {
         std::cerr << "Error: Cannot open " << file_name << " for writing.\n";
@@ -836,10 +838,10 @@ void printSymbolTable(sym_table *table, string file_name)
     // Add the Access column only for class tables
     if (isClassTable)
     {
-        fprintf(file, "Name, Type, Size, isInitialized, Offset, Access\n");
+        std::fprintf(file, "Name, Type, Size, isInitialized, Offset, Access\n");
         for (auto it : (*table))
         {
-            fprintf(file, "%s, %s, %lld, %d, %lld, %s\n",
+            std::fprintf(file, "%s, %s, %lld, %d, %lld, %s\n",
                     it.first.c_str(),
                     it.second->type.c_str(),
                     it.second->size,
@@ -851,10 +853,10 @@ void printSymbolTable(sym_table *table, string file_name)
     else
     {
         // Original format for non-class tables
-        fprintf(file, "Name, Type, Size, isInitialized, Offset\n");
+        std::fprintf(file, "Name, Type, Size, isInitialized, Offset\n");
         for (auto it : (*table))
         {
-            fprintf(file, "%s, %s, %lld, %d, %lld\n",
+            std::fprintf(file, "%s, %s, %lld, %d, %lld\n",
                     it.first.c_str(),
                     it.second->type.c_str(),
                     it.second->size,
@@ -863,10 +865,10 @@ void printSymbolTable(sym_table *table, string file_name)
         }
     }
 
-    fclose(file);
+    std::fclose(file);
 }
 
-ull getSize(string id)
+ull getSize(std::string id)
 {
     if (struct_size.find(id) != struct_size.end())
         return getStructsize(id);
