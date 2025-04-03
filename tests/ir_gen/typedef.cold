@@ -3,10 +3,16 @@
 typedef int integer;
 typedef char character;
 
-void test() 
+typedef struct test{
+    int n;
+} Test;
+
+int main() 
 {
     integer a;
     character ch;
-    a = 5;
-    ch = 'c';
+    struct Test t;
+    struct test t2;
+    t.n=1;
+    t2.n=2;
 }
