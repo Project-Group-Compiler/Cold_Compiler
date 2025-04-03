@@ -1711,7 +1711,14 @@ init_declarator
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 			//3AC
 			std::string type = $1->type;
-			// debug(type,$1->temp_name);
+			DBG("Type of variable: " + $1->type);
+			DBG("Type of initializer: " + $5->type);
+			// Check if types are compatible for initialization
+            string compatible = assignExp($1->type, $5->type, "=");
+            if (compatible.empty()) {
+                semantic_error(("Cannot initialize variable of type '" + $1->type + 
+                               "' with expression of type '" + $5->type + "'").c_str(), "type error");
+            }
 			if(array_decl){
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);

@@ -49,7 +49,8 @@ string postfixExpression(string type_name, int rule_num) {
 string checkType(string a, string b){
     std:: cout << "checkType: " << a << " " << b << std::endl;
     if(a == b)return "ok";
-    if((a == "void*" && b.back()=='*')||(a.back()=='*' && b == "void"))return "ok";
+    if(b == "void") return "";
+    if((a == "void*" && b.back()=='*')||(a.back()=='*' && b == "void*"))return "ok";
     if(a.back()=='*' && b.back()=='*')return "warning";
     if((checkInt(a) && b.back()=='*')||(checkInt(b)&&a.back()=='*'))return "warning";
     if(a == "char" || checkInt(a)) a = "long double";
@@ -57,7 +58,6 @@ string checkType(string a, string b){
     if(isFloat(a) && isFloat(b)) return "ok";
     return "";
 }
-
 string argExp(string a, string b, int  rule_num){
     if(rule_num == 1){
         if(a == "void") return a;
