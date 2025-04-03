@@ -201,6 +201,34 @@ bool isFloat (string type){
    return 0;
 }
 
+bool checkChar (string temp){
+   // Validate character constant
+   bool valid = false;
+   // Simple character: 'x'
+   if (temp.size() == 3 && temp[0] == '\'' && temp[2] == '\'') {
+       return true;
+   }
+   // Escape sequence: '\n', '\t', etc.
+   else if (temp.size() == 4 && temp[0] == '\'' && temp[3] == '\'' && temp[1] == '\\') {
+       char esc = temp[2];
+       return (esc == 'n' || esc == 't' || esc == 'r' || esc == '0' || 
+               esc == '\\' || esc == '\'' || esc == '\"' || esc == 'a' || 
+               esc == 'b' || esc == 'f' || esc == 'v');
+   }
+   // Hex escape sequence: '\xhh'
+   else if (temp.size() >= 5 && temp.size() <= 8 && temp[0] == '\'' && temp.back() == '\'' && temp[1] == '\\' && temp[2] == 'x') {
+        valid = true;
+        for (size_t i = 3; i < temp.size() - 1; i++) {
+            if (!isxdigit(temp[i])) {
+                valid = false;
+                return false;
+                break;
+            }
+        }
+    }
+    return valid;
+}
+
 // bool isSignedInt (string type){
 //    if(type=="int") return 1;
 //    if(type=="long") return 1;
