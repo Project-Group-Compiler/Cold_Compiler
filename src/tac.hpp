@@ -27,6 +27,7 @@ int getCurrentSize();
 void extendList(std::vector<int> &list1, std::vector<int> &list2);
 int emit(std::string, std::string, std::string, std::string, int);
 void backpatch(std::vector<int> &, int);
+void singlePatch(int label, int gotoLabel);
 void casepatch(std::vector<int> &bplist, std::string target);
 void remainingBackpatch();
 

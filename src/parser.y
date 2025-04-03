@@ -65,10 +65,11 @@ int previous_if_found = 0; // TODO: May need later
 std::vector<std::string> list_values;
 std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
-
 template <typename T>void debug(T x){std::cerr<<x<<'\n';}template <typename T>void debugsp(T x) {std::cerr << x << ' ';}
 template <typename T1, typename... T2>void debug(T1 x, T2... y){debugsp(x);if (sizeof...(y) == 1) debug(y...);}
 
+std::vector<int>previousCaseList;
+std::vector<int>CaseContinueList;
 %}
 
 %define parse.error detailed
@@ -101,7 +102,7 @@ template <typename T1, typename... T2>void debug(T1 x, T2... y){debugsp(x);if (s
 
 //3AC 
 %type<Int> NEXT_QUAD WRITE_GOTO
-%type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
+%type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE DEFAULT_CODE
 %type<ptr> N
 
 
@@ -146,7 +147,7 @@ primary_expression
 			$$->temp_name = string($1); 
 
 			//3AC
-			if(temp.substr(0, 5) == "FUNC_") {
+			if(temp.substr(0, 5) == "FUNC_") {//remove
 				$$->place = "CALL " + std::string($1);
 			} 
 			else {
@@ -1711,14 +1712,7 @@ init_declarator
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 			//3AC
 			std::string type = $1->type;
-			DBG("Type of variable: " + $1->type);
-			DBG("Type of initializer: " + $5->type);
-			// Check if types are compatible for initialization
-            string compatible = assignExp($1->type, $5->type, "=");
-            if (compatible.empty()) {
-                semantic_error(("Cannot initialize variable of type '" + $1->type + 
-                               "' with expression of type '" + $5->type + "'").c_str(), "type error");
-            }
+			// debug(type,$1->temp_name);
 			if(array_decl){
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
@@ -2918,13 +2912,13 @@ labeled_statement
 
 		//3AC
 		backpatch($1->truelist, $2);
-		extendList($3->nextlist, $1->falselist);
+		extendList($3->nextlist, $1->falselist); //! ---
         $$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
         $$->caselist = $1->caselist;
         $$->continuelist = $3->continuelist;
 	}
-	| DEFAULT ':' statement {
+	| DEFAULT_CODE ':' statement {
 		DBG("labeled_statement -> DEFAULT ':' statement");
 		std::vector<Data> attr;
         insertAttr(attr, NULL, "default", 0);
@@ -2934,7 +2928,21 @@ labeled_statement
 		//3AC
 		$$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
-        $$->continuelist = $3->continuelist;		
+        $$->continuelist = $3->continuelist;	
+	}
+	;
+
+DEFAULT_CODE
+	: DEFAULT {
+		DBG("DEFAULT_CODE -> DEFAULT");
+		$$ = getNode($1);
+
+		int a = getCurrentSize();
+		if(previousCaseList.size() > 0){
+			int prevCaseLabel = previousCaseList.back();
+			previousCaseList.pop_back();
+			singlePatch(prevCaseLabel, a);
+		}
 	}
 	;
 
@@ -2942,15 +2950,26 @@ CASE_CODE
 	: CASE constant_expression ':' {
         $$ = $2;
 		std::string t = getTempVariable($$->type);
+
 		int a = getCurrentSize();
-		emit("==", "", $2->place, t, -1);
+		if(previousCaseList.size() > 0){
+			int prevCaseLabel = previousCaseList.back();
+			previousCaseList.pop_back();
+			emit("GOTO", "", "", "", a+4);
+			a = getCurrentSize();
+			singlePatch(prevCaseLabel, a);
+		}
+
+		emit("==", "", $2->place, t, -1); //for switch ('a'){} -> arg1 -> 'a' 
 		int b = getCurrentSize();
 		emit("GOTO", "IF", t, "", 0);
 		int c = getCurrentSize();
 		emit("GOTO", "", "", "", 0);
 		$$->caselist.push_back(a);
 		$$->truelist.push_back(b);
-		$$->falselist.push_back(c);
+		previousCaseList.push_back(c);
+
+		// $$->falselist.push_back(c);
 	}
 	;
 
@@ -3139,6 +3158,11 @@ selection_statement
 		extendList($5->nextlist, $5->breaklist);
 		$$->nextlist = $5->nextlist;
 		$$->continuelist = $5->continuelist;
+
+		if(previousCaseList.size()>0){
+			$$->nextlist.push_back(previousCaseList.back());
+		}
+		previousCaseList.clear();
 	}
 	;
 

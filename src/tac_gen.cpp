@@ -45,6 +45,10 @@ void backpatch(std::vector<int> &nextList, int gotoLabel)
     }
 }
 
+void singlePatch(int label, int gotoLabel){
+    tac_code[label].gotoLabel = gotoLabel;
+}
+
 void casepatch(std::vector<int> &bplist, std::string target)
 {
     for (auto i : bplist)
