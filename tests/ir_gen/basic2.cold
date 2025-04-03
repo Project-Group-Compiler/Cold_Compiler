@@ -12,7 +12,10 @@ int main()
     int a, b, c;
     char op;
     aa.val=5;
-
+    aa.val++;
+    ++aa.val;
+    --aa.val;
+    aa.val--;
     switch(op){
         case '+':
             c = a+b;

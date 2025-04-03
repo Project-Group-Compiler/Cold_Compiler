@@ -3,7 +3,7 @@
 #include <map>
 #include "tac.hpp"
 #include "symbol_table.hpp"
-#include "typecheck.hpp"
+#include "types.hpp"
 
 extern std::string outputDir;
 std::vector<quad> tac_code;
@@ -43,6 +43,10 @@ void backpatch(std::vector<int> &nextList, int gotoLabel)
     {
         tac_code[i].gotoLabel = gotoLabel;
     }
+}
+
+void singlePatch(int label, int gotoLabel){
+    tac_code[label].gotoLabel = gotoLabel;
 }
 
 void casepatch(std::vector<int> &bplist, std::string target)

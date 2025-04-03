@@ -8,14 +8,14 @@
 #include <cstring>
 #include "AST.hpp"
 #include "data_structures.hpp"
-#include "typecheck.hpp"
+#include "types.hpp"
 #include "symbol_table.hpp"
 #include "tac.hpp"
 
 std::string currentDataType="";
 std::string currentAccess = "", tdstring="", tdstring2="";//for classes
-int noArgs=0;
-int flag=0,flag2=0, flag3=0;
+int noArgs = 0;
+int flag = 0, flag2 = 0, flag3 = 0;
 
 extern int yyleng;
 extern char* yytext;
@@ -65,10 +65,11 @@ int previous_if_found = 0; // TODO: May need later
 std::vector<std::string> list_values;
 std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
-
 template <typename T>void debug(T x){std::cerr<<x<<'\n';}template <typename T>void debugsp(T x) {std::cerr << x << ' ';}
 template <typename T1, typename... T2>void debug(T1 x, T2... y){debugsp(x);if (sizeof...(y) == 1) debug(y...);}
 
+std::vector<int>previousCaseList;
+std::vector<int>CaseContinueList;
 %}
 
 %define parse.error detailed
@@ -101,7 +102,7 @@ template <typename T1, typename... T2>void debug(T1 x, T2... y){debugsp(x);if (s
 
 //3AC 
 %type<Int> NEXT_QUAD WRITE_GOTO
-%type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE 
+%type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE DEFAULT_CODE
 %type<ptr> N
 
 
@@ -127,8 +128,8 @@ primary_expression
     	$$ = getNode(std::string($1));
 		
 		// Semantics
-		string temp = primaryExpression(string($1));
-		if(temp == ""){
+		string temp = searchIdentifierType(string($1));
+		if(temp.empty()){
 			semantic_error(("Undeclared Identifier " + string($1)).c_str(), "scope error");
 		}
 		else{
@@ -146,7 +147,7 @@ primary_expression
 			$$->temp_name = string($1); 
 
 			//3AC
-			if(temp.substr(0, 5) == "FUNC_") {
+			if(temp.substr(0, 5) == "FUNC_") {//remove
 				$$->place = "CALL " + std::string($1);
 			} 
 			else {
@@ -295,8 +296,8 @@ postfix_expression
 		// std::cout<<$1->type<<std::endl; //this is wrong type 
 		// Create mangled name with current arguments
 	    std::string mangledName = mangleFunctionName($1->temp_name, currArgs);
-		string temp = primaryExpression(mangledName);
-		if(temp == ""){
+		string temp = searchIdentifierType(mangledName);
+		if(temp.empty()){
 			//semantic_error(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
 		}
 		else{
@@ -702,7 +703,7 @@ postfix_expression
 		
 		// Semantics
 		$$->isInit = $1->isInit;
-		string temp = postfixExpression($1->type, 6);
+		string temp = postfixExpression($1->type, 3);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $1->intVal + 1;
@@ -722,7 +723,7 @@ postfix_expression
 		
 		// Semantics
 		$$->isInit = $1->isInit;
-		string temp = postfixExpression($1->type, 7);
+		string temp = postfixExpression($1->type, 3);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $1->intVal - 1;
@@ -780,7 +781,7 @@ unary_expression
 		
 		// Semantics
 		$$->isInit = $2->isInit;
-		string temp = postfixExpression($2->type, 6);
+		string temp = postfixExpression($2->type, 3);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal + 1;
@@ -801,7 +802,7 @@ unary_expression
 		
 		// Semantics
 		$$->isInit = $2->isInit;
-		string temp = postfixExpression($2->type, 7);
+		string temp = postfixExpression($2->type, 3);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal - 1;
@@ -1675,10 +1676,6 @@ init_declarator
 		//$$=getNode($1);
 		//
 		$$ = $1;  // Just pass the node directly
-		if(flag3){
-			typedefTable.push_back(make_pair(tdstring2,tdstring));
-			flag3=0;
-		}
 		// Semantics
 		if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
@@ -1695,7 +1692,16 @@ init_declarator
             // 1. No class context - normal insertion
             // 2. In class but not in method body - class member (handled in insertClassAttr)
             // 3. In class and in method body - local variable
-			if(className.empty() || inMethodBody)insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+			if((className.empty() || inMethodBody) && !flag && !flag3){
+				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+			}
+		}
+		if(flag3){
+			typedefTable.push_back(make_pair(tdstring2,tdstring));
+			flag3 = 0;
+		}
+		if(flag){
+			flag = 0;
 		}
 		//3AC
 		$$->place = $1->temp_name;
@@ -1710,17 +1716,19 @@ init_declarator
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
 		else{
+			DBG("Inserting into symbol table: " + $1->temp_name);
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
-			//3AC
 			std::string type = $1->type;
 			DBG("Type of variable: " + $1->type);
 			DBG("Type of initializer: " + $5->type);
 			// Check if types are compatible for initialization
-            string compatible = assignExp($1->type, $5->type, "=");
-            if (compatible.empty()) {
-                semantic_error(("Cannot initialize variable of type '" + $1->type + 
-                               "' with expression of type '" + $5->type + "'").c_str(), "type error");
-            }
+			string compatible = assignExp($1->type, $5->type, "=");
+			if (compatible.empty()) {
+				semantic_error(("Cannot initialize variable of type '" + $1->type + 
+							"' with expression of type '" + $5->type + "'").c_str(), "type error");
+			}
+			//3AC
+			// debug(type,$1->temp_name);
 			if(array_decl){
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
@@ -2012,6 +2020,7 @@ class_definition
 			if(type == "") type = "CLASS_" + $1->temp_name;
 			else type += " CLASS_" + $1->temp_name; //won't occur but need to confirm
 			//size not getting registered correctly
+			DBG("Inserting into symbol table: " + $1->temp_name);
 			insertSymbol(*curr_table, "CLASS_" + $1->temp_name, "class", getSize("CLASS_" + $1->temp_name), true, nullptr);
 		}
 		else{
@@ -2130,6 +2139,7 @@ struct_or_union_specifier
 		if(printStructTable("STRUCT_" + string($2)) == 1){
 			if(type == "") type = "STRUCT_" + string($2);
 			else type += " STRUCT_" + string($2);
+			DBG("Inserting into symbol table: " + string($2));
 			insertSymbol(*curr_table, "STRUCT_" + string($2), "struct", getSize("STRUCT_" + string($2)), true, nullptr);
 		}
 		else{
@@ -2154,6 +2164,7 @@ struct_or_union_specifier
 		if(printStructTable("STRUCT_" + to_string(Anon_StructCounter)) == 1){
 			if(type == "") type = "STRUCT_" + to_string(Anon_StructCounter);
 			else type += " STRUCT_" + to_string(Anon_StructCounter);
+			DBG("Inserting into symbol table: " + to_string(Anon_StructCounter));
 			insertSymbol(*curr_table, "STRUCT_" + to_string(Anon_StructCounter), "struct", getSize("STRUCT_" + to_string(Anon_StructCounter)), true, nullptr);
 		}
 		else{
@@ -2214,8 +2225,10 @@ struct_or_union
 	: STRUCT {
         DBG("struct_or_union -> STRUCT");
         $$ = $1; currentDataType="struct";
-		flag3 = 1;
-		flag=0;
+		if(flag==1){
+			flag3 = 1;
+			flag = 0;
+		}
     }
 	| UNION {
         DBG("struct_or_union -> UNION");
@@ -2395,7 +2408,7 @@ direct_declarator
 		}
 		else if (flag==2) {
 			typedefTable.push_back(make_pair(check, tdstring));
-			flag = 0;
+			//flag = 0;
 		} else {
 			addToSymbolTable(check, currentDataType);
 		}
@@ -2717,6 +2730,7 @@ parameter_declaration
 			if (currLookup($2->temp_name)) {
 				semantic_error(("Redeclaration of Parameter " + $2->temp_name).c_str(), "scope error");
 			} else {
+				DBG("Inserting into symbol table: " + $2->temp_name);
 				insertSymbol(*curr_table, $2->temp_name, $2->type, $2->size, true, NULL);
 			}
 			funcArgs.push_back($2->type);
@@ -2923,13 +2937,13 @@ labeled_statement
 
 		//3AC
 		backpatch($1->truelist, $2);
-		extendList($3->nextlist, $1->falselist);
+		extendList($3->nextlist, $1->falselist); //! ---
         $$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
         $$->caselist = $1->caselist;
         $$->continuelist = $3->continuelist;
 	}
-	| DEFAULT ':' statement {
+	| DEFAULT_CODE ':' statement {
 		DBG("labeled_statement -> DEFAULT ':' statement");
 		std::vector<Data> attr;
         insertAttr(attr, NULL, "default", 0);
@@ -2939,7 +2953,21 @@ labeled_statement
 		//3AC
 		$$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
-        $$->continuelist = $3->continuelist;		
+        $$->continuelist = $3->continuelist;	
+	}
+	;
+
+DEFAULT_CODE
+	: DEFAULT {
+		DBG("DEFAULT_CODE -> DEFAULT");
+		$$ = getNode($1);
+
+		int a = getCurrentSize();
+		if(previousCaseList.size() > 0){
+			int prevCaseLabel = previousCaseList.back();
+			previousCaseList.pop_back();
+			singlePatch(prevCaseLabel, a);
+		}
 	}
 	;
 
@@ -2947,15 +2975,26 @@ CASE_CODE
 	: CASE constant_expression ':' {
         $$ = $2;
 		std::string t = getTempVariable($$->type);
+
 		int a = getCurrentSize();
-		emit("==", "", $2->place, t, -1);
+		if(previousCaseList.size() > 0){
+			int prevCaseLabel = previousCaseList.back();
+			previousCaseList.pop_back();
+			emit("GOTO", "", "", "", a+4);
+			a = getCurrentSize();
+			singlePatch(prevCaseLabel, a);
+		}
+
+		emit("==", "", $2->place, t, -1); //for switch ('a'){} -> arg1 -> 'a' 
 		int b = getCurrentSize();
 		emit("GOTO", "IF", t, "", 0);
 		int c = getCurrentSize();
 		emit("GOTO", "", "", "", 0);
 		$$->caselist.push_back(a);
 		$$->truelist.push_back(b);
-		$$->falselist.push_back(c);
+		previousCaseList.push_back(c);
+
+		// $$->falselist.push_back(c);
 	}
 	;
 
@@ -3144,6 +3183,11 @@ selection_statement
 		extendList($5->nextlist, $5->breaklist);
 		$$->nextlist = $5->nextlist;
 		$$->continuelist = $5->continuelist;
+
+		if(previousCaseList.size()>0){
+			$$->nextlist.push_back(previousCaseList.back());
+		}
+		previousCaseList.clear();
 	}
 	;
 
