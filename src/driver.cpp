@@ -6,6 +6,7 @@
 
 extern FILE *yyin;
 bool print_ast = false;
+bool print_symtab = false;
 bool debug_enabled = false; 
 std::string inputFilename;
 std::string outputDir = std::filesystem::current_path().string() + "/";
@@ -58,7 +59,6 @@ int main(int argc, char *argv[])
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
     bool optimize_ir = true;
     bool lexPrint = false;
-    bool print_symtab = false;
     bool print_ir = true; // TODO : make it false in next phase
     bool force = false;
     for (int i = 2; i < argc; i++)
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
             print_ir = true;
         else if (arg == "-f" || arg == "--force")
             force = true;
-        else if (arg == "-o" || arg == "--output")
+        else if (arg == "--output")
         {
             if (i + 1 < argc)
                 outputDir = argv[++i];
@@ -113,8 +113,7 @@ int main(int argc, char *argv[])
         performParsing(inputFileString);
         if (print_symtab){
             std::cout << "Printing symbol table\n";
-            printTables(inputFileString);//meet's function
-            printSymbolTable(&gst, "#Global_Symbol_Table#.csv");
+            printSymbolTable(&gst, "GLOBAL_SYMTAB.csv");
         }
         if (!has_error || force)
         {

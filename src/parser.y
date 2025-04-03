@@ -144,7 +144,6 @@ primary_expression
 				$$->expType = 2; 
 			}
 			else $$->expType = 1;
-			//printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
 			$$->type = temp;
 			$$->isInit = lookup(string($1))->init;
 			$$->size = getSize(temp);
@@ -298,7 +297,6 @@ postfix_expression
 		// Semantics
 		$$->isInit = $3->isInit;
 		
-		// std::cout<<$1->type<<std::endl; //this is wrong type 
 		// Create mangled name with current arguments
 	    std::string mangledName = mangleFunctionName($1->temp_name, currArgs);
 		string temp = searchIdentifierType(mangledName);
@@ -313,7 +311,6 @@ postfix_expression
 				$1->expType = 2; 
 			}
 			else $1->expType = 1;
-			//printf("DEBUG: Identifier '%s' type: '%s'\n", $1, temp.c_str());
 			$1->type = temp;
 			DBG("DEBUG: Function call type = " + $1->type);
 			$1->isInit = lookup(mangledName)->init;
@@ -328,13 +325,10 @@ postfix_expression
 			DBG("DEBUG: Function call type = " + $$->type);
 			if($1->expType == 3){
 				vector<string> funcArgs = getFuncArgs(mangledName);
-				std::cout << mangledName << std::endl;
 				if (funcArgs.back() == "...") { //if "..." is present, remove it and do not check for size
 					funcArgs.pop_back();
 				}
 				else if(currArgs.size()!=funcArgs.size()){
-					std::cout << "currArgs.size() = " << currArgs.size() << std::endl;
-					std::cout << "funcArgs.size() = " << funcArgs.size() << std::endl;
 					semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
 				}
 				else{
@@ -381,7 +375,6 @@ postfix_expression
     	string type = $1->type;
 		
 		// Debug the type to see what's reaching this rule
-    	printf("DEBUG: Member access type = '%s', member = '%s',memberName='%s'\n", type.c_str(), temp.c_str(),memberName.c_str());
 
 		if ($1->temp_name == "this" || ($1->type.substr(0, 6) == "CLASS_" && !className.empty() && $1->type.substr(6) == className)) {
         	// We're inside a class method accessing a member through 'this'
@@ -1703,7 +1696,6 @@ init_declarator
 		}
 		//3AC
 		$$->place = $1->temp_name;
-		std::cout<<"Checking if rule completes"<<std::endl;
 	}
 	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
 		DBG("init_declarator -> declarator '=' initializer");
@@ -1726,7 +1718,6 @@ init_declarator
 							"' with expression of type '" + $5->type + "'").c_str(), "type error");
 			}
 			//3AC
-			// debug(type,$1->temp_name);
 			if(array_decl){
 				DBG("Array declaration  ");
 				for(int i = 0; i<list_values.size();i++){
@@ -1996,8 +1987,6 @@ class_definition_head
         // Process inheritance
 		Node* inheritanceNode = $5;
         // Extract parent class name(s)
-		std::cout<<"inheritanceNode->node_name: "<<inheritanceNode->node_name<<std::endl;
-		std::cout<<"inheritanceNode->temp_name: "<<inheritanceNode->temp_name<<std::endl;
 		if (inheritanceNode->node_name == "inheritance_specifier") {
             // Single parent
             string parentClassName = "CLASS_" + inheritanceNode->temp_name;
@@ -2084,11 +2073,9 @@ class_member
         DBG("class_member -> function_definition");
 		 $1->strVal = currentAccess;
 		 // Add function as a class member with proper access specifier
-		printf("DEBUG: Function member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
 
         std::string manglemethod;
 		if (classMethodArgs.empty()) {
-			std::cout<<"EMPTY classMethodArgs"<<std::endl;
 		    // Function with no arguments - create with empty parameter types
 		    manglemethod = mangleFunctionName($1->temp_name, std::vector<string>());
 		} else {
@@ -2107,7 +2094,6 @@ class_member
         DBG("class_member -> declaration");
         $1->strVal = currentAccess;
 		// Add declaration as a class member with proper access specifier
-		printf("DEBUG: Variable member name=%s, type=%s\n", $1->temp_name.c_str(), $1->type.c_str());
         insertClassAttr($1->temp_name, $1->type, $1->size, 0,currentAccess);
 		$$ = $1; 
 	}
@@ -2264,7 +2250,6 @@ specifier_qualifier_list
 	| type_specifier {
 		DBG("specifier_qualifier_list -> type_specifier");
 		$$ = $1;
-		std::cout << std::string($1->type) << '\n';
 	}
 	| type_qualifier specifier_qualifier_list {
 		DBG("specifier_qualifier_list -> type_qualifier specifier_qualifier_list");
@@ -2385,7 +2370,6 @@ declarator
 			$$->expType = 2;
 		}
 		//3AC
-		debug($$->temp_name);
 		$$->place = $$->temp_name;
 	}
 	| direct_declarator {

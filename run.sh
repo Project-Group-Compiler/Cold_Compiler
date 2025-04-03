@@ -20,7 +20,7 @@ for test_case in "$TEST_DIR"/*.cold; do
     test_name=$(basename "$test_case" .cold)
     echo "Running test case: $test_name"
 
-    "$EXECUTABLE" "$test_case" "-o" "$OUTPUT_DIR/" "-f"
+    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" $@
 
     if [ $? -eq 0 ]; then
       echo "Test $test_name passed. TAC saved in $OUTPUT_DIR/."

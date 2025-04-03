@@ -1,7 +1,10 @@
 #include "symbol_table.hpp"
 #include <iostream>
+#include <fstream>
 #include <cstdio>
 #include <cstdlib>
+
+extern bool print_symtab;
 
 // Global symbol table variables remain as before.
 sym_table gst;
@@ -820,13 +823,15 @@ std::string lookupType(std::string a)
 
 void printSymbolTable(sym_table *table, std::string file_name)
 {
+    if(!print_symtab)
+        return;
     if (!table)
     {
         std::cerr << "Error: NULL table passed to printSymbolTable.\n";
         return;
     }
-    FILE *file = std::fopen(file_name.c_str(), "w");
-    if (!file)
+    std::ofstream outFile(file_name);
+    if (!outFile.is_open())
     {
         std::cerr << "Error: Cannot open " << file_name << " for writing.\n";
         return;
@@ -838,34 +843,30 @@ void printSymbolTable(sym_table *table, std::string file_name)
     // Add the Access column only for class tables
     if (isClassTable)
     {
-        std::fprintf(file, "Name, Type, Size, isInitialized, Offset, Access\n");
+        outFile << "Name, Type, Size, isInitialized, Offset, Access\n";
         for (auto it : (*table))
         {
-            std::fprintf(file, "%s, %s, %lld, %d, %lld, %s\n",
-                    it.first.c_str(),
-                    it.second->type.c_str(),
-                    it.second->size,
-                    it.second->init,
-                    it.second->offset,
-                    it.second->access.c_str()); // Print access modifier for class members
+            outFile << it.first << ", " 
+                   << it.second->type << ", " 
+                   << it.second->size << ", " 
+                   << it.second->init << ", " 
+                   << it.second->offset << ", " 
+                   << it.second->access << "\n"; // Print access modifier for class members
         }
     }
     else
     {
         // Original format for non-class tables
-        std::fprintf(file, "Name, Type, Size, isInitialized, Offset\n");
+        outFile << "Name, Type, Size, isInitialized, Offset\n";
         for (auto it : (*table))
         {
-            std::fprintf(file, "%s, %s, %lld, %d, %lld\n",
-                    it.first.c_str(),
-                    it.second->type.c_str(),
-                    it.second->size,
-                    it.second->init,
-                    it.second->offset);
+            outFile << it.first << ", " 
+                   << it.second->type << ", " 
+                   << it.second->size << ", " 
+                   << it.second->init << ", " 
+                   << it.second->offset << "\n";
         }
     }
-
-    std::fclose(file);
 }
 
 ull getSize(std::string id)
