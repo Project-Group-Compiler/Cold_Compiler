@@ -1,80 +1,92 @@
+int f(int a){
+    a = (a == 5 ? 6:7+10);
+    f(a==5 ? 6:7+10);
+    a==5 ? 6:7+10;
+    if(a == 5? 6:7+10){
+        a = 5;
+    }
+    else{
+        a = 6;
+    }
+}
+
 // int f(){
 //     int arr[5]={1,2,3,4,5};
 //     arr[1] ++;
+// // }
+// int f() {
+//     char op;
+//     int a, b, c;
+//     int hulu;
+
+//     switch (op) {
+//         case '+':
+//             c = a + b;
+//             c = 10;
+//             break;
+//         case '-':
+//             c = a + b;
+//             c = 10;
+//             break;
+//         default:
+//             c = 11;
+//             c = 9;
+//     }
+//     hulu = 0;
+//     switch (op) {
+//         case '+':
+//             c = a + b;
+//             c = 10;
+//             break;
+//         default:
+//             c = 10;
+//     }
+//     hulu = 1;
+//     switch (op) {
+//         default:
+//             c = 10;
+//     }
+//     hulu = 2;
+//     switch (op) {
+//         case '+':
+//             c = a + b;
+//             c = 10;
+//             break;
+//         default:
+//             c = 10;
+//     }
+//     hulu = 3;
+//     switch (op) {
+//         case '+':
+//             c = a + b;
+//             c = 10;
+//             break;
+//     }
+//     hulu = 4;
+//     switch (op) {
+//         case '+':
+//             c = a + b;
+//             c = 10;
+//         case '-':
+//             c = a + b;
+//             c = 10;
+//             break;
+//         default:
+//             c = 11;
+//     }
+//     hulu = 5;
+
+//     switch (op) {
+//         case '+':
+//             c = a + b;
+//             c = 10;
+//         case '-':
+//             c = a + b;
+//             c = 10;
+//         default:
+//             c = 11;
+//     }
 // }
-int f() {
-    char op;
-    int a, b, c;
-    int hulu;
-
-    switch (op) {
-        case '+':
-            c = a + b;
-            c = 10;
-            break;
-        case '-':
-            c = a + b;
-            c = 10;
-            break;
-        default:
-            c = 11;
-            c = 9;
-    }
-    hulu = 0;
-    switch (op) {
-        case '+':
-            c = a + b;
-            c = 10;
-            break;
-        default:
-            c = 10;
-    }
-    hulu = 1;
-    switch (op) {
-        default:
-            c = 10;
-    }
-    hulu = 2;
-    switch (op) {
-        case '+':
-            c = a + b;
-            c = 10;
-            break;
-        default:
-            c = 10;
-    }
-    hulu = 3;
-    switch (op) {
-        case '+':
-            c = a + b;
-            c = 10;
-            break;
-    }
-    hulu = 4;
-    switch (op) {
-        case '+':
-            c = a + b;
-            c = 10;
-        case '-':
-            c = a + b;
-            c = 10;
-            break;
-        default:
-            c = 11;
-    }
-    hulu = 5;
-
-    switch (op) {
-        case '+':
-            c = a + b;
-            c = 10;
-        case '-':
-            c = a + b;
-            c = 10;
-        default:
-            c = 11;
-    }
-}
 
 // case '-':
 //     c = a-b;
