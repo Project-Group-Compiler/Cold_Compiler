@@ -1485,7 +1485,7 @@ conditional_expression
 			backpatch($7->truelist, getCurrentSize());
 
 			emit("=", $7->place, "", q, -1);
-			$$->nextlist.push_back($4);
+			singlePatch($4, getCurrentSize());
 			$$->place = q;
         } else {
             semantic_error("Type mismatch in Conditional Expression", "type error");
