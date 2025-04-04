@@ -9,6 +9,7 @@ extern std::string outputDir;
 std::vector<quad> tac_code;
 long long counter = 0;
 void print_error(const std::string &message);
+std::vector<quad> staticAddLater;
 
 int getCurrentSize()
 {
@@ -45,7 +46,8 @@ void backpatch(std::vector<int> &nextList, int gotoLabel)
     }
 }
 
-void singlePatch(int label, int gotoLabel){
+void singlePatch(int label, int gotoLabel)
+{
     tac_code[label].gotoLabel = gotoLabel;
 }
 
@@ -66,7 +68,7 @@ std::string getTempVariable(std::string type)
 
 // Emit for assignment expressions
 // TODO: Handle float
-int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2)
+int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2, bool isLocalStaticInit)
 {
     // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1 << "#" << arg2 << std::endl;
     std::string temp_op = "";
@@ -107,16 +109,29 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
         if (isFloat(type1) && checkInt(type2))
         {
             q = getTempVariable(type1);
-            emit("intToFloat", arg2, "", q, -1);
+            if (isLocalStaticInit)
+                staticAddLater.push_back(quad(staticAddLater.size(), "intToFloat", arg2, "", q, -1));
+            else
+                emit("intToFloat", arg2, "", q, -1);
         }
         else
             q = arg2;
     }
     int x;
     if (isFloat(type))
-        x = emit("(f)=", q, "", arg1, -1);
+    {
+        if (isLocalStaticInit)
+            staticAddLater.push_back(quad(staticAddLater.size(), "(f)=", q, "", arg1, -1));
+        else
+            x = emit("(f)=", q, "", arg1, -1);
+    }
     else
-        x = emit("=", q, "", arg1, -1);
+    {
+        if (isLocalStaticInit)
+            staticAddLater.push_back(quad(staticAddLater.size(), "=", q, "", arg1, -1));
+        else
+            x = emit("=", q, "", arg1, -1);
+    }
     return x;
 }
 
@@ -131,6 +146,16 @@ void remainingBackpatch()
             tac_code[i].gotoLabel = j;
         i--;
     }
+}
+
+void addStaticInit()
+{
+    for (auto &instr : staticAddLater)
+    {
+        instr.Label = tac_code.size();
+        tac_code.push_back(instr);
+    }
+    staticAddLater.clear();
 }
 
 void addgotoLabels()
@@ -173,7 +198,7 @@ void print_tac_code(const std::string &inputFile)
 
     // out << "Three Address Code:\n\n";
     // std::cout << std::setw(5) << "Label" << std::setw(20) << "Op" << std::setw(20) << "Arg1"
-            //   << std::setw(20) << "Arg2" << std::setw(20) << "Result" << std::setw(20) << "Goto" << "\n";
+    //   << std::setw(20) << "Arg2" << std::setw(20) << "Result" << std::setw(20) << "Goto" << "\n";
     // std::cout << "-------------------------------------------------------------------------------------------------------------\n";
 
     for (size_t i = 0; i < tac_code.size(); i++)
@@ -196,6 +221,7 @@ void print_tac_code(const std::string &inputFile)
 
 void generate_ir()
 {
+    addStaticInit();
     for (auto &instr : tac_code)
         std::cout << stringify(instr) << "\n";
     std::cout << "\n-------------------------\n\n";
