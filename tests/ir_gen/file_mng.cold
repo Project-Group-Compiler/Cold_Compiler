@@ -1,6 +1,7 @@
-// TODO: FILE MANG NOT WORKING PROBABLY DUE TO 3AC
+// TO CHECK SEMANTICS
+// IR WORKING
 
-void test 
+void test()
 {
     FILE *file = fopen("test.txt", "w");
     fprintf(file, "Hello, File!");
