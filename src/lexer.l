@@ -14,7 +14,7 @@ IS			(u|U|l|L)*
 #include <fstream>
 #include "AST.hpp"
 #include "parser.hpp"
-#include "data_structures.hpp"
+#include "symbol_table.hpp"
 #include "types.hpp"
 
 extern std::string outputDir;
@@ -83,14 +83,14 @@ std::string current_token_type;
 
 {L}({L}|{D})*   { count(); yylval.str = strdup(type_check().c_str()); current_token_type="IDENTIFIER"; return(check_type()); }
 
-0[xX]{H}+{IS}?  { count();  current_token_type="CONSTANT";set_int_type(3);  if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
-0{D}+{IS}?      { count();  current_token_type="CONSTANT"; set_int_type(2); if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
-{D}+{IS}?       { count(); current_token_type="CONSTANT"; set_int_type(1); if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Integer Constant"); return(CONSTANT); }
-L?'(\\.|[^\\'])+'  { count();  current_token_type="CONSTANT"; set_int_type(0); if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Character Constant"); return(CONSTANT); }
+0[xX]{H}+{IS}?  { count();  current_token_type="CONSTANT";set_int_type(3); return(CONSTANT); }
+0{D}+{IS}?      { count();  current_token_type="CONSTANT"; set_int_type(2); return(CONSTANT); }
+{D}+{IS}?       { count(); current_token_type="CONSTANT"; set_int_type(1); return(CONSTANT); }
+L?'(\\.|[^\\'])+'  { count();  current_token_type="CONSTANT"; set_int_type(0); return(CONSTANT); }
 
-{D}+{E}{FS}?    { count();  current_token_type="CONSTANT"; set_real_type(); if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
-{D}*"."{D}+({E})?{FS}?  { count();  current_token_type="CONSTANT"; set_real_type(); if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
-{D}+"."{D}*({E})?{FS}?  { count(); current_token_type="CONSTANT"; set_real_type(); if(!onlyLexin) addToConstantTable(std::string(strdup(yytext)),"Float Constant"); return(CONSTANT); }
+{D}+{E}{FS}?    { count();  current_token_type="CONSTANT"; set_real_type(); return(CONSTANT); }
+{D}*"."{D}+({E})?{FS}?  { count();  current_token_type="CONSTANT"; set_real_type(); return(CONSTANT); }
+{D}+"."{D}*({E})?{FS}?  { count(); current_token_type="CONSTANT"; set_real_type(); return(CONSTANT); }
 
 L?\"(\\.|[^\\"])*\"  { count(); yylval.str = strdup(yytext); current_token_type="STRING_LITERAL"; return(STRING_LITERAL); }
 
@@ -234,7 +234,6 @@ int check_type()
 
 void performLexing(const std::string &inputFile, bool lexPrint)
 {
-    onlyLexin = true;
     std::vector<TOKEN> tokens;
     int token_id;
     while ((token_id = yylex()) != 0)
