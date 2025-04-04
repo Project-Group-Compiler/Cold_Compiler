@@ -11,8 +11,8 @@ PARSER_HPP = $(BUILD_DIR)/parser.hpp
 AST_HPP = $(SRC_DIR)/AST.hpp
 AST_CPP = $(SRC_DIR)/AST.cpp
 SYM_TABLE_HPP = $(SRC_DIR)/symbol_table.hpp
-SYM_TABLE = $(SRC_DIR)/symbol_table.cpp
-types_HPP = $(SRC_DIR)/types.hpp
+SYM_TABLE_CPP = $(SRC_DIR)/symbol_table.cpp
+TYPES_HPP = $(SRC_DIR)/types.hpp
 TAC_HPP = $(SRC_DIR)/tac.hpp
 TAC_GEN_CPP = $(SRC_DIR)/tac_gen.cpp
 TAC_OPT_CPP = $(SRC_DIR)/tac_opt.cpp
@@ -34,9 +34,9 @@ OBJS = \
 
 # Compiler and tools
 FLEX = flex
-BISON = bison -d -t -v
+BISON = bison
 CXX = g++
-CXXFLAGS = -g -I$(SRC_DIR)
+CXXFLAGS = -I$(SRC_DIR)
 
 # Default target
 all: $(OUTPUT)
@@ -54,11 +54,11 @@ $(PARSER_CPP) $(PARSER_HPP): $(PARSER) | $(BUILD_DIR)
 	@$(BISON) -d -o $(PARSER_CPP) $(PARSER) -Wno-conflicts-rr -Wno-conflicts-sr
 
 # Compile lexer object file
-$(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP) $(AST_HPP)
+$(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP) $(AST_HPP) $(SYM_TABLE_HPP) $(TYPES_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(LEXER_CPP)
 
 # Compile parser object file
-$(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(SYM_TABLE_HPP) $(types_HPP)
+$(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(SYM_TABLE_HPP) $(TYPES_HPP) $(TAC_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(PARSER_CPP)
 
 # Compile AST object file
@@ -66,11 +66,11 @@ $(BUILD_DIR)/AST.o: $(AST_CPP) $(AST_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(AST_CPP)
 
 # Compile symbol_table object file
-$(BUILD_DIR)/symbol_table.o: $(SYM_TABLE) $(SYM_TABLE_HPP)
-	@$(CXX) $(CXXFLAGS) -c -o $@ $(SYM_TABLE)
+$(BUILD_DIR)/symbol_table.o: $(SYM_TABLE_CPP) $(SYM_TABLE_HPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(SYM_TABLE_CPP)
 
 # Compile the TAC generator object file
-$(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(SYM_TABLE_HPP)
+$(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(SYM_TABLE_HPP) $(TYPES_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_GEN_CPP)
 
 # Compile the TAC optimizer object file
@@ -78,7 +78,7 @@ $(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
 
 # Compile driver object file
-$(BUILD_DIR)/driver.o: $(DRIVER)
+$(BUILD_DIR)/driver.o: $(DRIVER) $(SYM_TABLE_HPP) $(TAC_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(DRIVER)
 
 # Link all object files into the final binary
