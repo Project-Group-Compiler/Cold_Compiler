@@ -3,7 +3,7 @@
 class Person { 
     // data members of person 
      public{
-         long aadhar_number;
+         int aadhar_number;
      };  
      private{
          char* name;
@@ -16,10 +16,10 @@ class Person {
  class Faculty <- Person { 
     // data members of Faculty
      protected{
-         long employeeID;
+         int employeeID;
      };  
      public{
-         long getEmployeeID(){ 
+         int getEmployeeID(){ 
           return (*this).employeeID; 
          }
      }; 
@@ -28,10 +28,10 @@ class Person {
  class Student <- Person { 
     // data members of Student 
     private {
-        long rollNo;
+        int rollNo;
     };
      public{ 
-         long getRollNo(int x) { 
+         int getRollNo(int x) { 
             int i;
              (*this).rollNo=(*this).aadhar_number; // or should it be (*this).aadhar_number??  2nd option seems better   -> throws error works fine
              (*this).returnName();//till now we created object and then called function -> *this does the same thing
