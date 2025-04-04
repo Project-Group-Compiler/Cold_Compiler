@@ -2121,14 +2121,34 @@ struct_or_union_specifier
         $$ = getNode($1, mergeAttrs(getNode($2), $5));
 		std::string check=std::string($2);
 		// Semantics
-		if(printStructTable("STRUCT_" + string($2)) == 1){
-			if(type == "") type = "STRUCT_" + string($2);
-			else type += " STRUCT_" + string($2);
-			DBG("Inserting into symbol table: " + string($2));
-			insertSymbol(*curr_table, "STRUCT_" + string($2), "struct", getSize("STRUCT_" + string($2)), true, nullptr);
+		std::cout<<"struct or union "<<$1<<std::endl;
+		if(std::string($1)=="struct" && printStructTable("STRUCT_" + string($2)) == 1 ){
+			if(findStruct("UNION_" + string($2)) == 1){
+				semantic_error(("UNION " + string($2) + " is already defined").c_str(), "scope error");
+			}
+			else{
+				if(type == "") type = "STRUCT_" + string($2);
+				else type += " STRUCT_" + string($2);
+				DBG("Inserting into symbol table: " + string($2));
+				insertSymbol(*curr_table, "STRUCT_" + string($2), "struct", getSize("STRUCT_" + string($2)), true, nullptr);
+			}
+		}
+		else if(std::string($1)=="union" && printStructTable("UNION_" + string($2)) == 1){
+			if(findStruct("STRUCT_" + string($2)) == 1){
+				semantic_error(("Struct " + string($2) + " is already defined").c_str(), "scope error");
+			}
+			else{
+				if(type == "") type = "UNION_" + string($2);
+				else type += " UNION_" + string($2);
+				DBG("Inserting into symbol table: " + string($2));
+				insertSymbol(*curr_table, "UNION_" + string($2), "union", getSize("UNION_" + string($2)), true, nullptr);
+			}
 		}
 		else{
-			semantic_error(("Struct " + string($2) + " is already defined").c_str(), "scope error");
+			if(std::string($1)=="struct")
+				semantic_error(("Struct " + string($2) + " is already defined").c_str(), "scope error");
+			else
+				semantic_error(("Union " + string($2) + " is already defined").c_str(), "scope error");
 		}
 		type = ""; //clearing after definition of struct
 		if (flag == 1) {
@@ -2164,18 +2184,34 @@ struct_or_union_specifier
 		
 		// Clear type before processing struct members
         type = "";
-
 		// Semantics
-		if(findStruct("STRUCT_" + string($2)) == 1){
+		DBG("Struct or Union: " + std::string($1));
+		DBG("Struct or Union name: " + std::string($2));
+		DBG("find struct "+std::to_string(findStruct("STRUCT_" + string($2))));
+		DBG("find union "+std::to_string(findStruct("UNION_" + string($2))));
+		if(findStruct("STRUCT_" + string($2)) == 1 && findStruct("UNION_" + string($2)) == 1){
+			semantic_error((string($2) + " defined as wrong kind of tag").c_str(), "scope error");
+		}
+		if(std::string($1)=="struct" && findStruct("STRUCT_" + string($2)) == 1){
 			if(type == "") type = "STRUCT_" + string($2);
 			else type += " STRUCT_" + string($2);
 		}
+		else if(std::string($1)=="union" && findStruct("UNION_" + string($2)) == 1){
+			if(type == "") type = "UNION_" + string($2);
+			else type += " UNION_" + string($2);
+		}
 		else if(structName == string($2)){
-			// We are inside a struct
+			// We are inside a struct or union ->but i don't think it matters which one :)
 			// We are inside a struct to handle declaration of structs in structs
 			type = "#INSIDE";
 		}
-		else{
+		else if(std::string($1)=="struct"){
+			semantic_error(("Struct " + string($2) + " is not defined").c_str(), "scope error");
+		}
+		else if(std::string($1)=="union"){
+			semantic_error(("Union " + string($2) + " is not defined").c_str(), "scope error");
+		}
+		else{//will never reach
 			semantic_error(("Struct " + string($2) + " is not defined").c_str(), "scope error");
 		}
 	}
