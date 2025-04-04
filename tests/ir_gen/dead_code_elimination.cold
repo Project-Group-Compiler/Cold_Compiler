@@ -1,8 +1,7 @@
 // SEMANTICS WORKING
+// IR WORKING
 
-int a = 1;
-
-int main()
+int target1()
 {
     int x = 9;
     if (1)
@@ -12,9 +11,7 @@ int main()
     return 0;
 }
 
-int b = 2;
-
-int target1()
+int target2()
 {
     do
     {
@@ -23,9 +20,8 @@ int target1()
     return b;
 }
 
-int c = 3;
 
-int target2()
+int target3()
 {
     int x = 9;
     while (0)

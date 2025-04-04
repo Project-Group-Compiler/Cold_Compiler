@@ -5,7 +5,6 @@
 #include <vector>
 #include <string>
 #include <cstdio>
-#include "data_structures.hpp"
 
 struct Node
 {

@@ -173,15 +173,15 @@ void print_tac_code(const std::string &inputFile)
             //   << std::setw(20) << "Arg2" << std::setw(20) << "Result" << std::setw(20) << "Goto" << "\n";
     // std::cout << "-------------------------------------------------------------------------------------------------------------\n";
 
-    // for (size_t i = 0; i < tac_code.size(); i++)
-    // { // FUNC -2 is also suppressed
-    //     const auto &q = tac_code[i];
-    //     std::cout << std::setw(5) << q.Label << std::setw(20) << q.op
-    //               << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
-    //               << std::setw(20) << q.result
-    //               << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
-    //               << "\n";
-    // }
+    for (size_t i = 0; i < tac_code.size(); i++)
+    { // FUNC -2 is also suppressed
+        const auto &q = tac_code[i];
+        std::cout << std::setw(5) << q.Label << std::setw(20) << q.op
+                  << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
+                  << std::setw(20) << q.result
+                  << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
+                  << "\n";
+    }
 
     // for (auto &instr : tac_code)
     // {

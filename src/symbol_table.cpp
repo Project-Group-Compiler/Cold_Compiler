@@ -121,8 +121,6 @@ void makeSymbolTable(std::string name, std::string f_type)
             std::cerr << "Error: curr_table not found in parent_table during makeSymbolTable.\n";
             exit(EXIT_FAILURE);
         }
-        // std::cout<<"Function name: " << name << std::endl;
-        // std::cout<<"Function type: " << f_type << std::endl;
         (*parent_table[curr_table]).erase("dummyF_name");
         // Only add to parent table if not in class context
         if (!inClassContext) {
@@ -635,18 +633,14 @@ int inheritFromClass(std::string childClassName, std::string parentClassName) {
                 if (firstUnderPos != std::string::npos) {
                     // Extract parent class name length and name
                     std::string parentLenStr = memberName.substr(5, firstUnderPos - 5);
-                    std::cout<<"Parent length: " << parentLenStr << std::endl;
                     int parentNameLen = std::stoi(parentLenStr);
                     
                     // Extract method name and signature (everything after parent class name)
                     std::string methodSuffix = memberName.substr(5 + parentNameLen + 1 + 1);
-                    std::cout<<"Method suffix: " << methodSuffix << std::endl;
                     // Create new mangled name with child class
                     std::string childClassNameBase = childClassName.substr(6); // Remove "CLASS_" prefix
-                    std::cout<<"Child class name base: " << childClassNameBase << std::endl;
                     std::string newMangledName = "FUNC_" + std::to_string(childClassNameBase.length()) + 
                                            childClassNameBase + "_" + methodSuffix;
-                    std::cout<<"New mangled name: " << newMangledName << std::endl;
                     
                     // Create a copy of the method's symbol entry
                     insertClassAttr(newMangledName, member->type, member->size, 
@@ -780,12 +774,6 @@ void updTableSize(std::string id)
 void insertFuncArg(std::string &func, std::vector<std::string> &arg)
 {
     func_arg.insert(std::make_pair(func, arg));
-    // std::cout << "Function: " << func << " Args: ";
-    // for (auto it : arg)
-    // {
-    //     std::cout << it << " ";
-    // }
-    // std::cout << std::endl;
 }
 
 void insertType(std::string a, std::string b)

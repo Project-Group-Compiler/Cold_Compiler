@@ -24,23 +24,14 @@ void compute_basic_blocks()
         const std::string &curr_op = instr.op;
         if (curr_op.back() == ':')
         {
-            if ((curr_op.substr(0, 5) == "FUNC_" && curr_op.substr(curr_op.length() - 3) == "end"))
+            if (!block.empty())
             {
-                block.push_back(instr);
                 basic_blocks.push_back(block);
                 block.clear();
             }
-            else
-            {
-                if (!block.empty())
-                {
-                    basic_blocks.push_back(block);
-                    block.clear();
-                }
-                block.push_back(instr);
-            }
+            block.push_back(instr);
         }
-        else if (curr_op == "GOTO")
+        else if ((curr_op == "GOTO") || (curr_op.substr(0, 5) == "FUNC_" && curr_op.substr(curr_op.length() - 3) == "end"))
         {
             block.push_back(instr);
             basic_blocks.push_back(block);
@@ -219,6 +210,7 @@ void constant_folding()
         {
             if (is_num_constant(instr.arg1) && is_num_constant(instr.arg2))
             {
+                bool modify_instr = true;
                 char actual_op = curr_op.back();
                 float arg1 = std::stof(instr.arg1);
                 float arg2 = std::stof(instr.arg2);
@@ -231,20 +223,24 @@ void constant_folding()
                 else if (actual_op == '/')
                 {
                     if (fabs(arg2) < 1e-9)
-                        continue;
+                        modify_instr = false;
                     arg1 = arg1 / arg2;
                 }
                 if (std::isnan(arg1) || std::isinf(arg1))
-                    continue;
-                curr_op = "=";
-                instr.arg1 = std::to_string(arg1);
-                instr.arg2 = "";
+                    modify_instr = false;
+                if (modify_instr)
+                {
+                    curr_op = "=";
+                    instr.arg1 = std::to_string(arg1);
+                    instr.arg2 = "";
+                }
             }
         }
         else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
         {
             if (is_int_constant(instr.arg1) && is_int_constant(instr.arg2))
             {
+                bool modify_instr = true;
                 char actual_op = curr_op.back();
                 int arg1 = std::stoi(instr.arg1);
                 int arg2 = std::stoi(instr.arg2);
@@ -257,20 +253,23 @@ void constant_folding()
                 else if (actual_op == '/')
                 {
                     if (arg2 == 0)
-                        continue;
+                        modify_instr = false;
                     arg1 = arg1 / arg2;
                 }
                 else if (actual_op == '%')
                 {
                     if (arg2 == 0)
-                        continue;
+                        modify_instr = false;
                     arg1 = arg1 % arg2;
                 }
                 if (std::isnan(arg1) || std::isinf(arg1))
-                    continue;
-                curr_op = "=";
-                instr.arg1 = std::to_string(arg1);
-                instr.arg2 = "";
+                    modify_instr = false;
+                if (modify_instr)
+                {
+                    curr_op = "=";
+                    instr.arg1 = std::to_string(arg1);
+                    instr.arg2 = "";
+                }
             }
         }
         else if (curr_op.substr(0, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op == "!" || curr_op == "~" || curr_op == "unary-" || curr_op == "unary+")
@@ -425,7 +424,7 @@ void dead_code_elimination()
     for (auto i = 1; i < basic_blocks.size(); i++)
     {
         const auto &block = basic_blocks[i];
-        if (block[0].op.back() == ':' && block[0].op.substr(0, 5) != "FUNC_")
+        if (!block.empty() && block[0].op.back() == ':' && block[0].op.substr(0, 5) != "FUNC_")
         {
             bool keep_label = false;
             for (auto &x : rev_adj[i])
@@ -436,7 +435,8 @@ void dead_code_elimination()
                     break;
                 }
             }
-            if (basic_blocks[i - 1].back().op == "GOTO" && basic_blocks[i - 1].back().gotoLabel == block[0].Label)
+            const auto &prev_bl = basic_blocks[i - 1];
+            if (!prev_bl.empty() && prev_bl.back().op == "GOTO" && prev_bl.back().gotoLabel == block[0].Label)
                 keep_label = true;
             if (!keep_label)
             {

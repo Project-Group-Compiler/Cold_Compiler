@@ -7,7 +7,7 @@
 extern FILE *yyin;
 bool print_ast = false;
 bool print_symtab = false;
-bool debug_enabled = false; 
+bool debug_enabled = false;
 std::string inputFilename;
 std::string outputDir = std::filesystem::current_path().string() + "/";
 std::string astDir = std::filesystem::current_path().string() + "/";
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
                       << "  -l, --lex        Print lexical analysis table\n"
                       << "  -a, --ast        Print abstract syntax tree\n"
                       << "  -s, --symtab     Print symbol tables\n"
-                      << "  -d, --debug      Print debug trace\n"    
+                      << "  -d, --debug      Print debug trace\n"
                       // << "  -t, --tac        Print three address code\n"
                       << "  -f, --force      Forcefully continue even if errors are present\n";
             return 0;
@@ -111,10 +111,8 @@ int main(int argc, char *argv[])
     {
         symTable_init();
         performParsing(inputFileString);
-        if (print_symtab){
-            std::cout << "Printing symbol table\n";
+        if (print_symtab)
             printSymbolTable(&gst, "GLOBAL_SYMTAB.csv");
-        }
         if (!has_error || force)
         {
             generate_ir();
@@ -128,10 +126,10 @@ int main(int argc, char *argv[])
             // generate asm code fn comes here
         }
         else
-            std::cerr<<"\nsyntax or semantic errors present, use -f to forcefully continue\n";
+            std::cerr << "\nsyntax or semantic errors present, use -f to forcefully continue\n";
     }
     else
-        std::cerr<<"\nlexical errors present, use -f to forcefully continue\n";
+        std::cerr << "\nlexical errors present, use -f to forcefully continue\n";
 
     fclose(yyin);
     if (has_error)

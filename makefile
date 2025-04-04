@@ -15,7 +15,6 @@ DS_CPP = $(SRC_DIR)/data_structures.cpp
 SYM_TABLE_HPP = $(SRC_DIR)/symbol_table.hpp
 SYM_TABLE = $(SRC_DIR)/symbol_table.cpp
 types_HPP = $(SRC_DIR)/types.hpp
-types = $(SRC_DIR)/types.cpp
 TAC_HPP = $(SRC_DIR)/tac.hpp
 TAC_GEN_CPP = $(SRC_DIR)/tac_gen.cpp
 TAC_OPT_CPP = $(SRC_DIR)/tac_opt.cpp
@@ -32,7 +31,6 @@ OBJS = \
 	$(BUILD_DIR)/AST.o \
 	$(BUILD_DIR)/data_structures.o \
 	$(BUILD_DIR)/symbol_table.o \
-	$(BUILD_DIR)/types.o \
 	$(BUILD_DIR)/tac_gen.o \
 	$(BUILD_DIR)/tac_opt.o \
 	$(BUILD_DIR)/driver.o
@@ -78,10 +76,6 @@ $(BUILD_DIR)/data_structures.o: $(DS_CPP) $(DS_HPP)
 $(BUILD_DIR)/symbol_table.o: $(SYM_TABLE) $(SYM_TABLE_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(SYM_TABLE)
 
-# Compile types object file
-$(BUILD_DIR)/types.o: $(types) $(types_HPP)
-	@$(CXX) $(CXXFLAGS) -c -o $@ $(types)
-
 # Compile the TAC generator object file
 $(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP) $(SYM_TABLE_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_GEN_CPP)
@@ -103,6 +97,6 @@ clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
 files_clean:
-	rm -f *.csv *.txt
+	rm -f *.csv *_debug_file.txt *_lexfile.txt
 
-.PHONY: all clean csv_clean
+.PHONY: all clean files_clean

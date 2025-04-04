@@ -1,8 +1,8 @@
 // SEMANTICS WORKING
 
 // global variables
-int g;
-int *ptr;
+int g = 0;
+int *ptr = &g;
 
 void test_arith()
 {
