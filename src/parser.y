@@ -1980,9 +1980,6 @@ init_declarator
 		if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
-		else if((!className.empty() && !inMethodBody)){
-				semantic_error("Cannot initialize class member variable", "semantic error");
-		}
 		else{
 			DBG("Inserting into symbol table: " + $1->temp_name);
 			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL,"",isStaticDecl);
@@ -2003,7 +2000,10 @@ init_declarator
 				}
 				array_decl = 0;
 			}else{
-				assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+				if(gst.find($1->temp_name) != gst.end())
+					assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+				else
+					assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place, isStaticDecl);
 			}
 
 			$$->place = $1->temp_name;

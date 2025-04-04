@@ -1,31 +1,19 @@
-static int glo=0;
-void increment() {
-    // Static variable declaration and initialization
-    static int count = 0; 
-    count++;
-    printf("Count: %d\n", count);
-}
-int add(int myNumber) {
-  static int total = 0;
-  total += myNumber;
-  return total;
-}
-int main() {
-  int x;
-    int y;
-    char c;
-    static float p;
-    increment(); 
-    increment(); 
-    increment(); 
-    glo=glo+5;
-     add(5);
-    add(2);
-     add(4);
-    add(9);
-    glo++;
+static int glo = 7;
+static int glo2;
 
-    return 0;
+void increment()
+{
+  static int count = 4;
+  static int total;
+  count++;
+  total += count;
 }
 
-  
+int main()
+{
+  glo = glo + 5;
+  glo2 = glo + 5;
+  increment();
+  increment();
+  return 0;
+}

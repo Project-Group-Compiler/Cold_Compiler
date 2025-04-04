@@ -34,7 +34,7 @@ void remainingBackpatch();
 
 void setArg1(int ind, std::string value);
 void setResult(int ind, std::string value);
-int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2);
+int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2, bool isLocalStaticInit = false);
 
 extern std::vector<quad> tac_code;
 extern std::vector<std::vector<quad>> basic_blocks;
