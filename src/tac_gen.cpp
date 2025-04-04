@@ -83,21 +83,24 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
                 std::string q1 = getTempVariable(type1);
                 emit("intToFloat", arg2, "", q1, -1);
                 q = getTempVariable(type);
-                emit("(f)" + temp_op, q, q1, q, -1);
+                emit("(f)" + temp_op, arg1, q1, q, -1);
             }
             else if (isFloat(type1) && isFloat(type2))
             {
                 q = getTempVariable(type);
-                emit("(f)" + temp_op, q, arg2, q, -1);
+                emit("(f)" + temp_op, arg1, arg2, q, -1);
             }
             else
             {
                 q = getTempVariable(type);
-                emit(temp_op, q, arg2, q, -1);
+                emit(temp_op, arg1, arg2, q, -1);
             }
         }
         else
+        {
             q = getTempVariable(type);
+            emit(temp_op, arg1, arg2, q, -1);
+        }
     }
     else
     {

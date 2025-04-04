@@ -1,3 +1,4 @@
+
 // void_in_calculation.cold
 void empty_function() {
     // This function returns void
