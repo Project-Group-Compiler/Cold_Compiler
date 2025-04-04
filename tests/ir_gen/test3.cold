@@ -1,5 +1,5 @@
-// TODO: STRUCT AS ARGS NOW WORKING
-
+// IR WORKING 
+// STRUCT as argument also WORKING fine
 //check different return types of functions
 struct a{
     int a;
@@ -10,7 +10,7 @@ void fun(){
 char fun2(int x,char c){
     return c;
 }
-int fun3(double y,int* p){
+int fun3(float y,int* p){
     return *p;
 }
 float fun4(int x, float y){
@@ -22,20 +22,20 @@ char* fun5(char str){
     return p;
 }
 int* fun6(int* p){
-    int* arr={1,2,3,4,5};
+    int* arr= p;
     return arr;
 }
-//a fun7(a p){//doesn't work
-//    return p;
-//}
+struct a fun7(struct a p){//doesn't work
+    return p;
+}
 void solve(){
     int a = 5;
     char b = 'c';
-    double c = 3.14;
+    float c = 3.14;
     float d = 2.5f;
     char str = 'c';
     int* p = &a;
-    // a=p;
+    
     struct a p1;
     fun();
     a=fun2(a, b);
@@ -43,5 +43,5 @@ void solve(){
     fun4(a, d);
     //b=fun5(str);//should give errror
     fun6(p);
-    //fun7(p1);
+    p1 = fun7(p1);
 }

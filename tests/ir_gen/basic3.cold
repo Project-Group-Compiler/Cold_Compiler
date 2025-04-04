@@ -1,3 +1,4 @@
+// IR WORKING
 // SEMANTICS WORKING
 
 // global variables
@@ -37,7 +38,7 @@ void test_others()
     c = sizeof(a);
     ++a;
     --b;
-    c += 7;
+    c += 7;//------------------
 }
 
 void test_bool()

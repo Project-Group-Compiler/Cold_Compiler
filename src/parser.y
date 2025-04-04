@@ -68,8 +68,18 @@ int previous_if_found = 0; // TODO: May need later
 std::vector<std::string> list_values;
 std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
-template <typename T>void debug(T x){std::cerr<<x<<'\n';}template <typename T>void debugsp(T x) {std::cerr << x << ' ';}
-template <typename T1, typename... T2>void debug(T1 x, T2... y){debugsp(x);if (sizeof...(y) == 1) debug(y...);}
+template <typename T>
+void _print_(const T& x) {
+    std::cerr << x;
+}
+
+template <typename T, typename... Args>
+void _print_(const T& x, const Args&... rest) {
+    std::cerr << x << ", ";
+    _print_(rest...);
+}
+#define debug(x...) std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; _print_(x); std::cerr << std::endl;
+
 
 std::vector<int>previousCaseList;
 std::vector<int>CaseContinueList;
@@ -1649,6 +1659,7 @@ init_declarator_list
 		DBG("init_declarator_list -> init_declarator");
 		$$ = $1;
 		array_decl = 0;
+		DBG("Array dec 0");
 	}
 	| init_declarator_list ',' NEXT_QUAD init_declarator {
 		DBG("init_declarator_list -> init_declarator_list ',' init_declarator");
@@ -1716,12 +1727,14 @@ init_declarator
 							"' with expression of type '" + $5->type + "'").c_str(), "type error");
 			}
 			//3AC
+			debug(rValue,array_decl);
 			if(array_decl){
 				DBG("Array declaration  ");
 				for(int i = 0; i<list_values.size();i++){
 					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->temp_name, -1);
 				}
 				array_decl = 0;
+				DBG("Array dec 0");
 			}else{
 				assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
 			}
@@ -2455,7 +2468,11 @@ direct_declarator
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
 			$$->size = $1->size * $3->intVal;
-			array_decl = 1;
+			debug(rValue);
+			if(rValue == 0){
+				array_decl = 1;
+				DBG("Array declaration  ");
+			}
 			//3AC
 			$$->place = $$->temp_name;
 		} else {
@@ -2475,7 +2492,10 @@ direct_declarator
 			$$->type = $1->type + "*";
 			$$->temp_name = $1->temp_name;
 			$$->size = 4;
-			array_decl = 1;
+			if(rValue == 0){
+				array_decl = 1;
+				DBG("Array declaration  ");
+			}
 			//3AC
 			$$->place = $$->temp_name;
 		}
@@ -2702,6 +2722,7 @@ parameter_type_list
 	: parameter_list {
 		DBG("parameter_type_list -> parameter_list");
 		$$ = $1;
+		array_decl = 0;
 	}
 	| parameter_list ',' ELLIPSIS {
 		DBG("parameter_type_list -> parameter_list ',' ELLIPSIS");
@@ -2710,6 +2731,7 @@ parameter_type_list
 		funcArgs.push_back("...");
 		//3AC
 		$$->nextlist = $1->nextlist;
+		array_decl = 0;
 	}
 	;
 

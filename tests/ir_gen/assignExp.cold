@@ -1,0 +1,15 @@
+// IR WORKING
+int main(){
+    int a, b, c, d;
+    float e, f, g, h, i, j;
+    a += 5;
+    a >>= 1;
+    a = b;
+
+    e += 5;
+    e = f;
+    e = e+5;
+
+    e = a;
+    e = a+6;
+}
