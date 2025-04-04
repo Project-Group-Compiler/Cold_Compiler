@@ -1,4 +1,5 @@
-// TODO: FIX EXPRESSION AS ARGUMENTS
+// IR WORKING
+// SEMANTICS WORKING
 
 int factorial(int n) 
 {
