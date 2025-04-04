@@ -3443,16 +3443,17 @@ function_definition
 
 		type = "";
 		string fName = string($3);
-		
-		printSymbolTable(curr_table, fName + ".csv");
-		updSymbolTable(fName);
-		inMethodBody = false;
-		//3AC
-		for(auto i: gotolablelist){
-			backpatch(i.second, gotolabel[i.first]);
+		if(fName!="("){//in case of error it gives this as fName
+			printSymbolTable(curr_table, fName + ".csv");
+			updSymbolTable(fName);
+			inMethodBody = false;
+			//3AC
+			for(auto i: gotolablelist){
+				backpatch(i.second, gotolabel[i.first]);
+			}
+        	emit(fName + " end", "", "", "", -1);
+        	remainingBackpatch();
 		}
-        emit(fName + " end", "", "", "", -1);
-        remainingBackpatch();
 	}
 	| declaration_specifiers declarator F compound_statement {
 		DBG("function_definition -> declaration_specifiers declarator F compound_statement");
@@ -3473,15 +3474,18 @@ function_definition
 
 		type = "";
 		string fName = string($3);
-		printSymbolTable(curr_table, fName + ".csv");
-		updSymbolTable(fName);
-		inMethodBody = false;
-		//3AC
-		for(auto i: gotolablelist){
-			backpatch(i.second, gotolabel[i.first]);
+		if(fName!="("){//in case of error it gives this as fName  ->this check works perfectly for this case need to review for others
+			printSymbolTable(curr_table, fName + ".csv");
+			updSymbolTable(fName);
+			inMethodBody = false;
+			//3AC
+			for(auto i: gotolablelist){
+				backpatch(i.second, gotolabel[i.first]);
+			}
+        	emit(fName + " end", "", "", "", -1);
+        	remainingBackpatch();
 		}
-        emit(fName + " end", "", "", "", -1);
-        remainingBackpatch();
+		
 	}
 	| declarator F declaration_list compound_statement {
 		DBG("function_definition -> declarator F declaration_list compound_statement");
@@ -3489,15 +3493,17 @@ function_definition
 		// Semantics
 		type = "";
 		string fName = string($2);
-		printSymbolTable(curr_table, fName + ".csv");
-		updSymbolTable(fName);
-		inMethodBody = false;
-		//3AC
-		for(auto i: gotolablelist){
-			backpatch(i.second, gotolabel[i.first]);
+		if(fName!="("){//in case of error it gives this as fName
+			printSymbolTable(curr_table, fName + ".csv");
+			updSymbolTable(fName);
+			inMethodBody = false;
+			//3AC
+			for(auto i: gotolablelist){
+				backpatch(i.second, gotolabel[i.first]);
+			}
+        	emit(fName + " end", "", "", "", -1);
+        	remainingBackpatch();
 		}
-        emit(fName + " end", "", "", "", -1);
-        remainingBackpatch();
 	}
 	| declarator F compound_statement {
 		DBG("function_definition -> declarator F compound_statement");
@@ -3505,15 +3511,17 @@ function_definition
 		// Semantics
 		type = "";
 		string fName = string($2);
-		printSymbolTable(curr_table, fName + ".csv");
-		updSymbolTable(fName);
-		inMethodBody = false;
-		//3AC
-		for (auto &i : gotolablelist) {
-			backpatch(i.second, gotolabel[i.first]);
-        }
-        emit(fName + " end", "", "", "", -1);
-        remainingBackpatch();
+		if(fName!="("){//in case of error it gives this as fName
+			printSymbolTable(curr_table, fName + ".csv");
+			updSymbolTable(fName);
+			inMethodBody = false;
+			//3AC
+			for (auto &i : gotolablelist) {
+				backpatch(i.second, gotolabel[i.first]);
+        	}
+        	emit(fName + " end", "", "", "", -1);
+        	remainingBackpatch();
+		}
 	}
 	;
 
@@ -3534,6 +3542,7 @@ F
 		else qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
 		funcArgs.clear();
 		if (gst.find(qualifiedFuncName) != gst.end()){
+			removeFuncProto();//added for handling func redifinition
 			semantic_error(("Redefinition of function " + funcName).c_str(), "scope error");
 		}
 		else{
