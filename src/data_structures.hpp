@@ -34,6 +34,8 @@ typedef struct sym_entry
 	ull offset;
 	std::map<std::string, sym_entry *> *entry;
 	std::string access; //  field: "public", "private", "protected", etc.
+	bool isStatic;
+	bool isConst;
 } sym_entry;
 
 typedef std::map<std::string, sym_entry *> sym_table;
@@ -75,7 +77,7 @@ void printTables(const std::string &inputFile);
 std::string getSizeOfType(const std::string& typeStr);
 
 void symTable_init();
-sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access = "");
+sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access = "", bool isStatic = false, bool isConst = false);
 void makeSymbolTable(std::string name, std::string f_type);
 void removeFuncProto();
 void updSymbolTable(std::string id);
@@ -101,7 +103,7 @@ int findClass(std::string class_name);
 int lookupClass(std::string class_name, std::string id);
 
 void createParamList();
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr);
+void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr,std::string access="",bool isStatic = false,bool isConst = false);
 std::vector<std::string> getFuncArgs(std::string id);
 std::string mangleFunctionName(const std::string& name, const std::vector<std::string>& paramTypes);
 std::string getTypeCode(const std::string& type);

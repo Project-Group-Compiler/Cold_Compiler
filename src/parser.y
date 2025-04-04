@@ -28,6 +28,7 @@ extern std::string outputDir;
 extern bool has_error;
 
 //Semantics
+bool isStaticDecl = false;
 bool array_decl = 0;
 string funcName = "";
 string structName = "";
@@ -68,7 +69,7 @@ int previous_if_found = 0; // TODO: May need later
 std::vector<std::string> list_values;
 std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
-template <typename T>void debug(T x){std::cerr<<x<<'\n';}template <typename T>void debugsp(T x) {std::cerr << x << ' ';}
+template <typename T>void debug(T x){if (debug_enabled) out<<x<<'\n';}template <typename T>void debugsp(T x) {if (debug_enabled) out << x << ' ';}
 template <typename T1, typename... T2>void debug(T1 x, T2... y){debugsp(x);if (sizeof...(y) == 1) debug(y...);}
 
 std::vector<int>previousCaseList;
@@ -1679,10 +1680,10 @@ init_declarator
 		else{
 			// Insert into symbol table based on context:
             // 1. No class context - normal insertion
-            // 2. In class but not in method body - class member (handled in insertClassAttr)
+            // 2. In class but not in method body - class member (handled in insertClassAttr so don't insert here)
             // 3. In class and in method body - local variable
 			if((className.empty() || inMethodBody) && !flag && !flag3){
-				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL,"",isStaticDecl);
 			}
 		}
 		if(flag3){
@@ -1694,6 +1695,7 @@ init_declarator
 		}
 		//3AC
 		$$->place = $1->temp_name;
+		isStaticDecl=0;
 	}
 	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
 		DBG("init_declarator -> declarator '=' initializer");
@@ -1703,9 +1705,12 @@ init_declarator
 		if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
+		else if((!className.empty() && !inMethodBody)){
+				semantic_error("Cannot initialize class member variable", "semantic error");
+		}
 		else{
 			DBG("Inserting into symbol table: " + $1->temp_name);
-			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
+			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL,"",isStaticDecl);
 			std::string type = $1->type;
 			DBG("Type of variable: " + $1->type);
 			DBG("Type of initializer: " + $5->type);
@@ -1733,6 +1738,7 @@ init_declarator
 			rValue = 0;
 			list_values.clear();
 		}
+		isStaticDecl=0;
 	}
 	;
 
@@ -1753,6 +1759,7 @@ storage_class_specifier
 		DBG("storage_class_specifier -> STATIC");
 		$$ = getNode($1);
 		currentDataType = "static ";
+		isStaticDecl = true; 
 		flag2 = 1;
 	}
 	| AUTO {
