@@ -1,7 +1,7 @@
 #ifndef TYPECHECK_HPP
 #define TYPECHECK_HPP
 
-#include "symbol_table.hpp"
+#include "data_structures.hpp"
 #include <string>
 #include <cctype> // for isxdigit
 #include <iostream>

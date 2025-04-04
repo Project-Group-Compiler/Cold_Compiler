@@ -1,8 +1,6 @@
 enum COLOR
 {
-    R,
-    G,
-    B
+    R, G, B
 };
 
 enum ErrorCode
@@ -10,15 +8,15 @@ enum ErrorCode
     X = 205,
     Y = 101
 };
-const int y = 9;
-int x;
 
 int main()
 {
+    enum COLOR myColor1 = G;
+    enum ErrorCode error1 = X;
+    enum ErrorCode error2 = Y;
 
     int x = G + 5;
     enum COLOR myColor1 = 75;
-    
 
     return 0;
 }

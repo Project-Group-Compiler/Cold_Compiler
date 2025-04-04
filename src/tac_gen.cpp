@@ -2,7 +2,7 @@
 #include <iostream>
 #include <map>
 #include "tac.hpp"
-#include "symbol_table.hpp"
+#include "data_structures.hpp"
 #include "types.hpp"
 
 extern std::string outputDir;
