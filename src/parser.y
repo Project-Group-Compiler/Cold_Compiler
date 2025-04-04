@@ -18,6 +18,7 @@ std::string currentDataType="";
 std::string currentAccess = "", tdstring="", tdstring2="";//for classes
 int noArgs = 0;
 int flag = 0, flag2 = 0, flag3 = 0;
+int enum_ctr=0;
 
 extern int yyleng;
 extern char* yytext;
@@ -28,7 +29,7 @@ extern std::string outputDir;
 extern bool has_error;
 
 //Semantics
-bool array_decl = 0;
+bool array_decl = 0, enum_decl = 0;
 string funcName = "";
 string structName = "";
 string className="";
@@ -1682,7 +1683,12 @@ init_declarator
             // 2. In class but not in method body - class member (handled in insertClassAttr)
             // 3. In class and in method body - local variable
 			if((className.empty() || inMethodBody) && !flag && !flag3){
-				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+				if(enum_decl){
+					insertSymbol(*curr_table, $1->temp_name, "int", 4, 0, NULL);
+					enum_decl = 0;
+				}
+				else
+					insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
 			}
 		}
 		if(flag3){
@@ -1705,7 +1711,11 @@ init_declarator
 		}
 		else{
 			DBG("Inserting into symbol table: " + $1->temp_name);
-			insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
+			if(enum_decl){
+					insertSymbol(*curr_table, $1->temp_name, "int", 4, 0, NULL);
+					enum_decl = 0;
+			} else
+				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
 			std::string type = $1->type;
 			DBG("Type of variable: " + $1->type);
 			DBG("Type of initializer: " + $5->type);
@@ -1904,6 +1914,8 @@ type_specifier
 		}
 		| enum_specifier {
 			DBG("type_specifier -> enum_specifier");
+			$1->type = "int";
+			type = "int";
 			$$ = $1;
 		}
 		| TYPE_NAME {
@@ -2334,16 +2346,25 @@ enum_specifier
 	: ENUM '{' enumerator_list '}' {
 		DBG("enum_specifier -> ENUM '{' enumerator_list '}'");
 		$$ = getNode($1, mergeAttrs($3));
+		enum_decl = 1;
 		// TODO: Add enum semantics
 	}
 	| ENUM IDENTIFIER '{' enumerator_list '}' {
 		DBG("enum_specifier -> ENUM IDENTIFIER '{' enumerator_list '}'");
 		$$ = getNode($1, mergeAttrs(getNode($2), $4));
+		// SEMANTICS
+		insertSymbol(*curr_table, std::string($2), "enum", 4, 0, NULL);
+		enum_decl = 1;
+		enum_ctr = 0;
 	}
 	| ENUM IDENTIFIER {
 		DBG("enum_specifier -> ENUM IDENTIFIER");
 		$$ = getNode($1, mergeAttrs(getNode($2)));
+		// SEMANTICS
 		currentDataType = "Enum " + std::string($2);
+		if(!lookup(std::string($2))) semantic_error(("Enum " + std::string($2) + " is not defined").c_str(), "scope error");
+		else enum_decl = 1;
+		
 	}
 	;
 
@@ -2351,9 +2372,11 @@ enumerator_list
 	: enumerator {
 		DBG("enumerator_list -> enumerator");
 		$$ = $1;
+		enum_decl = 1;
 	}
 	| enumerator_list ',' enumerator {
 		DBG("enumerator_list -> enumerator_list ',' enumerator");
+		enum_decl = 1;
 		$$ = getNode("enumerator_list", mergeAttrs($1, $3));
 	}
 	;
@@ -2362,10 +2385,23 @@ enumerator
 	: IDENTIFIER {
 		DBG("enumerator -> IDENTIFIER");
 		$$ = getNode($1);
+		enum_decl = 1;
+		insertSymbol(*curr_table, std::string($1), "int", 4, 0, NULL);
+		//3AC
+		emit("=", std::to_string(enum_ctr), "" , std::string($1), -1);
+		enum_ctr++;
+		
 	}
 	| IDENTIFIER '=' constant_expression {
 		DBG("enumerator -> IDENTIFIER '=' constant_expression");
 		$$ = getNode("=", mergeAttrs(getNode($1), $3));
+		enum_decl = 1;
+		insertSymbol(*curr_table, std::string($1), "int", 4, 1, NULL);
+		enum_ctr = $3->intVal;
+
+		//3AC
+		emit("=", std::to_string(enum_ctr), "" ,  std::string($1), -1);
+		enum_ctr++;
 	}
 	;
 
