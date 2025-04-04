@@ -739,18 +739,13 @@ postfix_expression
 	    string classType = $1->type;
 	    string methodName = string($3);
 		std::string manglemethod;
-		// DBG("DEBUG: classType = " + classType);
-		// DBG("DEBUG: temp_name " + $1->temp_name);
-		// DBG("DEBUG: node_name " + $1->node_name);
 
 		if(classType.back() != '*')
 			semantic_error(($1->temp_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
 		else
 			classType.pop_back();
-		DBG("DEBUG: classType = " + classType);
-		DBG("DEBUG: $1->type " + $1->type);
-		DBG("classname = " + className);
-    	// Special case for 'this' pointer access within a class definition
+
+		// Special case for 'this' pointer access within a class definition
     	if ($1->temp_name == "this" || 
     	    (classType.substr(0, 6) == "CLASS_" && !className.empty() && 
     	     classType.substr(6) == className)) {
