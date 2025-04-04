@@ -12,7 +12,6 @@ using namespace std;
 #include "types.hpp"
 #include "data_structures.hpp"
 #include "tac.hpp"
-#include <algorithm>
 
 std::string currentDataType="";
 std::string currentAccess = "", tdstring="", tdstring2="";//for classes
@@ -29,7 +28,9 @@ extern std::string outputDir;
 extern bool has_error;
 
 //Semantics
-bool array_decl = 0, enum_decl = 0;
+bool isStaticDecl = false;
+bool array_decl = 0;
+bool enum_decl = 0;
 string funcName = "";
 string structName = "";
 string className="";
@@ -69,7 +70,7 @@ int previous_if_found = 0; // TODO: May need later
 std::vector<std::string> list_values;
 std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
-template <typename T>void debug(T x){std::cerr<<x<<'\n';}template <typename T>void debugsp(T x) {std::cerr << x << ' ';}
+template <typename T>void debug(T x){if (debug_enabled) out<<x<<'\n';}template <typename T>void debugsp(T x) {if (debug_enabled) out << x << ' ';}
 template <typename T1, typename... T2>void debug(T1 x, T2... y){debugsp(x);if (sizeof...(y) == 1) debug(y...);}
 
 std::vector<int>previousCaseList;
@@ -663,31 +664,307 @@ postfix_expression
         DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER");
 		$$ = getNode($2, mergeAttrs($1, getNode($3)));
 		
-		// Semantics
-		string temp = string($3);
-		string temp1 = ($1->type);
-		if(temp1.back() != '*'){
+		// Semantics - check if it's a class or struct
+    	string temp = string($3);
+    	string memberName = $1->temp_name;
+    	string type = $1->type;
+
+		if(type.back() != '*'){
 			semantic_error(($1->node_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
 		}
-		else temp1.pop_back();
+		else type.pop_back();
 		
-		int ret = lookupStruct(temp1, temp);
-		if(ret == -1){
-			semantic_error("Struct not defined", "scope error");
-		}
-		else if (ret == 0){
-			semantic_error("Attribute of Struct not defined", "scope error");
-		}
-		else{
-			$$->type = StructAttrType(temp1, temp);
-			$$->temp_name = $1->temp_name + "->" + temp;
-			//3AC
-			std::string q = getTempVariable($1->type); 
+		// Debug the type to see what's reaching this rule
+
+		if ($1->temp_name == "this" || (type.substr(0, 6) == "CLASS_" && !className.empty() && type.substr(6) == className)) {
+        	// We're inside a class method accessing a member through 'this'
+        	// Check if the member exists in the current class structure
+        	if (curr_class_structure && (*curr_class_structure).find(temp) != (*curr_class_structure).end()) {
+        	    $$->type = (*curr_class_structure)[temp]->type;
+        	    $$->temp_name = $1->temp_name + "->" + temp;
+        	} else {
+        	    semantic_error(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
+        	}
+    	}
+    	// First check if it's a regular class
+		else if (type.substr(0, 6) == "CLASS_") {
+    	    int ret = lookupClass(type, temp);
+    	    if (ret == 1) {
+    	        string memberAccess = ClassAttrAccess(type, temp);
+        
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != type.substr(6))) {
+        		    semantic_error(("Cannot access " + memberAccess + " member '" + temp + 
+        		            "' of class '" + type.substr(6) + "'").c_str(), "scope error");
+        		} else {
+        		    // Member found and accessible
+        		    $$->type = ClassAttrType(type, temp);
+        		    $$->temp_name = $1->temp_name + "->" + temp;
+        		}
+    	    }
+    	    else if (ret == 0) {
+    	        semantic_error(("Member '" + temp + "' not found in class").c_str(), "scope error");
+    	    }
+    	    else {
+    	        semantic_error(("Class '" + memberName + "' not defined").c_str(), "scope error");
+    	    }
+    	}
+    	// If not a class, try struct
+    	else {
+    	    int ret = lookupStruct(type, temp);
+    	    if (ret == -1) {
+    	        semantic_error(("Struct or class '" + memberName + "' not defined").c_str(), "scope error");
+    	    }
+    	    else if (ret == 0) {
+    	        semantic_error(("Member '" + temp + "' not found in struct").c_str(), "scope error");
+    	    }
+    	    else {
+    	        $$->type = StructAttrType(type, temp);
+    	        $$->temp_name = $1->temp_name + "->" + temp;
+    	    }
+    	}
+		//3AC
+		std::string q = getTempVariable($1->type); 
+		if(type.substr(0, 6) != "UNION_")
 			emit("ptr+", $1->place, std::string($3), q, -1); //TODO: REPLACE $3 with $3->offset 
-			q = "*" + q;
-			$$->place = q;
-			//$$->nextlist.clear();
+		q = "*" + q;
+        $$->place = q;
+		$$->nextlist.clear();
+	}
+	| postfix_expression PTR_OP IDENTIFIER '(' ')'  {
+	    DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER '(' ')'");
+	    
+		$$ = getNode("method_call", mergeAttrs($1, getNode($3)));
+	
+	    // Semantics - check if it's a class method call
+	    string classType = $1->type;
+	    string methodName = string($3);
+		std::string manglemethod;
+
+		if(classType.back() != '*')
+			semantic_error(($1->temp_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
+		else
+			classType.pop_back();
+
+		// Special case for 'this' pointer access within a class definition
+    	if ($1->temp_name == "this" || 
+    	    (classType.substr(0, 6) == "CLASS_" && !className.empty() && 
+    	     classType.substr(6) == className)) {
+			
+			manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
+			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+
+    	    // We're inside a class method calling another method through 'this'
+    	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
+    	        string methodType = (*curr_class_structure)[manglemethod]->type;
+	
+    	        if (methodType.substr(0, 5) == "FUNC_") {
+    	            $$->type = methodType.substr(5); // Extract return type
+    	            $$->temp_name = $1->temp_name + "->" + methodName;
+    	            $$->isInit = 1;
+	
+    	            // Check arguments
+    	            vector<string> methodArgs = getFuncArgs(manglemethod);
+    	            if (methodArgs.size() > 1) { // More than 1 because of implicit 'this'
+						semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
+    	            }
+    	        } else {
+    	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+    	        }
+    	    } else {
+    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+    	    }
+    	}
+	    // First check if it's a class
+	    else if (classType.substr(0, 6) == "CLASS_") {
+	        // Look up method in class
+			manglemethod=mangleFunctionName(methodName,currArgs);
+			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
+	        int ret = lookupClass(classType, manglemethod);
+
+	        if (ret == 1) {
+				string memberAccess = ClassAttrAccess(classType, manglemethod);
+				
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != classType.substr(6))) {
+        		    semantic_error(("Cannot access " + memberAccess + " member '" + methodName + 
+        		            "' of class '" + classType.substr(6) + "'").c_str(), "scope error");
+        		}
+				else{
+	            	// Get method type (should be FUNC_returnType)
+	            	string methodType = ClassAttrType(classType, manglemethod);
+
+	            	// Check if it's a function
+	            	if (methodType.substr(0, 5) == "FUNC_") {
+	            	    string returnType = methodType.substr(5); // Extract return type
+	            	    $$->type = returnType;
+	            	    $$->temp_name = $1->temp_name + "->" + methodName;
+	            	    $$->isInit = 1;
+
+	            	    // Check arguments (none for this rule)
+	            	    vector<string> methodArgs = getFuncArgs(manglemethod);
+	            	    if (methodArgs.size() > 1) {  // More than 1 because the first is the implicit 'this'
+							semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
+                		}
+	            	} 
+					else {
+	            	    semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            	}
+				}
+	        } else if (ret == 0) {
+	            semantic_error(("Method '" + methodName + "' not found in class with this signature").c_str(), "scope error");
+	        } else {
+	            semantic_error(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
+	        }
+	    } else {
+	        semantic_error("Cannot call method on non-class type", "type error");
+	    }
+		//3AC
+		emit("param", $1->place, "", "", -1);
+		if($$->type != "void")
+		{
+			std::string q2 = getTempVariable($$->type);
+			emit("CALL", manglemethod, "1", q2, -1);
+			$$->place = q2;
 		}
+		else
+		{
+			emit("CALL", manglemethod, "1", "", -1);
+		}
+	    currArgs.clear();
+		actualArgs.clear();
+		$$->nextlist.clear();
+	}
+	| postfix_expression PTR_OP IDENTIFIER '(' argument_expression_list ')' {
+	    DBG("postfix_expression -> postfix_expression PTR_OP IDENTIFIER '(' argument_expression_list ')'");
+		$$ = getNode("method_call_args", mergeAttrs($1, getNode($3), $5));
+	
+	    // Semantics - check if it's a class method call with arguments
+	    string classType = $1->type;
+	    string methodName = string($3);
+		std::string manglemethod;
+    	// Special case for 'this' pointer access within a class definition
+		if(classType.back() != '*')
+			semantic_error(($1->temp_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
+		else
+			classType.pop_back();
+
+    	if (($1->temp_name == "this") || 
+    	    (classType.substr(0, 6) == "CLASS_" && !className.empty() && 
+    	     classType.substr(6) == className)) {
+			manglemethod=mangleFunctionName(methodName,currArgs);//need to skip 'this'
+			manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+
+    	    // We're inside a class method calling another method through 'this'
+    	    if (curr_class_structure && (*curr_class_structure).find(manglemethod) != (*curr_class_structure).end()) {
+    	        string methodType = (*curr_class_structure)[manglemethod]->type;
+				
+    	        if (methodType.substr(0, 5) == "FUNC_") {
+    	            string returnType = methodType.substr(5); // Extract return type
+    	            $$->type = returnType;
+    	            $$->temp_name = $1->temp_name + "->" + methodName;
+    	            $$->isInit = $5->isInit;
+
+    	            // Check arguments
+    	            vector<string> methodArgs = getFuncArgs(manglemethod);
+	
+    	            // Check number of arguments (account for implicit 'this')
+    	            if (currArgs.size() != methodArgs.size() - 1) {
+    	                semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
+    	            } else {
+    	                // Type check arguments
+    	                for (int i = 1; i < methodArgs.size(); i++) { // Start from 1 to skip 'this'
+    	                    if (methodArgs[i] == "...") break;
+	
+    	                    string msg = checkType(methodArgs[i], currArgs[i-1]);
+							if (msg.empty()) {
+    	                        semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
+    	                        break;
+    	                    }
+    	                }
+    	            }
+    	        } 
+				else {
+    	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+    	        }
+    	    } else {
+    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature ").c_str(), "scope error");
+    	    }
+    	}
+	    // First check if it's a class
+	    else if (classType.substr(0, 6) == "CLASS_") {
+	        // Look up method in class
+			manglemethod=mangleFunctionName(methodName,currArgs);
+			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
+	        int ret = lookupClass(classType, manglemethod);
+	        if (ret == 1) {
+				string memberAccess = ClassAttrAccess(classType, manglemethod);
+
+        		// If outside class trying to access private/protected member
+        		if ((memberAccess == "private" || memberAccess == "protected") && 
+        		    (className.empty() || className != classType.substr(6))) {
+        		    semantic_error(("Cannot access " + memberAccess + " member '" + methodName + 
+        		            "' of class '" + classType.substr(6) + "'").c_str(), "scope error");
+        		}
+				else{
+	            	// Get method type (should be FUNC_returnType)
+	            	string methodType = ClassAttrType(classType, manglemethod);
+
+	            	// Check if it's a function
+	            	if (methodType.substr(0, 5) == "FUNC_") {
+	            	    string returnType = methodType.substr(5); // Extract return type
+
+	            	    // Check arguments against parameter types
+	            	    vector<string> methodArgs = getFuncArgs(manglemethod);//gives className_func ->className empty right now
+						if(currArgs.size() != methodArgs.size()-1)
+							semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
+					else{
+
+	            	    for (int i = 1; i < methodArgs.size(); i++) {
+	            	        if (methodArgs[i] == "...") break;
+							string msg = checkType(methodArgs[i], currArgs[i-1]);
+							if (msg.empty()) {
+	            	            semantic_error(("Incorrect signature while calling method " + methodName).c_str(), "semantic error");
+	            	            break;
+	            	        }
+	            	    }
+					}
+	            	    $$->type = returnType;
+	            	    $$->temp_name = $1->temp_name + "->" + methodName;
+	            	    $$->isInit = $5->isInit;
+	            	} else {
+	            	    semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
+	            	}
+				}
+	        } else if (ret == 0) {
+	            semantic_error(("Method '" + methodName + "' not found in class with this signature").c_str(), "scope error");
+	        } else {
+	            semantic_error(("Class '" + $1->temp_name + "' not defined").c_str(), "scope error");
+	        }
+	    } else {
+	        semantic_error("Cannot call method on non-class type", "type error");
+	    }
+		//3AC
+		reverse(actualArgs.begin(), actualArgs.end());
+		for(auto&x : actualArgs)
+			emit("param", x, "", "", -1);
+		emit("param", $1->place, "", "", -1); 
+		if($$->type != "void")
+		{
+			std::string q2 = getTempVariable($$->type);
+			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
+			$$->place = q2;
+		}
+		else
+		{
+			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
+		}
+		$$->nextlist.clear();
+	    currArgs.clear();
+		actualArgs.clear();
+		$$->nextlist.clear();
 	}
 	| postfix_expression INC_OP {
         DBG("postfix_expression -> postfix_expression INC_OP");
@@ -1680,7 +1957,7 @@ init_declarator
 		else{
 			// Insert into symbol table based on context:
             // 1. No class context - normal insertion
-            // 2. In class but not in method body - class member (handled in insertClassAttr)
+            // 2. In class but not in method body - class member (handled in insertClassAttr so don't insert here)
             // 3. In class and in method body - local variable
 			if((className.empty() || inMethodBody) && !flag && !flag3){
 				if(enum_decl){
@@ -1700,6 +1977,7 @@ init_declarator
 		}
 		//3AC
 		$$->place = $1->temp_name;
+		isStaticDecl=0;
 	}
 	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
 		DBG("init_declarator -> declarator '=' initializer");
@@ -1708,6 +1986,9 @@ init_declarator
 		// Semantics
 		if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
+		}
+		else if((!className.empty() && !inMethodBody)){
+				semantic_error("Cannot initialize class member variable", "semantic error");
 		}
 		else{
 			DBG("Inserting into symbol table: " + $1->temp_name);
@@ -1743,6 +2024,7 @@ init_declarator
 			rValue = 0;
 			list_values.clear();
 		}
+		isStaticDecl=0;
 	}
 	;
 
@@ -1763,6 +2045,7 @@ storage_class_specifier
 		DBG("storage_class_specifier -> STATIC");
 		$$ = getNode($1);
 		currentDataType = "static ";
+		isStaticDecl = true; 
 		flag2 = 1;
 	}
 	| AUTO {
