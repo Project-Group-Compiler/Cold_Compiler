@@ -10,7 +10,7 @@ using namespace std;
 #include <cstring>
 #include "AST.hpp"
 #include "types.hpp"
-#include "symbol_table.hpp"
+#include "data_structures.hpp"
 #include "tac.hpp"
 #include <algorithm>
 
