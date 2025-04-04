@@ -4,7 +4,7 @@
 class Person 
 {
     private{
-        int age;
+        int age;//int age=23 not allowed
 
     };
     public{

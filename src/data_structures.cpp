@@ -117,7 +117,7 @@ void symTable_init()
     insertKeywords();
 }
 
-sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access)
+sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, bool isStatic, bool isConst)
 {
     sym_entry *new_sym = new (std::nothrow) sym_entry();
     if (!new_sym)
@@ -131,6 +131,8 @@ sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_ta
     new_sym->offset = offset;
     new_sym->entry = ptr;
     new_sym->access = access;
+    new_sym->isStatic = isStatic;
+    new_sym->isConst = isConst;
     return new_sym;
 }
 
@@ -745,9 +747,9 @@ void createParamList()
     avl = 1;
 }
 
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr)
+void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr,std::string access,bool isStatic,bool isConst)
 {
-    table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr)));
+    table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr,access,isStatic,isConst)));
     if (!blockSz.empty())
         blockSz.top() += size;
     else
@@ -902,14 +904,17 @@ void printSymbolTable(sym_table *table, std::string file_name)
     else
     {
         // Original format for non-class tables
-        outFile << "Name, Type, Size, isInitialized, Offset\n";
+        outFile << "Name, Type, Size, isInitialized, Offset,isStatic,isConst\n";
         for (auto it : (*table))
         {
             outFile << it.first << ", " 
                    << it.second->type << ", " 
                    << it.second->size << ", " 
                    << it.second->init << ", " 
-                   << it.second->offset << "\n";
+                   << it.second->offset <<", "
+                   << (it.second->isStatic ? "static" : "") << ", "
+                   << (it.second->isConst ? "const" : "") << "\n";
+                   
         }
     }
 }

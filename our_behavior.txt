@@ -2,3 +2,4 @@
 
 2. pointer as function arg is working fine ig(atleast int*).
 
+3. don't do this : class person *ptr, p; (if u have to declare, use separate lines like class person *ptr; class person p;)
