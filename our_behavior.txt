@@ -1,0 +1,1 @@
+1. we allow same name of class and struct. c++ doesnt bcoz it has functions in struct. but since we don't it wont affect our name mangling.

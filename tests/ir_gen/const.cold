@@ -1,3 +1,5 @@
+// IR WORKING
+
 void add(int a,int b){
 
 }
@@ -10,6 +12,7 @@ void solve(){
     int x;
     char c='n';
     int y='c';
+    int z = c;
     float f=x;
     add(2,3);
     add(2+3,4+3);

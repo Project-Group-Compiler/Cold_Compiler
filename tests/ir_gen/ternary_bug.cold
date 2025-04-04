@@ -1,0 +1,5 @@
+void f()
+{
+    int x = 0, y = 0, z = 2, w = 7;
+    int a = x > w ? y : z;
+}

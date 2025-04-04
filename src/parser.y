@@ -427,7 +427,8 @@ postfix_expression
 		//3AC
 		std::string q = getTempVariable($1->type+'*'); 
 		emit("unary&", $1->place, "", q, -1);
-		emit("ptr+", q, std::string($3), q, -1); //TODO: REPLACE $3 with $3->offset 
+		if(type.substr(0, 6) != "UNION_")
+			emit("ptr+", q, std::string($3), q, -1); //TODO: REPLACE $3 with $3->offset 
 		q = "*" + q;
         $$->place = q;
 		$$->nextlist.clear();

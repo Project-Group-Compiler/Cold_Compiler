@@ -206,7 +206,7 @@ void constant_folding()
     {
         bool add_instr = true;
         std::string &curr_op = instr.op;
-        if (curr_op.substr(0, 3) == "(f)" && curr_op.back() != '=')
+        if (curr_op.length() > 3 && curr_op.substr(0, 3) == "(f)" && curr_op.back() != '=')
         {
             if (is_num_constant(instr.arg1) && is_num_constant(instr.arg2))
             {
@@ -224,7 +224,8 @@ void constant_folding()
                 {
                     if (fabs(arg2) < 1e-9)
                         modify_instr = false;
-                    arg1 = arg1 / arg2;
+                    if (modify_instr)
+                        arg1 = arg1 / arg2;
                 }
                 if (std::isnan(arg1) || std::isinf(arg1))
                     modify_instr = false;
@@ -254,13 +255,15 @@ void constant_folding()
                 {
                     if (arg2 == 0)
                         modify_instr = false;
-                    arg1 = arg1 / arg2;
+                    if (modify_instr)
+                        arg1 = arg1 / arg2;
                 }
                 else if (actual_op == '%')
                 {
                     if (arg2 == 0)
                         modify_instr = false;
-                    arg1 = arg1 % arg2;
+                    if (modify_instr)
+                        arg1 = arg1 % arg2;
                 }
                 if (std::isnan(arg1) || std::isinf(arg1))
                     modify_instr = false;
