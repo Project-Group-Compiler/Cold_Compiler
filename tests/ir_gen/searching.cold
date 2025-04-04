@@ -1,3 +1,4 @@
+// IR WORKING
 // SEMANTICS WORKING
 
 void func(int arr[], int n)
