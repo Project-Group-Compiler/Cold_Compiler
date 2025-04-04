@@ -4,7 +4,8 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
-#include "data_structures.hpp"
+#include "symbol_table.hpp"
+
 
 class quad
 {

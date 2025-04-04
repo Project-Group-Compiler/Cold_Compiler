@@ -40,6 +40,63 @@ int blockCnt = 1;
 std::vector<std::string> lib_funcs={"scanf", "printf", "malloc", "calloc", "free", "fopen", "fputs", "fgets",
      "fclose", "fprintf", "fscanf", "fgetc", "fputc","strlen", "strcmp", "strncmp", "strcpy", "strcat", "va_start", "va_arg", "va_end"};
 
+
+std::vector<std::pair<std::string, std::string>> typedefTable;
+extern std::string outputDir;
+
+std::string searchTypedefTable(std::string Token)
+{
+    for (int i = 0; i < typedefTable.size(); i++)
+    {
+        if (typedefTable[i].first == Token)
+            return typedefTable[i].second;
+    }
+    return "";
+}
+
+void printType(std::ofstream &out)
+{
+    if (typedefTable.empty()){
+        std::cerr << "Typedef table is empty\n";
+        return;
+    }
+        
+    out << "\nTypedef Table:\n\n";
+    out << std::left << std::setw(60) << "Definition"
+        << std::setw(25) << "Keyword" << std::endl;
+    out << std::string(90, '-') << "\n";
+    for (int i = 0; i < typedefTable.size(); i++)
+    {
+        out << std::left << std::setw(60) << typedefTable[i].first
+            << std::setw(25) << typedefTable[i].second << "\n";
+    }
+    out << std::string(90, '-') << "\n";
+}
+
+void printTables(const std::string &inputFile)
+{
+    std::ofstream out(outputDir + inputFile + "_tables.txt");
+    if (!out)
+    {
+        print_error("cannot open " + outputDir + inputFile + "_tables.txt");
+        return;
+    }
+    printType(out);
+}
+
+std::string getSizeOfType(const std::string& typeStr) {
+    if (typeStr == "int") {
+        return "4";
+    } else if (typeStr == "int*") {
+        return "4";
+    } else if(typeStr.size() >= 4 && typeStr.substr(0, 4) == "int*"){//for int****
+        return "4";
+    } else {
+        return "0"; // Unknown type
+    }
+}
+
+
 void symTable_init()
 {
     // Initialize global stacks.

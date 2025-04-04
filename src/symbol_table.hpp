@@ -1,10 +1,15 @@
 #ifndef SYMBOL_TABLE_H
 #define SYMBOL_TABLE_H
 
+#pragma once
+#include <fstream>
+#include <cstring>
+#include <stdio.h>
 #include <string>
 #include <vector>
 #include <map>
 #include <stack>
+#include <iomanip>
 #include <iostream>
 
 #define ll long long
@@ -12,6 +17,14 @@
 #define sym_file 0
 #define sym_function 1
 #define sym_block 2
+
+struct TOKEN
+{
+    int line;
+    int column;
+    std::string token_type;
+    std::string lexeme;
+};
 
 typedef struct sym_entry
 {
@@ -51,6 +64,15 @@ extern int avl;
 extern typ_table typ_gst;
 extern std::map<typ_table *, typ_table *> typ_parent_table;
 extern typ_table *curr_typ;
+
+//old functions
+extern std::vector<std::pair<std::string, std::string>> typedefTable;
+
+void print_error(const std::string &message);
+std::string searchTypedefTable(std::string Token);
+void printType(std::ofstream &out);
+void printTables(const std::string &inputFile);
+std::string getSizeOfType(const std::string& typeStr);
 
 void symTable_init();
 sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access = "");

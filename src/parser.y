@@ -9,7 +9,6 @@ using namespace std;
 #include <algorithm>
 #include <cstring>
 #include "AST.hpp"
-#include "data_structures.hpp"
 #include "types.hpp"
 #include "symbol_table.hpp"
 #include "tac.hpp"
@@ -196,8 +195,6 @@ primary_expression
 	}
 	| STRING_LITERAL {
         DBG("primary_expression -> STRING_LITERAL");
-		std::string check=std::string($1);
-		addToConstantTable(check,"String Literal");
 		$$ = getNode($1);
 		
 		// Semantics for string literals
@@ -2230,8 +2227,6 @@ G
 		else if (flag==2) {
 			//typedefTable.push_back(make_pair(check, tdstring));
 			flag = 0;
-		} else {
-			//addToSymbolTable(check, currentDataType);
 		}
 	}
 	;
@@ -2429,8 +2424,6 @@ direct_declarator
 		else if (flag==2) {
 			typedefTable.push_back(make_pair(check, tdstring));
 			//flag = 0;
-		} else {
-			addToSymbolTable(check, currentDataType);
 		}
 		// Semantics
 		$$->expType = 1; // Variable
@@ -2456,7 +2449,6 @@ direct_declarator
 		Node* node = getNode("[ ]", mergeAttrs($3));
 		$$ = getNode("direct_declarator[..]", mergeAttrs($1, node));
 
-		updateLastSymbolEntry();
 		// Semantics
 		if ($1->expType == 1 || $1->expType == 2) {
 			$$->expType = 2;
@@ -2477,7 +2469,6 @@ direct_declarator
 		insertAttr(attr, NULL, "[ ]", 0);
 		$$ = getNode("direct_declarator[]", &attr);
 
-		updateLastSymbolEntry();
 		// Semantics
 		if ($1->expType <= 2) {
 			$$->expType = 2;
@@ -2497,7 +2488,6 @@ direct_declarator
 		Node *node = getNode("( )", mergeAttrs($4));
 		$$ = getNode("direct_declarator", mergeAttrs($1, node));
 
-		updateFuncSymbolEntry(noArgs);
 		noArgs = 0;
 		// Semantics
 		string baseName = $1->temp_name;//just function name -> don't change to funcName will cause issues as it is global
@@ -2614,7 +2604,6 @@ direct_declarator
 		insertAttr(attr, $1, "", 1);
 		insertAttr(attr, NULL, "( )", 0);
 		$$ = getNode("direct_declarator", &attr);
-		updateFuncSymbolEntry(0);
 
 		string baseName = $1->temp_name;
 		std::string mangledName;
@@ -3552,7 +3541,6 @@ F
 
 void performParsing(const std::string &inputFile)
 {
-	onlyLexin = false;
 	if(debug_enabled)
 		out = std::ofstream(outputDir + inputFile + "_debug_file.txt");
     beginAST(inputFile);
