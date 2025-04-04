@@ -1,4 +1,4 @@
-// SEMANTICS WORKING
+// SEMANTICS WORKING ->but doesn't work if 'nod' is accessed so better remove this testcase
 
 struct node{
     int x;
