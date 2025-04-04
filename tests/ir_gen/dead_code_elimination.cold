@@ -13,6 +13,7 @@ int target1()
 
 int target2()
 {
+    int b;
     do
     {
         b++;

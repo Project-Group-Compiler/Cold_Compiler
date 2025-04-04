@@ -1,4 +1,5 @@
 // SEMNATICS WORKING
+// IR WORKING
 
 void testGoto() 
 {

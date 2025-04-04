@@ -1,4 +1,5 @@
-// SEMANTICS WORKING ->but doesn't work if 'nod' is accessed so better remove this testcase
+// SEMANTICS WORKING
+// IR WORKING
 
 struct node{
     int x;
@@ -6,20 +7,11 @@ struct node{
     struct node* next;
 };
 
-int func(int a,int b){
-    int c = a & b;
-    return c;
-
-}
-
-int main(){
-    int  b = 1, d = 3;
-    int a = 0;
-    struct node* node;
-    struct nod {
-        int c1,c2;
-        struct node r;
-    };
-
-    a = a+ 100;
+int main()
+{
+    struct node* head, temp;
+    // head = (struct node*)malloc(sizeof(struct node));
+    // This malloc does not work
+    head->x = 1;
+    head->next = temp;
 }

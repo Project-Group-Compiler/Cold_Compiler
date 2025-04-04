@@ -1,4 +1,5 @@
 // SEMANTICS WORKING
+// IR WORKING
 
 // Function overloading example
 int func(int x) {
@@ -8,7 +9,7 @@ int func(int x) {
 int func2(int y) {
     return y + y; 
 }
-double func(double x) {
+float func(float x) {
     return x / 2; 
 }
 int func(int x,int y) {
@@ -19,14 +20,13 @@ int func(){
 }
 void solve() {
     int num1 = 4;
-    double num2 = 10.5;
+    float num2 = 10.5;
     int z;
     char* b="jhel";
     func(num1);
     func(num2);
     func(num1, num1);
     func2(z);
-    //func(b);//gives error
 }
 
 int main() {
