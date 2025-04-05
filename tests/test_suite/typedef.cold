@@ -1,0 +1,19 @@
+// SEMANTICS WORKING
+// IR WORKING
+
+typedef int integer;
+typedef char character;
+
+typedef struct test{
+    int n;
+} Test;
+
+int main() 
+{
+    integer a;
+    character ch;
+    struct Test t;
+    struct test t2;
+    t.n=1;
+    t2.n=2;
+}
