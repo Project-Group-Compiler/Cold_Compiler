@@ -32,9 +32,7 @@
 
 //3AC 
 %type<Int> NEXT_INSTR WRITE_GOTO
-%type<ptr> OR_WHAT CASE_LABEL IF_COND EXPR_COND EXPR_STMT_COND DEFAULT_LABEL
-%type<ptr> N
-
+%type<ptr> OR_WHAT CASE_LABEL IF_COND EXPR_COND EXPR_STMT_COND DEFAULT_LABEL SKIP
 
 %start translation_unit
 
@@ -3410,7 +3408,7 @@ IF_COND
     }
 	;
 
-N
+SKIP
     : %empty {
         int a = getCurrentSize();
 		$$ = new Node;
@@ -3430,7 +3428,7 @@ selection_statement
 		$$->continuelist = $3->continuelist;
 		$$->breaklist = $3->breaklist;
 	}
-	| IF_COND NEXT_INSTR statement N ELSE NEXT_INSTR statement {
+	| IF_COND NEXT_INSTR statement SKIP ELSE NEXT_INSTR statement {
 		DBG("selection_statement -> IF '(' expression ')' statement ELSE statement");
 		$$ = getNode("if-else", mergeAttrs($1, $3, $7));
 		//3AC
@@ -3548,7 +3546,7 @@ iteration_statement
 
 		emit("GOTO", "", "", "", $4);
 	}
-	| FOR '(' expression_statement NEXT_INSTR EXPR_STMT_COND NEXT_INSTR expression N ')' NEXT_INSTR statement {
+	| FOR '(' expression_statement NEXT_INSTR EXPR_STMT_COND NEXT_INSTR expression SKIP ')' NEXT_INSTR statement {
 		DBG("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
 		$$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
 
