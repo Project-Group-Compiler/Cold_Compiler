@@ -921,9 +921,9 @@ postfix_expression
 		
 		DBG("unary name: "+string($1->place));
 		DBG("node name: "+string($1->node_name));
-		DBG("temp_name: "+string($1->temp_name));
+		DBG("tempName: "+string($1->tempName));
 		DBG("type: "+string($1->type));
-		bool t=searchIdConst($1->temp_name);
+		bool t=searchIdConst($1->tempName);
 		DBG(to_string(t));
 		if(t){
 			semantic_error("Increment of const variable", "semantic error");
@@ -952,9 +952,9 @@ postfix_expression
 		
 		DBG("unary name: "+string($1->place));
 		DBG("node name: "+string($1->node_name));
-		DBG("temp_name: "+string($1->temp_name));
+		DBG("tempName: "+string($1->tempName));
 		DBG("type: "+string($1->type));
-		bool t=searchIdConst($1->temp_name);
+		bool t=searchIdConst($1->tempName);
 		DBG(to_string(t));
 		if(t){
 			semantic_error("Decrement of const variable", "semantic error");
@@ -1775,9 +1775,9 @@ assignment_expression
         
 		DBG("unary name: "+string($1->place));
 		DBG("node name: "+string($1->node_name));
-		DBG("temp_name: "+string($1->temp_name));
+		DBG("tempName: "+string($1->tempName));
 		DBG("type: "+string($1->type));
-		bool t=searchIdConst($1->temp_name); //still won't suppport sturct like struct->member or class
+		bool t=searchIdConst($1->tempName); //still won't suppport sturct like struct->member or class
 		DBG(to_string(t));
 		if(t){
 			semantic_error("Assignment of const variable", "semantic error");
