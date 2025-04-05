@@ -85,7 +85,7 @@ void updSymbolTable(std::string id);
 sym_entry *lookup(std::string id);
 sym_entry *currLookup(std::string id);
 void insertKeywords();
-void insert_imp_func(std::string func_name, std::vector<std::string> type, std::string ret_type);
+void insert_std_func(std::string func_name, std::vector<std::string> type, std::string ret_type);
 std::string getType(std::string id);
 void createStructTable();
 int insertStructAttr(std::string attr, std::string type, ull size, bool init);
