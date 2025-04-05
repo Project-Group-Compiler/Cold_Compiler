@@ -29,6 +29,7 @@ extern bool has_error;
 
 //Semantics
 bool isStaticDecl = false;
+bool isConstDecl = false;
 bool array_decl = 0;
 bool enum_decl = 0;
 string funcName = "";
@@ -978,40 +979,56 @@ postfix_expression
         DBG("postfix_expression -> postfix_expression INC_OP");
 		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
-		// Semantics
-		$$->isInit = $1->isInit;
-		string temp = postfixExpression($1->type, 3);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $1->intVal + 1;
-			//3AC
-			std::string q = getTempVariable($$->type);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit("S++", $1->place, "", q, -1);
+		DBG("unary name: "+string($1->place));
+		bool t=searchIdConst($1->place);
+		DBG(to_string(t));
+		if(t){
+			semantic_error("Increment of const variable", "semantic error");
 		}
 		else{
-			semantic_error("Increment not defined for this type", "type error");
+			// Semantics
+			$$->isInit = $1->isInit;
+			string temp = postfixExpression($1->type, 3);
+			if(!temp.empty()){
+				$$->type = temp;
+				$$->intVal = $1->intVal + 1;
+				//3AC
+				std::string q = getTempVariable($$->type);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit("S++", $1->place, "", q, -1);
+			}
+			else{
+				semantic_error("Increment not defined for this type", "type error");
+			}
 		}
 	}
 	| postfix_expression DEC_OP {
         DBG("postfix_expression -> postfix_expression DEC_OP");
 		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
-		// Semantics
-		$$->isInit = $1->isInit;
-		string temp = postfixExpression($1->type, 3);
-		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $1->intVal - 1;
-			//3AC
-			std::string q = getTempVariable($$->type);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit("S--", $1->place, "", q, -1);
+		DBG("unary name: "+string($1->place));
+		bool t=searchIdConst($1->place);
+		DBG(to_string(t));
+		if(t){
+			semantic_error("Decrement of const variable", "semantic error");
 		}
 		else{
-			semantic_error("Decrement not defined for this type", "type error");
+			// Semantics
+			$$->isInit = $1->isInit;
+			string temp = postfixExpression($1->type, 3);
+			if(!temp.empty()){
+				$$->type = temp;
+				$$->intVal = $1->intVal - 1;
+				//3AC
+				std::string q = getTempVariable($$->type);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit("S--", $1->place, "", q, -1);
+			}
+			else{
+				semantic_error("Decrement not defined for this type", "type error");
+			}
 		}
 	}
 	;
@@ -1816,26 +1833,34 @@ assignment_expression
         DBG("assignment_expression -> unary_expression assignment_operator assignment_expression");
         $$ = getNode($2, mergeAttrs($1, $4));
         
-        // Semantics
-        string temp = assignExp($1->type, $4->type, string($2));
-        if (!temp.empty()) {
-            if (temp == "ok") {
-                $$->type = $1->type;
-            } else if (temp == "warning") {//doesn't happen yet
-                $$->type = $1->type;
-                warning("Assignment with incompatible pointer type");
-            }
-			// 3AC
-			int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
-			$$->place = $1->place;
-			backpatch($4->nextlist, num);
-			rValue = 0;
-        } else {
-            semantic_error("Incompatible types when assigning type", "type error");
-        }
-        if ($1->expType == 3 && $4->isInit) {
-            updInit($1->temp_name);
-        }
+		DBG("unary name: "+string($1->place));
+		bool t=searchIdConst($1->place);
+		DBG(to_string(t));
+		if(t){
+			semantic_error("Assignment of const variable", "semantic error");
+		}
+		else{
+        	// Semantics
+        	string temp = assignExp($1->type, $4->type, string($2));
+        	if (!temp.empty()) {
+        	    if (temp == "ok") {
+        	        $$->type = $1->type;
+        	    } else if (temp == "warning") {//doesn't happen yet
+        	        $$->type = $1->type;
+        	        warning("Assignment with incompatible pointer type");
+        	    }
+				// 3AC
+				int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
+				$$->place = $1->place;
+				backpatch($4->nextlist, num);
+				rValue = 0;
+        	} else {
+        	    semantic_error("Incompatible types when assigning type", "type error");
+        	}
+        	if ($1->expType == 3 && $4->isInit) {
+        	    updInit($1->temp_name);
+        	}
+		}
     }
     ;
 
@@ -1953,7 +1978,11 @@ init_declarator
 		//
 		$$ = $1;  // Just pass the node directly
 		// Semantics
-		if(currLookup($1->temp_name)){
+		if(isConstDecl){
+			semantic_error("Const declaration without initialization", "semantic error");
+			isConstDecl = 0;
+		}
+		else if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
 		else if($1->expType == 3){
@@ -1974,7 +2003,7 @@ init_declarator
 					enum_decl = 0;
 				}
 				else
-					insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL);
+					insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 0, NULL,"",isStaticDecl);
 			}
 		}
 		if(flag3){
@@ -1991,7 +2020,7 @@ init_declarator
 	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
 		DBG("init_declarator -> declarator '=' initializer");
 		$$ = getNode("=", mergeAttrs($1, $5));
-		
+		DBG("Function Name: "+funcName);
 		// Semantics
 		if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
@@ -2002,7 +2031,7 @@ init_declarator
 					insertSymbol(*curr_table, $1->temp_name, "int", 4, 0, NULL);
 					enum_decl = 0;
 			} else
-				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL);
+				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL,"",isStaticDecl,isConstDecl);
 			std::string type = $1->type;
 			DBG("Type of variable: " + $1->type);
 			DBG("Type of initializer: " + $5->type);
@@ -2036,6 +2065,7 @@ init_declarator
 			list_values.clear();
 		}
 		isStaticDecl=0;
+		isConstDecl=0;
 	}
 	;
 
@@ -2680,7 +2710,7 @@ enumerator
 		DBG("enumerator -> IDENTIFIER");
 		$$ = getNode($1);
 		enum_decl = 1;
-		insertSymbol(*curr_table, std::string($1), "int", 4, 0, NULL);
+		insertSymbol(*curr_table, std::string($1), "int", 4, 0, NULL,"",false,1);
 		//3AC
 		emit("=", std::to_string(enum_ctr), "" , std::string($1), -1);
 		enum_ctr++;
@@ -2690,7 +2720,7 @@ enumerator
 		DBG("enumerator -> IDENTIFIER '=' constant_expression");
 		$$ = getNode("=", mergeAttrs(getNode($1), $3));
 		enum_decl = 1;
-		insertSymbol(*curr_table, std::string($1), "int", 4, 1, NULL);
+		insertSymbol(*curr_table, std::string($1), "int", 4, 1, NULL,"",false,1);
 		enum_ctr = $3->intVal;
 
 		//3AC
@@ -2704,6 +2734,7 @@ type_qualifier
 		DBG("type_qualifier -> CONST");
 		$$ = getNode($1);
 		currentDataType = "const ";
+		isConstDecl = true;
 		flag2 = 1;
 	}
 	| VOLATILE {

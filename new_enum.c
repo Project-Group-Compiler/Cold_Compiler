@@ -26,12 +26,13 @@ enum ErrorCode
     Y, Z = 890, A, B = 90
 };
 
-int X;
 
 int main()
 {
 // 
     // enum COLOR myColor1 = G;
-    enum ErrorCode error1 = 9;
+    int X;
+    enum ErrorCode error1 = R +668;
+    // R++;
     return 0;
 }

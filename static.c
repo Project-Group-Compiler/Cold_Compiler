@@ -1,10 +1,18 @@
+const int count=45;
 void increment()
 {
-  static int count = 4;
+  const int count = 4;
+  int x=5;
+  x++;
+  x=x+1;
   count += 9;
+  count=count*8;
+  count=count/2;
+  count=count+1;
+  x-=5;
+  count=count-1;
 }
 
-static int count = 5;
 
 int main()
 {
@@ -12,5 +20,7 @@ int main()
   increment();
   increment();
   count++;
+  count=count+count;
+  count--;
   return 0;
 }
