@@ -37,3 +37,5 @@ and
         return;
     }
 ```
+
+7. static vars -> local scope and global scope both allowed. static can be int, char or float. CAUTION : Please don't initialize float static with an int constant (no error but wrong code), please initialize it with float constant.

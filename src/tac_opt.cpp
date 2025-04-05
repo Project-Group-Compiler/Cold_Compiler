@@ -483,9 +483,10 @@ void dead_code_elimination()
 
 void run_optimisations()
 {
+    addgotoLabels();
     constant_folding();
     dead_code_elimination();
-    for (auto &instr : tac_code)
-        std::cout << stringify(instr) << "\n";
-    std::cout << "\n-------------------------\n\n";
+    // for (auto &instr : tac_code)
+    //     std::cout << stringify(instr) << "\n";
+    // std::cout << "\n-------------------------\n\n";
 }

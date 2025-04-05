@@ -2,7 +2,8 @@
 
 EXECUTABLE="bin/ir_gen"
 TEST_DIR="tests/ir_gen"
-OUTPUT_DIR="outputs"
+OUTPUT_DIR="outputs/IR"
+OUTPUT_DIR_OPT="outputs/opt"
 
 # Ensure test directory exists
 if [ ! -d "$TEST_DIR" ]; then
@@ -10,8 +11,14 @@ if [ ! -d "$TEST_DIR" ]; then
   exit 1
 fi
 
+# Ensure executable exists
+if [ ! -f "$EXECUTABLE" ]; then
+  echo "Error: Executable '$EXECUTABLE' does not exist."
+  exit 1
+fi
+
 # Create the outputs directory if it doesn't exist
-mkdir -p "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR" "$OUTPUT_DIR_OPT"
 
 # Run the executable over each test case
 for test_case in "$TEST_DIR"/*.cold; do
@@ -20,13 +27,18 @@ for test_case in "$TEST_DIR"/*.cold; do
     test_name=$(basename "$test_case" .cold)
     echo "Running test case: $test_name"
 
-    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" $@
+    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" "-O0" "$@"
+
 
     if [ $? -eq 0 ]; then
-      echo "Test $test_name passed. TAC saved in $OUTPUT_DIR/."
+      echo "Test $test_name passed."
     else
       echo "Test $test_name failed."
+      continue
     fi
+
+    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR_OPT/" "$@"
+
   else
     echo "No test cases found in '$TEST_DIR'."
   fi
