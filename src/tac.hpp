@@ -6,7 +6,6 @@
 #include <iomanip>
 #include "data_structures.hpp"
 
-
 class quad
 {
 public:
@@ -64,7 +63,12 @@ inline std::string stringify(const quad &instr)
             s += instr.result + " = " + instr.arg1 + " " + curr_op.back() + " " + instr.arg2 + "\t\t(float)";
     }
     else if (curr_op == "=")
-        s += instr.result + " = " + instr.arg1;
+    {
+        if (instr.result.substr(0, 3) == "_s_")
+            s += instr.result.substr(3) + " = " + instr.arg1 + "\t(static)";
+        else
+            s += instr.result + " = " + instr.arg1;
+    }
     else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
         s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
     else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+")

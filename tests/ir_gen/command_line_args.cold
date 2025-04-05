@@ -3,11 +3,6 @@
 
 int main(int argc, char* argv[])
 {   
-    int ar3[];
-
     char* x = argv[2];
-    int arr[2];
-    int ar1[2] = {1,2};
-    int ar2[2] = {1,2};
 	return 0;
 }
