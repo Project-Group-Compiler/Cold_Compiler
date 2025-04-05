@@ -46,6 +46,7 @@ int Anon_StructCounter=0;
 int Anon_ClassCounter = 0;
 vector<string> funcArgs;
 vector<string> classMethodArgs; 
+std::vector<std::string> varargsFuncs;
 bool inMethodBody = false;  // Set true when inside a method body
 vector<string> idList;
 vector<string> currArgs;
@@ -312,6 +313,7 @@ postfix_expression
 		string temp = searchIdentifierType(mangledName);
 		if(temp.empty()){
 			//semantic_error(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
+			DBG("func nhi milaaaaa");
 		}
 		else{
 			if(temp.substr(0, 5) == "FUNC_"){
@@ -335,21 +337,45 @@ postfix_expression
 			DBG("DEBUG: Function call type = " + $$->type);
 			if($1->expType == 3){
 				vector<string> funcArgs = getFuncArgs(mangledName);
-				if (funcArgs.back() == "...") { //if "..." is present, remove it and do not check for size
-					funcArgs.pop_back();
-				}
-				else if(currArgs.size()!=funcArgs.size()){
-					semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
-				}
-				else{
-					for(int i=0; i<funcArgs.size(); i++){
-					if(funcArgs[i]=="...")break;
-					string msg = checkType(funcArgs[i],currArgs[i]);
-					if(msg.empty()){
-						semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
-						break;
+				bool varargs = true;
+				for(auto it : varargsFuncs){
+					if(isMatching(it, mangledName)){
+						int i=0,j=0;
+						mangledName = it;
+						while(it[i]==mangledName[j]){
+							i++;
+							j++;
+						}
+						i--;
+						for(j; j<mangledName.size(); j++){
+							if(mangledName[j]!=it[i]){
+								varargs = false;
+								semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
+								break;
+							}
+						}
+					}
+					else{
+						varargs = false;
 					}
 				}
+				if(!varargs){
+					if (funcArgs.back() == "...") { //if "..." is present, remove it and do not check for size
+						funcArgs.pop_back();
+					}
+					else if(currArgs.size()!=funcArgs.size()){
+						semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
+					}
+					else{
+						for(int i=0; i<funcArgs.size(); i++){
+							if(funcArgs[i]=="...")break;
+							string msg = checkType(funcArgs[i],currArgs[i]);
+							if(msg.empty()){
+								semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
+								break;
+							}
+						}
+					}
 				}
 				//3AC
 				$$->temp_name = $1->temp_name;
@@ -3794,6 +3820,7 @@ function_definition
 		// Semantics
 		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
+		DBG("Function name: " + $2->temp_name);
         if ($2->type.find("*") != string::npos) {
             // Use the complete type from declarator which includes pointer
             $$->type = $2->type;
@@ -3825,6 +3852,7 @@ function_definition
 		// Semantics 
 		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
+		DBG("Function name: " + $2->temp_name);
 		if ($2->type.find("*") != string::npos) {
             // Use the complete type from declarator which includes pointer
             $$->type = $2->type;
@@ -3857,6 +3885,7 @@ function_definition
 		// Semantics
 		type = "";
 		string fName = string($2);
+		DBG("Function name: " + fName);
 		if(fName!="("){//in case of error it gives this as fName
 			printSymbolTable(curr_table, fName + ".csv");
 			updSymbolTable(fName);
@@ -3875,6 +3904,7 @@ function_definition
 		// Semantics
 		type = "";
 		string fName = string($2);
+		DBG("Function name: " + fName);
 		if(fName!="("){//in case of error it gives this as fName
 			printSymbolTable(curr_table, fName + ".csv");
 			updSymbolTable(fName);
@@ -3901,9 +3931,13 @@ F
 		    } 
 		    qualifiedFuncName=mangleFunctionName(funcName, std::vector<string>(funcArgs.begin() + 1, funcArgs.end()));//need to skip 'this'
 			qualifiedFuncName="FUNC_" + std::to_string(className.size()) + className + "_" + qualifiedFuncName.substr(5);
-		    
 		}
 		else qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
+		if(qualifiedFuncName.back() == 'm'){
+			varargsFuncs.push_back(qualifiedFuncName);
+			DBG("Pushed into var args vec: " + qualifiedFuncName);
+		}
+		DBG("Mangled Function name: " + qualifiedFuncName);
 		funcArgs.clear();
 		if (gst.find(qualifiedFuncName) != gst.end()){
 			removeFuncProto();//added for handling func redifinition
