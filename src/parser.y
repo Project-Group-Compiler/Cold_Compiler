@@ -2409,7 +2409,6 @@ struct_or_union_specifier
         $$ = getNode($1, mergeAttrs(getNode($2), $5));
 		std::string check=std::string($2);
 		// Semantics
-		std::cout<<"struct or union "<<$1<<std::endl;
 		if(std::string($1)=="struct" && printStructTable("STRUCT_" + string($2)) == 1 ){
 			if(findStruct("UNION_" + string($2)) == 1){
 				semantic_error(("UNION " + string($2) + " is already defined").c_str(), "scope error");
