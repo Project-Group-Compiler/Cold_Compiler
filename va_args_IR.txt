@@ -1,0 +1,37 @@
+Three Address Code:
+
+0:  FUNC_8find_sum_im start :
+1:  sum = 0
+2:  param count
+3:  param args
+4:  CALL va_start 2
+5:  IF count GOTO 7
+6:  GOTO 15
+7:  param "int"
+8:  param args
+9:  _t_0 = CALL va_arg 2
+10:  _t_1 = sum + _t_0
+11:  sum = _t_1
+12:  _t_2 = count - 1
+13:  count = _t_2
+14:  GOTO 5
+15:  param args
+16:  CALL va_end 1
+17:  RETURN sum
+18:  FUNC_8find_sum_im end
+19:  FUNC_4main_v start :
+20:  param 6
+21:  param 4
+22:  param 2
+23:  param 3
+24:  _t_3 = CALL FUNC_8find_sum_im 4
+25:  ans = _t_3
+26:  param 3
+27:  param 1
+28:  param 2
+29:  _t_4 = CALL FUNC_8find_sum_im 3
+30:  ans = _t_4
+31:  RETURN 0
+32:  FUNC_4main_v end
+
+------------------------------------------------------------
