@@ -8,6 +8,7 @@ PARSER = $(SRC_DIR)/parser.y
 LEXER_CPP = $(BUILD_DIR)/lexer.cpp
 PARSER_CPP = $(BUILD_DIR)/parser.cpp
 PARSER_HPP = $(BUILD_DIR)/parser.hpp
+PARSER_HEADER_HPP = $(SRC_DIR)/parserHeader.hpp
 AST_HPP = $(SRC_DIR)/AST.hpp
 AST_CPP = $(SRC_DIR)/AST.cpp
 DS_HPP = $(SRC_DIR)/data_structures.hpp
@@ -58,7 +59,7 @@ $(BUILD_DIR)/lexer.o: $(LEXER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP) $(TYPES_HP
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(LEXER_CPP)
 
 # Compile parser object file
-$(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(AST_HPP) $(DS_HPP) $(TYPES_HPP) $(TAC_HPP)
+$(BUILD_DIR)/parser.o: $(PARSER_CPP) $(PARSER_HPP) $(PARSER_HEADER_HPP) $(AST_HPP) $(DS_HPP) $(TYPES_HPP) $(TAC_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(PARSER_CPP)
 
 # Compile AST object file
