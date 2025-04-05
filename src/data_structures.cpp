@@ -83,7 +83,14 @@ void printTables(const std::string &inputFile)
     }
     printType(out);
 }
-
+bool searchIdConst(std::string id) {
+    sym_entry* n = lookup(id);
+    if(n) {
+        bool s = n->isConst;
+        return s;     
+    }
+    return "";
+}
 std::string getSizeOfType(const std::string& typeStr) {
     if (typeStr == "int") {
         return "4";

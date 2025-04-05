@@ -7,6 +7,11 @@ void increment()
   int x = 8;
   static int count = 4;
   count += 9;
+  count=count*8;
+  count=count/2;
+  count=count+1;
+  x-=5;
+  count=count-1;
 }
 
 int glo4 = 7;
