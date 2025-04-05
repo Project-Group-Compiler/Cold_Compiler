@@ -1,7 +1,7 @@
 #!/bin/bash
 
 EXECUTABLE="bin/ir_gen"
-TEST_DIR="tests/ir_gen"
+TEST_DIR="tests/original_ir_gen_tests"
 OUTPUT_DIR="outputs/IR"
 OUTPUT_DIR_OPT="outputs/opt"
 
@@ -32,8 +32,10 @@ for test_case in "$TEST_DIR"/*.cold; do
 
     if [ $? -eq 0 ]; then
       echo "Test $test_name passed."
+      echo
     else
       echo "Test $test_name failed."
+      echo
       continue
     fi
 
