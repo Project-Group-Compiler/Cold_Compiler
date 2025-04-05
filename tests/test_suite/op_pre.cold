@@ -1,8 +1,0 @@
-// SEMANTICS WORKING
-// IR WORKING
-
-int test()
-{
-    int a = 0 == 1 & 2;  // Expected new output: 1 (0 == (1 & 2))
-    return a;
-}

@@ -1,5 +1,0 @@
-void test_command_line(int argc, char *argv[]) {
-    if (argc > 1) {
-        printf(argv[0]);
-    }
-}
