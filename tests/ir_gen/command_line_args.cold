@@ -1,8 +1,0 @@
-// IR WORKING
-// SEMANTICS WORKING 
-
-int main(int argc, char* argv[])
-{   
-    char* x = argv[2];
-	return 0;
-}

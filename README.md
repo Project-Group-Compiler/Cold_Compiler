@@ -17,32 +17,37 @@ The C Lex specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C
 
 The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C-grammar-y.html).
 
+*All basic features required have been supported.*
+
 **List of advanced features supported apart from basic features** :
 
 - recursive function call
 - classes and objects
-- inheritance (including multi-level inheritance)
+- inheritance
+- function call with variable arguments
 - dynamic memory allocation
 - command line input
 - public, private and protected keywords
 - typedef
-- struct
+- enum, union
 - file manipulation
 - until loop
 - multi-level pointers
 - multi-dimensional arrays
-<!-- - const, signed, unsigned, extern and static -->
 
-**Optimizations implemented** :
+**Extra advanced features** :
 
-- Constant folding
-- Dead code elimination
+- function overloading
+- const type qualifier
+- multi-level inheritance
+- modified operator precedence (more details in `docs/operator_precedence.md`.)
+- *machine-independent optimizations* implemented (at this point) :
+  1. constant folding
+  2. dead code elimination
 
-Additionally, since we are crafting a new language, we have taken the liberty to slightly *modify normal C operator precedence*. More details in `docs/operator_precedence.md`.
+Some syntax changes and implementation related details have been documented in `docs/lang_details.md`.
 
-Some syntax and implementation related details have been documented in `docs/lang_details.md`.
-
-**Error handling:** Multiple errors in same program can be handled (shown in testcases) and descriptive error messages are being printed in terminal. Invalid symbols are handled during lexing while syntax errors are handled during parsing stage.
+`Error handling` : Multiple errors in same program can be handled (shown in testcases) and descriptive error messages are being printed in terminal.
 
 ## Installation
 

@@ -1,7 +1,0 @@
-//IR WORKING
-int main()
-{
-    int a;
-    int *ptr = &a;
-    *ptr = 5;
-}

@@ -920,7 +920,10 @@ postfix_expression
 		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
 		DBG("unary name: "+string($1->place));
-		bool t=searchIdConst($1->place);
+		DBG("node name: "+string($1->node_name));
+		DBG("temp_name: "+string($1->temp_name));
+		DBG("type: "+string($1->type));
+		bool t=searchIdConst($1->temp_name);
 		DBG(to_string(t));
 		if(t){
 			semantic_error("Increment of const variable", "semantic error");
@@ -948,7 +951,10 @@ postfix_expression
 		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
 		DBG("unary name: "+string($1->place));
-		bool t=searchIdConst($1->place);
+		DBG("node name: "+string($1->node_name));
+		DBG("temp_name: "+string($1->temp_name));
+		DBG("type: "+string($1->type));
+		bool t=searchIdConst($1->temp_name);
 		DBG(to_string(t));
 		if(t){
 			semantic_error("Decrement of const variable", "semantic error");
@@ -1768,7 +1774,10 @@ assignment_expression
         $$ = getNode($2, mergeAttrs($1, $4));
         
 		DBG("unary name: "+string($1->place));
-		bool t=searchIdConst($1->place);
+		DBG("node name: "+string($1->node_name));
+		DBG("temp_name: "+string($1->temp_name));
+		DBG("type: "+string($1->type));
+		bool t=searchIdConst($1->temp_name); //still won't suppport sturct like struct->member or class
 		DBG(to_string(t));
 		if(t){
 			semantic_error("Assignment of const variable", "semantic error");
@@ -2391,7 +2400,6 @@ struct_or_union_specifier
         $$ = getNode($1, mergeAttrs(getNode($2), $5));
 		std::string check=std::string($2);
 		// Semantics
-		std::cout<<"struct or union "<<$1<<std::endl;
 		if(std::string($1)=="struct" && printStructTable("STRUCT_" + string($2)) == 1 ){
 			if(findStruct("UNION_" + string($2)) == 1){
 				semantic_error(("UNION " + string($2) + " is already defined").c_str(), "scope error");

@@ -99,7 +99,7 @@ inline std::string stringify(const quad &instr)
             s += "GOTO " + std::to_string(instr.gotoLabel);
     }
     else if (curr_op == "CopyToOffset")
-        s += "Copy " + instr.arg1 + " to offset " + instr.arg2 + " of " + instr.result;
+        s += instr.result + " offset " + instr.arg2 + " <- " + instr.arg1;
     else if (curr_op == "intToFloat" || curr_op == "SIZEOF")
         s += instr.result + " = " + curr_op + "(" + instr.arg1 + ")";
     else if (curr_op.substr(0, 5) == "CAST_")

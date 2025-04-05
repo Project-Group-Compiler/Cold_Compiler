@@ -13,3 +13,4 @@ ast/
 *.csv
 *.png
 *_debug_file.txt
+*_IR.txt

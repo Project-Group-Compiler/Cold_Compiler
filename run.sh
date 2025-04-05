@@ -32,8 +32,10 @@ for test_case in "$TEST_DIR"/*.cold; do
 
     if [ $? -eq 0 ]; then
       echo "Test $test_name passed."
+      echo
     else
       echo "Test $test_name failed."
+      echo
       continue
     fi
 
