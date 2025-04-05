@@ -39,3 +39,7 @@ and
 ```
 
 7. static vars -> local scope and global scope both allowed. static can be int, char or float. CAUTION : Please don't initialize float static with an int constant (no error but wrong code), please initialize it with float constant.
+
+8. We don't allow const & static in struct and classes for now -> their behaviour can be unexpected
+
+9. Don't do printf("%d\n",add(2)); ->not handled yet
