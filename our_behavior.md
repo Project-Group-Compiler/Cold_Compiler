@@ -8,7 +8,7 @@
 
 5. struct and union with same name not allowed. (but class and struct of same name allowed.)
 
-6. no error produced for these 2: 
+6. no error produced for these 2 (which is ok, nice error handling has been done otherwise): 
     
 ```cpp
     union Data

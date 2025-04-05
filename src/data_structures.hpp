@@ -74,6 +74,7 @@ void print_error(const std::string &message);
 std::string searchTypedefTable(std::string Token);
 void printType(std::ofstream &out);
 void printTables(const std::string &inputFile);
+bool searchIdConst(std::string id);
 std::string getSizeOfType(const std::string& typeStr);
 
 void symTable_init();
@@ -114,5 +115,7 @@ void printSymbolTable(sym_table *table, std::string file_name);
 ull getSize(std::string id);
 std::string lookupType(std::string a);
 void insertType(std::string a, std::string b);
+
+bool isMatching(std::string s1, std::string s2);
 
 #endif // SYMBOL_TABLE_H

@@ -108,10 +108,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
         if (isFloat(type1) && checkInt(type2))
         {
             q = getTempVariable(type1);
-            if (isLocalStaticInit)
-                staticAddLater.push_back(quad(staticAddLater.size(), "intToFloat", arg2, "", q, -1));
-            else
-                emit("intToFloat", arg2, "", q, -1);
+            emit("intToFloat", arg2, "", q, -1);
         }
         else
             q = arg2;
@@ -119,10 +116,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
     int x;
     if (isFloat(type))
     {
-        if (isLocalStaticInit)
-            staticAddLater.push_back(quad(staticAddLater.size(), "(f)=", q, "", arg1, -1));
-        else
-            x = emit("(f)=", q, "", arg1, -1);
+        x = emit("(f)=", q, "", arg1, -1);
     }
     else
     {
