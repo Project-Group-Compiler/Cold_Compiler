@@ -33,5 +33,6 @@ int main()
 {
     enum COLOR myColor1 = G;
     enum ErrorCode error1 = 9;
+    R = 78;
     return 0;
 }
