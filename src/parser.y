@@ -338,10 +338,11 @@ postfix_expression
 			if($1->expType == 3){
 				vector<string> funcArgs = getFuncArgs(mangledName);
 				bool varargs = true;
+				bool varargs2 = false;
 				for(auto it : varargsFuncs){
 					if(isMatching(it, mangledName)){
 						int i=0,j=0;
-						mangledName = it;
+						varargs2 = true;
 						while(it[i]==mangledName[j]){
 							i++;
 							j++;
@@ -358,8 +359,10 @@ postfix_expression
 					else{
 						varargs = false;
 					}
+					if(varargs)
+						mangledName = it;
 				}
-				if(!varargs){
+				if(!varargs2){
 					if (funcArgs.back() == "...") { //if "..." is present, remove it and do not check for size
 						funcArgs.pop_back();
 					}
