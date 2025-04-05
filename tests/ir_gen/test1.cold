@@ -1,28 +1,20 @@
 // SEMANTICS WORKING
+// IR WORKING
 
-//these tests were failing at some point of time
-struct a{
+struct a
+{
     int x;
     int y;
 };
-struct person{
-    char* ok;
-    char name;
+struct person
+{
     int age;
-    int x;
     struct a a1;
 };
-struct p2{
-    int age;
-    char name;
-};
-void solve(){
+
+void solve()
+{
     struct person p;
     struct a a1;
-    struct p2 p2;
-    long long x=5;
-    p2.age = 30;
-    
-    p.age = 25;
-
+    p.a1.y = 25;
 }

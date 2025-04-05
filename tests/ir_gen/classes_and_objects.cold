@@ -1,28 +1,31 @@
 // SEMANTICS WORKING
 // IR WORKING
 
-class Person 
+class Person
 {
-    private{
-        int age;//int age=23 not allowed
-
+public{
+        int age;
     };
-    public{
-        int returnAge(int x)  { 
+public{
+        int returnAge(int x)
+        {
             return 42;
         }
     };
-    
 };
-int returnAge(int x)  { 
-            return 42;
-        }
+
+void returnAge(int x)
+{
+    return 42;
+}
+
 int main()
 {
-	class Person p1;
-   // p1.age = 6;
-   int x;
-   returnAge(x);
-	p1.returnAge(x);
-	return 0;
+    int x;
+    class Person p1;
+    p1.age = 6;
+    p1.returnAge(p1.age);
+    returnAge(x);
+    p1.returnAge(x);
+    return 0;
 }

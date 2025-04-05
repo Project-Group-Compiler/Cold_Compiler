@@ -67,7 +67,6 @@ std::string getTempVariable(std::string type)
 }
 
 // Emit for assignment expressions
-// TODO: Handle float
 int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2, bool isLocalStaticInit)
 {
     // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1 << "#" << arg2 << std::endl;
@@ -150,11 +149,15 @@ void remainingBackpatch()
 
 void addStaticInit()
 {
-    for (auto &instr : staticAddLater)
+    for (auto &instr : tac_code)
     {
-        instr.Label = tac_code.size();
-        tac_code.push_back(instr);
+        instr.Label += staticAddLater.size();
+        if (instr.op == "GOTO" && instr.gotoLabel != -1)
+            instr.gotoLabel += staticAddLater.size();
     }
+    for (auto &instr : tac_code)
+        staticAddLater.push_back(instr);
+    tac_code = staticAddLater;
     staticAddLater.clear();
 }
 

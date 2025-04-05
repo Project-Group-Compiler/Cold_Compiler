@@ -441,7 +441,6 @@ postfix_expression
 		q = "*" + q;
         $$->place = q;
 		$$->nextlist.clear();
-
 	}
 	| postfix_expression '.' IDENTIFIER '(' ')'  {
 	    DBG("postfix_expression -> postfix_expression '.' IDENTIFIER '(' ')'");
@@ -971,7 +970,6 @@ postfix_expression
 		{
 			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
 		}
-		$$->nextlist.clear();
 	    currArgs.clear();
 		actualArgs.clear();
 		$$->nextlist.clear();

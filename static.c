@@ -1,19 +1,16 @@
-static int glo = 7;
-static int glo2;
-
 void increment()
 {
   static int count = 4;
-  static int total;
-  count++;
-  total += count;
+  count += 9;
 }
+
+static int count = 5;
 
 int main()
 {
-  glo = glo + 5;
-  glo2 = glo + 5;
   increment();
   increment();
+  increment();
+  count++;
   return 0;
 }
