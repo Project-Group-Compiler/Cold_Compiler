@@ -10,8 +10,6 @@ struct node{
 int main()
 {
     struct node* head, temp;
-    // head = (struct node*)malloc(sizeof(struct node));
-    // This malloc does not work
     head->x = 1;
-    head->next = temp;
+    head->next = &temp;
 }

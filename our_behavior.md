@@ -43,3 +43,34 @@ and
 8. We don't allow const & static in struct and classes for now -> their behaviour can be unexpected
 
 9. Don't do printf("%d\n",add(2)); ->not handled yet
+10. Nested switch-case like these don't work :
+    
+    ```cpp
+    int main()
+    {
+        char i;
+        int p=0;
+        int a=0;
+        switch(i)
+        {
+            case 'a':
+                p++;
+            a++;
+                break;
+            case 'b':
+                switch(p)
+                {
+                    case 1:
+                        a=0;
+                        a++;
+                        break;
+                    case 2:
+                        a=0;
+                        a--;
+                        break;
+                }
+                break;
+        }
+        return 0;
+    }
+    ```

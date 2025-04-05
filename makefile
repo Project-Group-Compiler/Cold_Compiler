@@ -91,6 +91,6 @@ clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
 files_clean:
-	rm -f *.csv *_debug_file.txt *_lexfile.txt
+	rm -f *.csv *_debug_file.txt *_lexfile.txt *_IR.txt
 
 .PHONY: all clean files_clean

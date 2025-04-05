@@ -39,7 +39,7 @@ void whileLoop(){
     int i = 10;
 
     while(i>=0){
-        if(i==5)break;;
+        if(i==5)break;
         i--;
     }
 }
