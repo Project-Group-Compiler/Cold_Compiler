@@ -38,8 +38,16 @@ int struct_count = 1;
 int avl = 0;
 int blockCnt = 1;
 
-std::vector<std::string> lib_funcs = {"scanf", "printf", "malloc", "calloc", "free", "fopen", "fputs", "fgets",
-                                      "fclose", "fprintf", "fscanf", "fgetc", "fputc", "strlen", "strcmp", "strncmp", "strcpy", "strcat", "va_start", "va_arg", "va_end"};
+#define LIB_FUNC_LIST "scanf", "printf", "malloc", "calloc", "free", \
+                      "fopen", "fputs", "fgets", "fclose", "fprintf", \
+                      "fscanf", "fgetc", "fputc", "strlen", "strcmp", \
+                      "strncmp", "strcpy", "strcat", "va_start", "va_arg", \
+                      "va_end"
+
+const char* func_array[] = { LIB_FUNC_LIST };
+std::vector<std::string> lib_funcs(std::begin(func_array), std::end(func_array));
+
+
 
 std::vector<std::pair<std::string, std::string>> typedefTable;
 extern std::string outputDir;
@@ -117,19 +125,15 @@ void symTable_init() {
 }
 
 sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, bool isStatic, bool isConst) {
-    sym_entry *new_sym = new (std::nothrow) sym_entry();
+    sym_entry* new_sym = new (std::nothrow) sym_entry{
+        type, size, init, offset, ptr, access, isStatic, isConst
+    };
+    
     if (!new_sym) {
         std::cerr << "Error: Memory allocation failed in createEntry.\n";
         exit(EXIT_FAILURE);
     }
-    new_sym->type = type;
-    new_sym->size = size;
-    new_sym->init = init;
-    new_sym->offset = offset;
-    new_sym->entry = ptr;
-    new_sym->access = access;
-    new_sym->isStatic = isStatic;
-    new_sym->isConst = isConst;
+    
     return new_sym;
 }
 
@@ -213,14 +217,19 @@ void updSymbolTable(std::string id) {
         std::cerr << "Error: Parent table not found for current table in updSymbolTable.\n";
         exit(EXIT_FAILURE);
     }
-    curr_table = parent_table[curr_table];
-    curr_struct_table = struct_parent_table[curr_struct_table];
-    curr_class_table = class_parent_table[curr_class_table];
-    curr_typ = typ_parent_table[curr_typ];
+    
+    if (parent_table.find(curr_table) != parent_table.end())
+        curr_table = parent_table[curr_table];
+    if (struct_parent_table.find(curr_struct_table) != struct_parent_table.end())
+        curr_struct_table = struct_parent_table[curr_struct_table];
+    if (class_parent_table.find(curr_class_table) != class_parent_table.end())
+        curr_class_table = class_parent_table[curr_class_table];
+    if (typ_parent_table.find(curr_typ) != typ_parent_table.end())
+        curr_typ = typ_parent_table[curr_typ];
 
-    sym_entry *entry = lookup(id);
-    if (entry)
+    if (sym_entry *entry = lookup(id)) {
         entry->size = blockSz.top();
+    }
 
     temp = blockSz.top();
     blockSz.pop();
