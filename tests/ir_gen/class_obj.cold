@@ -1,23 +1,15 @@
-// IR WORKING
-
 class person{
-    public{
+    private{
         int age;
-        void f(){
-           this->age = 5;
-        }
-        int g(int x){
-            (*this).age = x;
-        }
-        void foo()
+    };
+    public{
+        int foo()
         {
-            this->f();
-            this->g(5);
+            return 42;
         }
         void bar(int a, int b)
         {
-            (*this).f();
-            (*this).g(b);
+            int c = a + b;
         }
     };
 };
@@ -25,11 +17,10 @@ class person{
 
 int main()
 {	
+    class person p;
     class person *ptr;
-    ptr->age = 6;
-    ptr->foo();
-    ptr->bar(4, 6);
+    p.bar(4, 6);
     (*ptr).foo();
-    (*ptr).bar(4, 6);
+    ptr->bar(4, 6);
 	return 0;
 }
