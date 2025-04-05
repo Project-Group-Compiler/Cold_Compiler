@@ -43,12 +43,14 @@ int func_flag = 0;
 string type = "";
 int Anon_StructCounter=0;
 int Anon_ClassCounter = 0;
-vector<string> funcArgs;
-vector<string> classMethodArgs; 
+std::vector<std::string> funcArgs;
+std::vector<std::string> classMethodArgs; 
 bool inMethodBody = false;  // Set true when inside a method body
-vector<string> idList;
-vector<string> currArgs;
-vector<string> actualArgs;
+std::vector<std::string> idList;
+std::vector<std::string> currArgs;
+std::vector<std::string> actualArgs;
+std::vector<int>previousCaseList;
+std::vector<int>CaseContinueList;
 
 // Debug tracking
 extern bool debug_enabled; // Flag to enable or disable debugging
@@ -82,9 +84,6 @@ void _print_(const T& x, const Args&... rest) {
 }
 #define debug(x...) std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; _print_(x); std::cerr << std::endl;
 
-
-std::vector<int>previousCaseList;
-std::vector<int>CaseContinueList;
 %}
 
 %define parse.error detailed
@@ -116,8 +115,8 @@ std::vector<int>CaseContinueList;
 %type<str> CHANGE_TABLE 
 
 //3AC 
-%type<Int> NEXT_QUAD WRITE_GOTO
-%type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE DEFAULT_CODE
+%type<Int> NEXT_INSTR WRITE_GOTO
+%type<ptr> OR_WHAT CASE_LABEL IF_COND EXPR_COND EXPR_STMT_COND DEFAULT_LABEL
 %type<ptr> N
 
 
@@ -1735,7 +1734,7 @@ logical_or_expression
 		$$->nextlist.clear();
     }
     ;
-NEXT_QUAD
+NEXT_INSTR
 	: %empty {
 		$$ = getCurrentSize();
 	}
@@ -1746,7 +1745,7 @@ conditional_expression
         DBG("conditional_expression -> logical_or_expression");
         $$ = $1;
     }
-	| GOTO_COND NEXT_QUAD expression WRITE_GOTO ':' NEXT_QUAD conditional_expression {
+	| OR_WHAT NEXT_INSTR expression WRITE_GOTO ':' NEXT_INSTR conditional_expression {
         DBG("conditional_expression -> logical_or_expression '?' expression ':' conditional_expression");
         $$ = getNode("ternary operator", mergeAttrs($1, $3, $7));
         
@@ -1780,7 +1779,7 @@ conditional_expression
     }
     ;
 
-GOTO_COND
+OR_WHAT
 	: logical_or_expression '?' {
 		previous_if_found = if_found;
 		if_found = 0;
@@ -1860,7 +1859,7 @@ expression
 		DBG("expression -> assignment_expression");
 		$$ = $1;
 	}
-	| expression ',' NEXT_QUAD assignment_expression {
+	| expression ',' NEXT_INSTR assignment_expression {
 		DBG("expression -> expression ',' assignment_expression");
 		$$ = getNode("expression", mergeAttrs($1, $4));
 		$$->type = "void"; // Semantic
@@ -1937,7 +1936,7 @@ init_declarator_list
 		array_decl = 0;
 		DBG("Array dec 0");
 	}
-	| init_declarator_list ',' NEXT_QUAD init_declarator {
+	| init_declarator_list ',' NEXT_INSTR init_declarator {
 		DBG("init_declarator_list -> init_declarator_list ',' init_declarator");
 		$$ = getNode("init_declarator_list", mergeAttrs($1, $4));
 		// 3AC
@@ -1988,7 +1987,7 @@ init_declarator
 		$$->place = $1->temp_name;
 		isStaticDecl=0;
 	}
-	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
+	| declarator '=' {rValue = 1;} NEXT_INSTR initializer {
 		DBG("init_declarator -> declarator '=' initializer");
 		$$ = getNode("=", mergeAttrs($1, $5));
 		
@@ -2820,7 +2819,7 @@ direct_declarator
 			semantic_error(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
-	| direct_declarator '(' A parameter_type_list ')' NEXT_QUAD {
+	| direct_declarator '(' A parameter_type_list ')' NEXT_INSTR {
 		DBG("direct_declarator -> direct_declarator '(' A parameter_type_list ')'");
 		Node *node = getNode("( )", mergeAttrs($4));
 		$$ = getNode("direct_declarator", mergeAttrs($1, node));
@@ -3058,7 +3057,7 @@ parameter_list
 		noArgs++;
 		$$ = $1;
 	}
-	| parameter_list ',' NEXT_QUAD parameter_declaration {
+	| parameter_list ',' NEXT_INSTR parameter_declaration {
 		DBG("parameter_list -> parameter_list ',' parameter_declaration");
 		$$ = getNode("parameter_list", mergeAttrs($1, $4));
 		noArgs++;
@@ -3233,7 +3232,7 @@ initializer_list
 		DBG("initializer_list -> initializer");
 		$$ = $1;
 	}
-	| initializer_list ',' NEXT_QUAD initializer {
+	| initializer_list ',' NEXT_INSTR initializer {
 		DBG("initializer_list -> initializer_list ',' initializer");
 		$$ = getNode("initializer_list", mergeAttrs($1, $4));
 		$$->isInit = ($1->isInit && $4->isInit);
@@ -3277,7 +3276,7 @@ statement
 	;
 
 labeled_statement
-	: IDENTIFIER ':'  NEXT_QUAD statement {
+	: IDENTIFIER ':'  NEXT_INSTR statement {
 		DBG("labeled_statement -> IDENTIFIER ':' statement");
 		$$ = getNode("labeled_statement", mergeAttrs(getNode($1), $4));
 		//3AC
@@ -3288,19 +3287,19 @@ labeled_statement
         $$->continuelist = $4->continuelist;
         $$->breaklist = $4->breaklist;
 	}
-	| CASE_CODE NEXT_QUAD statement {
+	| CASE_LABEL NEXT_INSTR statement {
 		DBG("labeled_statement -> CASE constant_expression ':' statement");
 		$$ = getNode("case", mergeAttrs($1, $3));
 
 		//3AC
 		backpatch($1->truelist, $2);
-		extendList($3->nextlist, $1->falselist); //! ---
+		extendList($3->nextlist, $1->falselist); 
         $$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
         $$->caselist = $1->caselist;
         $$->continuelist = $3->continuelist;
 	}
-	| DEFAULT_CODE ':' statement {
+	| DEFAULT_LABEL ':' statement {
 		DBG("labeled_statement -> DEFAULT ':' statement");
 		std::vector<Data> attr;
         insertAttr(attr, NULL, "default", 0);
@@ -3314,9 +3313,9 @@ labeled_statement
 	}
 	;
 
-DEFAULT_CODE
+DEFAULT_LABEL
 	: DEFAULT {
-		DBG("DEFAULT_CODE -> DEFAULT");
+		DBG("DEFAULT_LABEL -> DEFAULT");
 		$$ = getNode($1);
 
 		int a = getCurrentSize();
@@ -3328,7 +3327,7 @@ DEFAULT_CODE
 	}
 	;
 
-CASE_CODE
+CASE_LABEL
 	: CASE constant_expression ':' {
         $$ = $2;
 		std::string t = getTempVariable($$->type);
@@ -3390,7 +3389,7 @@ compound_statement
 			func_flag--;
 		}
 	}
-	| '{' CHANGE_TABLE declaration_list NEXT_QUAD  statement_list '}'	{
+	| '{' CHANGE_TABLE declaration_list NEXT_INSTR  statement_list '}'	{
         DBG("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
 		$$ = getNode("compound_statement", mergeAttrs($3, $5));
 		
@@ -3438,7 +3437,7 @@ declaration_list
 		DBG("declaration_list -> declaration");
 		$$ = $1;
 	}
-	| declaration_list NEXT_QUAD declaration {
+	| declaration_list NEXT_INSTR declaration {
 		DBG("declaration_list -> declaration_list declaration");
 		$$ = getNode("declaration_list", mergeAttrs($1, $3));
 		//3AC
@@ -3452,7 +3451,7 @@ statement_list
 		DBG("statement_list -> statement");
 		$$ = $1;
 	}
-	| statement_list NEXT_QUAD statement {
+	| statement_list NEXT_INSTR statement {
 		DBG("statement_list -> statement_list statement");
 		$$ = getNode("statement_list", mergeAttrs($1, $3));
 
@@ -3479,7 +3478,7 @@ expression_statement
 	}
 	;
 
-IF_CODE
+IF_COND
     : IF {if_found = 1;} '(' expression ')' {
         if($4->truelist.empty() && $4->falselist.empty()) {
             int a = getCurrentSize();
@@ -3505,7 +3504,7 @@ N
     ;
 
 selection_statement
-	: IF_CODE NEXT_QUAD statement {
+	: IF_COND NEXT_INSTR statement {
 		DBG("selection_statement -> IF '(' expression ')' statement");
 		$$ = getNode("if", mergeAttrs($1, $3));
 		//3AC
@@ -3515,7 +3514,7 @@ selection_statement
 		$$->continuelist = $3->continuelist;
 		$$->breaklist = $3->breaklist;
 	}
-	| IF_CODE NEXT_QUAD statement N ELSE NEXT_QUAD statement {
+	| IF_COND NEXT_INSTR statement N ELSE NEXT_INSTR statement {
 		DBG("selection_statement -> IF '(' expression ')' statement ELSE statement");
 		$$ = getNode("if-else", mergeAttrs($1, $3, $7));
 		//3AC
@@ -3549,7 +3548,7 @@ selection_statement
 	;
 
 
-EXPR_CODE
+EXPR_COND
     : {if_found = 1;} expression {
         if($2->truelist.empty() && $2->falselist.empty()) {
             int a = getCurrentSize();
@@ -3565,7 +3564,7 @@ EXPR_CODE
     }
     ;
 
-EXPR_STMT_CODE
+EXPR_STMT_COND
     : {if_found = 1;} expression_statement { 
 		if($2->truelist.empty() && $2->falselist.empty()) {
             int a = getCurrentSize();
@@ -3583,7 +3582,7 @@ EXPR_STMT_CODE
 
 
 iteration_statement
-    : WHILE '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement {
+    : WHILE '(' NEXT_INSTR EXPR_COND ')' NEXT_INSTR statement {
 		DBG("iteration_statement -> WHILE '(' expression ')' statement");
 		$$ = getNode("while-loop", mergeAttrs($4, $7));
 
@@ -3595,7 +3594,7 @@ iteration_statement
 		extendList($$->nextlist, $7->breaklist);
         emit("GOTO", "", "", "", $3);
 	}
-	| UNTIL '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement { /*** Added UNTIL grammar ***/
+	| UNTIL '(' NEXT_INSTR EXPR_COND ')' NEXT_INSTR statement { /*** Added UNTIL grammar ***/
 		DBG("iteration_statement -> UNTIL '(' expression ')' statement");
 		$$ = getNode("until-loop", mergeAttrs($4, $7));
 
@@ -3607,7 +3606,7 @@ iteration_statement
 		extendList($$->nextlist, $7->breaklist);
 		emit("GOTO", "", "", "", $3);
 	}
-	| DO NEXT_QUAD statement WHILE '(' NEXT_QUAD EXPR_CODE ')' ';' {
+	| DO NEXT_INSTR statement WHILE '(' NEXT_INSTR EXPR_COND ')' ';' {
 		DBG("iteration_statement -> DO statement WHILE '(' expression ')' ';'");
 		$$ = getNode("do-while-loop", mergeAttrs($3, $7));
 
@@ -3618,7 +3617,7 @@ iteration_statement
 		$$->nextlist = $7->falselist;
 		extendList($$->nextlist, $3->breaklist);
 	}
-	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE ')' NEXT_QUAD statement {
+	| FOR '(' expression_statement NEXT_INSTR EXPR_STMT_COND ')' NEXT_INSTR statement {
 		DBG("iteration_statement -> FOR '(' expression_statement expression_statement ')' statement");
 		$$ = getNode("for-loop(w/o update stmt)", mergeAttrs($3, $5, $8));
 
@@ -3633,7 +3632,7 @@ iteration_statement
 
 		emit("GOTO", "", "", "", $4);
 	}
-	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement {
+	| FOR '(' expression_statement NEXT_INSTR EXPR_STMT_COND NEXT_INSTR expression N ')' NEXT_INSTR statement {
 		DBG("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
 		$$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
 
@@ -3713,7 +3712,7 @@ translation_unit
 		DBG("translation_unit -> external_declaration");
 		$$ = $1;
 	}
-	| translation_unit NEXT_QUAD external_declaration {
+	| translation_unit NEXT_INSTR external_declaration {
 		DBG("translation_unit -> translation_unit external_declaration");
 		$$ = getNode("program", mergeAttrs($1, $3));
 		//3AC
