@@ -780,10 +780,10 @@ std::string getTypeCode(const std::string& type) {
     // Convert full type names to single-character codes
     if (type == "int") return "i";
     if (type == "float") return "f";
-    if (type == "double") return "d";
     if (type == "char") return "c";
     if (type == "void") return "v";
     if (type == "bool") return "b";
+    if (type == "...") return "m";
     if (type.find("*") != std::string::npos) return "p"; // All pointers
     // Add more types as needed
     return type; // Unknown type
@@ -965,6 +965,16 @@ ull getSize(std::string id)
         return sizeof(unsigned long long);
     if (id == "unsigned long long int")
         return sizeof(unsigned long long int);
-    if(id == "va_list") return sizeof(va_list);
+    if(id == "va_list") return sizeof(char*);
     return 8; // for any pointer type
+}
+
+bool isMatching(std::string var, std::string s2){ // s1-> func_im , s2 -> func_iiii
+    int n = var.size();
+    var.pop_back();
+    for(int i=0;i<var.size();i++){
+        if(s2.size() <= i) return false;
+        if(var[i] != s2[i]) return false;
+    }   
+    return true; 
 }

@@ -115,4 +115,6 @@ ull getSize(std::string id);
 std::string lookupType(std::string a);
 void insertType(std::string a, std::string b);
 
+bool isMatching(std::string s1, std::string s2);
+
 #endif // SYMBOL_TABLE_H
