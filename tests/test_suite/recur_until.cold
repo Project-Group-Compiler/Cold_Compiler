@@ -1,0 +1,17 @@
+// IR WORKING
+// SEMANTICS WORKING
+
+int rec(int n) 
+{
+    if (n == 0)
+        return 1;
+    return n * rec(n - 1);
+}
+
+void untilLoop(){
+    int x = 0;
+    until(x >= 5)
+    {
+        x += 1;
+    }
+}

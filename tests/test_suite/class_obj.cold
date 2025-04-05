@@ -1,0 +1,35 @@
+// IR WORKING
+
+class person{
+    public{
+        int age;
+        void f(){
+           this->age = 5;
+        }
+        int g(int x){
+            (*this).age = x;
+        }
+        void foo()
+        {
+            this->f();
+            this->g(5);
+        }
+        void bar(int a, int b)
+        {
+            (*this).f();
+            (*this).g(b);
+        }
+    };
+};
+
+
+int main()
+{	
+    class person *ptr;
+    ptr->age = 6;
+    ptr->foo();
+    ptr->bar(4, 6);
+    (*ptr).foo();
+    (*ptr).bar(4, 6);
+	return 0;
+}

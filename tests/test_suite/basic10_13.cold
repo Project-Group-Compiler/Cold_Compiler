@@ -1,0 +1,45 @@
+int glo = 7;
+int count = 5;
+static int glos = 9;
+
+void staticKywrd(){
+    int x = 8;
+    static int count = 3;
+    count += 1;
+}
+
+void prntfScnf(int i, char c) {
+    if (scanf("%d %c", &i, &c) != 2) {
+        printf("Input error\n");
+        return 1;
+    }
+
+    printf("Integer: %d\n", i);
+    printf("Character: %c\n", c);
+}
+
+void functionCall() {
+    int a = 10, b = 11;
+    prntfScnf(a + b, 'c');
+}
+
+void gotoBrkCont() {
+    int i = 10;
+
+    while(i){
+        i -= 1;
+        if (i == 2)
+            continue;  
+    
+        if (i == 5)
+            break;  
+        
+        printf("i = %d\n", i);
+    }
+
+    goto skip;
+    printf("This line should not print.\n");
+skip:
+    printf("Goto landed here successfully.\n");
+}
+

@@ -89,7 +89,7 @@ bool searchIdConst(std::string id) {
         bool s = n->isConst;
         return s;     
     }
-    return "";
+    return 0;
 }
 std::string getSizeOfType(const std::string& typeStr) {
     if (typeStr == "int") {
