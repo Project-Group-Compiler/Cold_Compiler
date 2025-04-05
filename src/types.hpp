@@ -177,8 +177,6 @@ inline std::string shiftExp(std::string a, std::string b){
 inline std::string relExp(std::string a, std::string b) {
     setVar(a, b);
     if ((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar)) return "ok";
-    if ((isAInt || isAChar) && isBAnyPtr) return "warning";
-    if ((isBInt || isBChar) && isAAnyPtr) return "warning";
     return "";
 }
 
@@ -186,7 +184,6 @@ inline std::string eqExp(std::string a, std::string b){
     setVar(a, b);
     if(a == b) return "ok";
     if((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar)) return "ok";
-    if((isAInt && isBAnyPtr) || (isAAnyPtr && isBInt)) return "warning";
     return "";
 }
 

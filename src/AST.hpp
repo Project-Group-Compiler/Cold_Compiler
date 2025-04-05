@@ -16,9 +16,10 @@ struct Node
     std::string strVal;
     //semantics addition
     std::string type;
-	int expType;	// 1 -> Variable, 2 -> Array, 3-> Function, 4 -> Constant, 5 -> string  			 	
+	int expType;	// 1 -> Variable, 2 -> ptr, 
+                    //3-> Function, 4 -> Constant, 5 -> string  			 	
 	int isInit;
-    std::string temp_name;
+    std::string tempName;
     long long int size;
 
     std::string place;
