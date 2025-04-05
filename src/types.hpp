@@ -6,45 +6,15 @@
 #include <cctype> // for isxdigit
 #include <iostream>
 
-inline int checkInt(std::string type){
-    // if(type=="int") return 1;
-    // if(type=="long") return 1;
-    // if(type=="long long") return 1;
-    // if(type=="long int") return 1;
-    // if(type=="long long int") return 1;
-    // if(type=="unsigned int") return 1;
-    // if(type=="unsigned long") return 1;
-    // if(type=="unsigned long long") return 1;
-    // if(type=="unsigned long int") return 1;
-    // if(type=="unsigned long long int") return 1;
-    // if(type=="signed int") return 1;
-    // if(type=="signed long") return 1;
-    // if(type=="signed long long") return 1;
-    // if(type=="signed long int") return 1;
-    // if(type=="signed long long int") return 1;
-    // if(type=="short") return 1;
-    // if(type=="short int") return 1;
-    // if(type=="signed short") return 1;
-    // if(type=="unsigned short") return 1;
-    // if(type=="unsigned short int") return 1;
-    // if(type=="signed short int") return 1;
-    // return 0;
+inline int checkInt(std::string type)
+{
     return type == "int";
- }
+}
  
- inline bool isFloat(std::string type){
-    // if(type=="float") return 1;
-    // if(type=="double") return 1;
-    // if(type=="long double") return 1;
-    // if(type=="unsigned float") return 1;
-    // if(type=="unsigned double") return 1;
-    // if(type=="unsigned long double") return 1;
-    // if(type=="signed float") return 1;
-    // if(type=="signed double") return 1;
-    // if(type=="signed long double") return 1;
-    // return 0;
+inline bool isFloat(std::string type)
+{
     return type == "float";
- }
+}
  
  inline bool checkChar(std::string temp){
     // Validate character constant

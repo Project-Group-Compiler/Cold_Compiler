@@ -46,3 +46,15 @@
 
 - Empty struct in C is undefined behaviour. Our compiler chooses to throw a syntax error on an empty struct. That is, only non-empty structs can be declared.
 - C++ style comments ( starting with `//` are supported )
+
+
+----
+
+
+NO type casting in arguments passed to function;
+
+ie u can pass an int var and an int constant only to a function taking an int argument.
+
+similarly a float var or float constant only to a function taking float argument.
+
+same for char.

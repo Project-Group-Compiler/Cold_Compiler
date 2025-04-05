@@ -1,5 +1,90 @@
 %{
-#include "parserHeader.hpp"
+using namespace std;
+#include <stdio.h>
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <cstring>
+#include "AST.hpp"
+#include "types.hpp"
+#include "data_structures.hpp"
+#include "tac.hpp"
+
+std::string currentDataType="";
+std::string currentAccess = "", tdstring="", tdstring2="";//for classes
+int noArgs = 0;
+int flag = 0, flag2 = 0, flag3 = 0;
+int enum_ctr=0;
+
+extern int yyleng;
+extern char* yytext;
+extern int column;
+extern int line;
+extern std::string inputFilename;
+extern std::string outputDir;
+extern bool has_error;
+
+//Semantics
+bool isStaticDecl = false;
+bool array_decl = 0;
+bool enum_decl = 0;
+string funcName = "";
+string structName = "";
+string className="";
+string funcType = "";
+int block_count = 0;
+stack<int> block_stack;
+bool fn_decl = 0;
+int func_flag = 0;
+
+string type = "";
+int Anon_StructCounter=0;
+int Anon_ClassCounter = 0;
+vector<string> funcArgs;
+vector<string> classMethodArgs; 
+bool inMethodBody = false;  // Set true when inside a method body
+vector<string> idList;
+vector<string> currArgs;
+vector<string> actualArgs;
+
+// Debug tracking
+extern bool debug_enabled; // Flag to enable or disable debugging
+std::ofstream out;
+void DBG(const std::string&rule){
+	 if (debug_enabled) 
+		out<<"DEBUG: Processing rule "<<rule<<" at line "<<line<<"\n";
+}
+
+void semantic_error(const char* s, const std::string &errorType="semantic error");
+void yyerror(const char* s, const std::string &errorType = "syntax error");
+int yylex();
+int warning(const char*);
+
+//3 - AC 
+int rValue = 0;
+int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
+int previous_if_found = 0; // TODO: May need later
+std::vector<std::string> list_values;
+std::map<std::string, std::vector<int>> gotolablelist;
+std::map<std::string, int> gotolabel;
+template <typename T>
+void _print_(const T& x) {
+    std::cerr << x;
+}
+
+template <typename T, typename... Args>
+void _print_(const T& x, const Args&... rest) {
+    std::cerr << x << ", ";
+    _print_(rest...);
+}
+#define debug(x...) std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; _print_(x); std::cerr << std::endl;
+
+
+std::vector<int>previousCaseList;
+std::vector<int>CaseContinueList;
 %}
 
 %define parse.error detailed
@@ -31,8 +116,10 @@
 %type<str> CHANGE_TABLE 
 
 //3AC 
-%type<Int> NEXT_INSTR WRITE_GOTO
-%type<ptr> OR_WHAT CASE_LABEL IF_COND EXPR_COND EXPR_STMT_COND DEFAULT_LABEL SKIP
+%type<Int> NEXT_QUAD WRITE_GOTO
+%type<ptr> GOTO_COND CASE_CODE IF_CODE EXPR_CODE EXPR_STMT_CODE DEFAULT_CODE
+%type<ptr> N
+
 
 %start translation_unit
 
@@ -224,7 +311,6 @@ postfix_expression
 		string temp = searchIdentifierType(mangledName);
 		if(temp.empty()){
 			//semantic_error(("Undeclared Identifier " + $1->temp_name +" .Incorrect Function overloading.").c_str(), "scope error");//->repetive error msg
-			DBG("func nhi milaaaaa");
 		}
 		else{
 			if(temp.substr(0, 5) == "FUNC_"){
@@ -248,48 +334,21 @@ postfix_expression
 			DBG("DEBUG: Function call type = " + $$->type);
 			if($1->expType == 3){
 				vector<string> funcArgs = getFuncArgs(mangledName);
-				bool varargs = true;
-				bool varargs2 = false;
-				for(auto it : varargsFuncs){
-					if(isMatching(it, mangledName)){
-						int i=0,j=0;
-						varargs2 = true;
-						while(it[i]==mangledName[j]){
-							i++;
-							j++;
-						}
-						i--;
-						for(j; j<mangledName.size(); j++){
-							if(mangledName[j]!=it[i]){
-								varargs = false;
-								semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
-								break;
-							}
-						}
-					}
-					else{
-						varargs = false;
-					}
-					if(varargs)
-						mangledName = it;
+				if (funcArgs.back() == "...") { //if "..." is present, remove it and do not check for size
+					funcArgs.pop_back();
 				}
-				if(!varargs2){
-					if (funcArgs.back() == "...") { //if "..." is present, remove it and do not check for size
-						funcArgs.pop_back();
-					}
-					else if(currArgs.size()!=funcArgs.size()){
+				else if(currArgs.size()!=funcArgs.size()){
+					semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
+				}
+				else{
+					for(int i=0; i<funcArgs.size(); i++){
+					if(funcArgs[i]=="...")break;
+					string msg = checkType(funcArgs[i],currArgs[i]);
+					if(msg.empty()){
 						semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
+						break;
 					}
-					else{
-						for(int i=0; i<funcArgs.size(); i++){
-							if(funcArgs[i]=="...")break;
-							string msg = checkType(funcArgs[i],currArgs[i]);
-							if(msg.empty()){
-								semantic_error(("Incorrect signature while calling function " + $1->temp_name).c_str(), "semantic error");
-								break;
-							}
-						}
-					}
+				}
 				}
 				//3AC
 				$$->temp_name = $1->temp_name;
@@ -919,56 +978,40 @@ postfix_expression
         DBG("postfix_expression -> postfix_expression INC_OP");
 		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
-		DBG("unary name: "+string($1->place));
-		bool t=searchIdConst($1->place);
-		DBG(to_string(t));
-		if(t){
-			semantic_error("Increment of const variable", "semantic error");
+		// Semantics
+		$$->isInit = $1->isInit;
+		string temp = postfixExpression($1->type, 3);
+		if(!temp.empty()){
+			$$->type = temp;
+			$$->intVal = $1->intVal + 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("S++", $1->place, "", q, -1);
 		}
 		else{
-			// Semantics
-			$$->isInit = $1->isInit;
-			string temp = postfixExpression($1->type, 3);
-			if(!temp.empty()){
-				$$->type = temp;
-				$$->intVal = $1->intVal + 1;
-				//3AC
-				std::string q = getTempVariable($$->type);
-				$$->place = q;
-				$$->nextlist.clear();
-				emit("S++", $1->place, "", q, -1);
-			}
-			else{
-				semantic_error("Increment not defined for this type", "type error");
-			}
+			semantic_error("Increment not defined for this type", "type error");
 		}
 	}
 	| postfix_expression DEC_OP {
         DBG("postfix_expression -> postfix_expression DEC_OP");
 		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
-		DBG("unary name: "+string($1->place));
-		bool t=searchIdConst($1->place);
-		DBG(to_string(t));
-		if(t){
-			semantic_error("Decrement of const variable", "semantic error");
+		// Semantics
+		$$->isInit = $1->isInit;
+		string temp = postfixExpression($1->type, 3);
+		if(!temp.empty()){
+			$$->type = temp;
+			$$->intVal = $1->intVal - 1;
+			//3AC
+			std::string q = getTempVariable($$->type);
+			$$->place = q;
+			$$->nextlist.clear();
+			emit("S--", $1->place, "", q, -1);
 		}
 		else{
-			// Semantics
-			$$->isInit = $1->isInit;
-			string temp = postfixExpression($1->type, 3);
-			if(!temp.empty()){
-				$$->type = temp;
-				$$->intVal = $1->intVal - 1;
-				//3AC
-				std::string q = getTempVariable($$->type);
-				$$->place = q;
-				$$->nextlist.clear();
-				emit("S--", $1->place, "", q, -1);
-			}
-			else{
-				semantic_error("Decrement not defined for this type", "type error");
-			}
+			semantic_error("Decrement not defined for this type", "type error");
 		}
 	}
 	;
@@ -1692,7 +1735,7 @@ logical_or_expression
 		$$->nextlist.clear();
     }
     ;
-NEXT_INSTR
+NEXT_QUAD
 	: %empty {
 		$$ = getCurrentSize();
 	}
@@ -1703,7 +1746,7 @@ conditional_expression
         DBG("conditional_expression -> logical_or_expression");
         $$ = $1;
     }
-	| OR_WHAT NEXT_INSTR expression WRITE_GOTO ':' NEXT_INSTR conditional_expression {
+	| GOTO_COND NEXT_QUAD expression WRITE_GOTO ':' NEXT_QUAD conditional_expression {
         DBG("conditional_expression -> logical_or_expression '?' expression ':' conditional_expression");
         $$ = getNode("ternary operator", mergeAttrs($1, $3, $7));
         
@@ -1737,7 +1780,7 @@ conditional_expression
     }
     ;
 
-OR_WHAT
+GOTO_COND
 	: logical_or_expression '?' {
 		previous_if_found = if_found;
 		if_found = 0;
@@ -1773,34 +1816,26 @@ assignment_expression
         DBG("assignment_expression -> unary_expression assignment_operator assignment_expression");
         $$ = getNode($2, mergeAttrs($1, $4));
         
-		DBG("unary name: "+string($1->place));
-		bool t=searchIdConst($1->place);
-		DBG(to_string(t));
-		if(t){
-			semantic_error("Assignment of const variable", "semantic error");
-		}
-		else{
-        	// Semantics
-        	string temp = assignExp($1->type, $4->type, string($2));
-        	if (!temp.empty()) {
-        	    if (temp == "ok") {
-        	        $$->type = $1->type;
-        	    } else if (temp == "warning") {//doesn't happen yet
-        	        $$->type = $1->type;
-        	        warning("Assignment with incompatible pointer type");
-        	    }
-				// 3AC
-				int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
-				$$->place = $1->place;
-				backpatch($4->nextlist, num);
-				rValue = 0;
-        	} else {
-        	    semantic_error("Incompatible types when assigning type", "type error");
-        	}
-        	if ($1->expType == 3 && $4->isInit) {
-        	    updInit($1->temp_name);
-        	}
-		}
+        // Semantics
+        string temp = assignExp($1->type, $4->type, string($2));
+        if (!temp.empty()) {
+            if (temp == "ok") {
+                $$->type = $1->type;
+            } else if (temp == "warning") {//doesn't happen yet
+                $$->type = $1->type;
+                warning("Assignment with incompatible pointer type");
+            }
+			// 3AC
+			int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
+			$$->place = $1->place;
+			backpatch($4->nextlist, num);
+			rValue = 0;
+        } else {
+            semantic_error("Incompatible types when assigning type", "type error");
+        }
+        if ($1->expType == 3 && $4->isInit) {
+            updInit($1->temp_name);
+        }
     }
     ;
 
@@ -1825,7 +1860,7 @@ expression
 		DBG("expression -> assignment_expression");
 		$$ = $1;
 	}
-	| expression ',' NEXT_INSTR assignment_expression {
+	| expression ',' NEXT_QUAD assignment_expression {
 		DBG("expression -> expression ',' assignment_expression");
 		$$ = getNode("expression", mergeAttrs($1, $4));
 		$$->type = "void"; // Semantic
@@ -1902,7 +1937,7 @@ init_declarator_list
 		array_decl = 0;
 		DBG("Array dec 0");
 	}
-	| init_declarator_list ',' NEXT_INSTR init_declarator {
+	| init_declarator_list ',' NEXT_QUAD init_declarator {
 		DBG("init_declarator_list -> init_declarator_list ',' init_declarator");
 		$$ = getNode("init_declarator_list", mergeAttrs($1, $4));
 		// 3AC
@@ -1918,11 +1953,7 @@ init_declarator
 		//
 		$$ = $1;  // Just pass the node directly
 		// Semantics
-		if(isConstDecl){
-			semantic_error("Const declaration without initialization", "semantic error");
-			isConstDecl = 0;
-		}
-		else if(currLookup($1->temp_name)){
+		if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
 		}
 		else if($1->expType == 3){
@@ -1957,10 +1988,10 @@ init_declarator
 		$$->place = $1->temp_name;
 		isStaticDecl=0;
 	}
-	| declarator '=' {rValue = 1;} NEXT_INSTR initializer {
+	| declarator '=' {rValue = 1;} NEXT_QUAD initializer {
 		DBG("init_declarator -> declarator '=' initializer");
 		$$ = getNode("=", mergeAttrs($1, $5));
-		DBG("Function Name: "+funcName);
+		
 		// Semantics
 		if(currLookup($1->temp_name)){
 			semantic_error(($1->temp_name + " is already declared").c_str(), "scope error");
@@ -1970,8 +2001,9 @@ init_declarator
 			if(enum_decl){
 					insertSymbol(*curr_table, $1->temp_name, "int", 4, 0, NULL);
 					enum_decl = 0;
-			} else
-				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL,"",isStaticDecl,isConstDecl);
+			} else{
+				insertSymbol(*curr_table, $1->temp_name, $1->type, $1->size, 1, NULL, "", isStaticDecl);
+			}
 			std::string type = $1->type;
 			DBG("Type of variable: " + $1->type);
 			DBG("Type of initializer: " + $5->type);
@@ -2010,7 +2042,6 @@ init_declarator
 			list_values.clear();
 		}
 		isStaticDecl=0;
-		isConstDecl=0;
 	}
 	;
 
@@ -2655,7 +2686,7 @@ enumerator
 		DBG("enumerator -> IDENTIFIER");
 		$$ = getNode($1);
 		enum_decl = 1;
-		insertSymbol(*curr_table, std::string($1), "int", 4, 0, NULL,"",false,1);
+		insertSymbol(*curr_table, std::string($1), "int", 4, 0, NULL);
 		//3AC
 		emit("=", std::to_string(enum_ctr), "" , std::string($1), -1);
 		enum_ctr++;
@@ -2665,7 +2696,7 @@ enumerator
 		DBG("enumerator -> IDENTIFIER '=' constant_expression");
 		$$ = getNode("=", mergeAttrs(getNode($1), $3));
 		enum_decl = 1;
-		insertSymbol(*curr_table, std::string($1), "int", 4, 1, NULL,"",false,1);
+		insertSymbol(*curr_table, std::string($1), "int", 4, 1, NULL);
 		enum_ctr = $3->intVal;
 
 		//3AC
@@ -2679,7 +2710,6 @@ type_qualifier
 		DBG("type_qualifier -> CONST");
 		$$ = getNode($1);
 		currentDataType = "const ";
-		isConstDecl = true;
 		flag2 = 1;
 	}
 	| VOLATILE {
@@ -2796,7 +2826,7 @@ direct_declarator
 			semantic_error(("Function " + $1->temp_name + " cannot be used as an array").c_str(), "type error");
 		}
 	}
-	| direct_declarator '(' A parameter_type_list ')' NEXT_INSTR {
+	| direct_declarator '(' A parameter_type_list ')' NEXT_QUAD {
 		DBG("direct_declarator -> direct_declarator '(' A parameter_type_list ')'");
 		Node *node = getNode("( )", mergeAttrs($4));
 		$$ = getNode("direct_declarator", mergeAttrs($1, node));
@@ -3034,7 +3064,7 @@ parameter_list
 		noArgs++;
 		$$ = $1;
 	}
-	| parameter_list ',' NEXT_INSTR parameter_declaration {
+	| parameter_list ',' NEXT_QUAD parameter_declaration {
 		DBG("parameter_list -> parameter_list ',' parameter_declaration");
 		$$ = getNode("parameter_list", mergeAttrs($1, $4));
 		noArgs++;
@@ -3209,7 +3239,7 @@ initializer_list
 		DBG("initializer_list -> initializer");
 		$$ = $1;
 	}
-	| initializer_list ',' NEXT_INSTR initializer {
+	| initializer_list ',' NEXT_QUAD initializer {
 		DBG("initializer_list -> initializer_list ',' initializer");
 		$$ = getNode("initializer_list", mergeAttrs($1, $4));
 		$$->isInit = ($1->isInit && $4->isInit);
@@ -3253,7 +3283,7 @@ statement
 	;
 
 labeled_statement
-	: IDENTIFIER ':'  NEXT_INSTR statement {
+	: IDENTIFIER ':'  NEXT_QUAD statement {
 		DBG("labeled_statement -> IDENTIFIER ':' statement");
 		$$ = getNode("labeled_statement", mergeAttrs(getNode($1), $4));
 		//3AC
@@ -3264,19 +3294,19 @@ labeled_statement
         $$->continuelist = $4->continuelist;
         $$->breaklist = $4->breaklist;
 	}
-	| CASE_LABEL NEXT_INSTR statement {
+	| CASE_CODE NEXT_QUAD statement {
 		DBG("labeled_statement -> CASE constant_expression ':' statement");
 		$$ = getNode("case", mergeAttrs($1, $3));
 
 		//3AC
 		backpatch($1->truelist, $2);
-		extendList($3->nextlist, $1->falselist); 
+		extendList($3->nextlist, $1->falselist); //! ---
         $$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
         $$->caselist = $1->caselist;
         $$->continuelist = $3->continuelist;
 	}
-	| DEFAULT_LABEL ':' statement {
+	| DEFAULT_CODE ':' statement {
 		DBG("labeled_statement -> DEFAULT ':' statement");
 		std::vector<Data> attr;
         insertAttr(attr, NULL, "default", 0);
@@ -3290,9 +3320,9 @@ labeled_statement
 	}
 	;
 
-DEFAULT_LABEL
+DEFAULT_CODE
 	: DEFAULT {
-		DBG("DEFAULT_LABEL -> DEFAULT");
+		DBG("DEFAULT_CODE -> DEFAULT");
 		$$ = getNode($1);
 
 		int a = getCurrentSize();
@@ -3304,7 +3334,7 @@ DEFAULT_LABEL
 	}
 	;
 
-CASE_LABEL
+CASE_CODE
 	: CASE constant_expression ':' {
         $$ = $2;
 		std::string t = getTempVariable($$->type);
@@ -3366,7 +3396,7 @@ compound_statement
 			func_flag--;
 		}
 	}
-	| '{' CHANGE_TABLE declaration_list NEXT_INSTR  statement_list '}'	{
+	| '{' CHANGE_TABLE declaration_list NEXT_QUAD  statement_list '}'	{
         DBG("compound_statement -> '{' CHANGE_TABLE declaration_list statement_list '}'");
 		$$ = getNode("compound_statement", mergeAttrs($3, $5));
 		
@@ -3414,7 +3444,7 @@ declaration_list
 		DBG("declaration_list -> declaration");
 		$$ = $1;
 	}
-	| declaration_list NEXT_INSTR declaration {
+	| declaration_list NEXT_QUAD declaration {
 		DBG("declaration_list -> declaration_list declaration");
 		$$ = getNode("declaration_list", mergeAttrs($1, $3));
 		//3AC
@@ -3428,7 +3458,7 @@ statement_list
 		DBG("statement_list -> statement");
 		$$ = $1;
 	}
-	| statement_list NEXT_INSTR statement {
+	| statement_list NEXT_QUAD statement {
 		DBG("statement_list -> statement_list statement");
 		$$ = getNode("statement_list", mergeAttrs($1, $3));
 
@@ -3455,7 +3485,7 @@ expression_statement
 	}
 	;
 
-IF_COND
+IF_CODE
     : IF {if_found = 1;} '(' expression ')' {
         if($4->truelist.empty() && $4->falselist.empty()) {
             int a = getCurrentSize();
@@ -3471,7 +3501,7 @@ IF_COND
     }
 	;
 
-SKIP
+N
     : %empty {
         int a = getCurrentSize();
 		$$ = new Node;
@@ -3481,7 +3511,7 @@ SKIP
     ;
 
 selection_statement
-	: IF_COND NEXT_INSTR statement {
+	: IF_CODE NEXT_QUAD statement {
 		DBG("selection_statement -> IF '(' expression ')' statement");
 		$$ = getNode("if", mergeAttrs($1, $3));
 		//3AC
@@ -3491,7 +3521,7 @@ selection_statement
 		$$->continuelist = $3->continuelist;
 		$$->breaklist = $3->breaklist;
 	}
-	| IF_COND NEXT_INSTR statement SKIP ELSE NEXT_INSTR statement {
+	| IF_CODE NEXT_QUAD statement N ELSE NEXT_QUAD statement {
 		DBG("selection_statement -> IF '(' expression ')' statement ELSE statement");
 		$$ = getNode("if-else", mergeAttrs($1, $3, $7));
 		//3AC
@@ -3525,7 +3555,7 @@ selection_statement
 	;
 
 
-EXPR_COND
+EXPR_CODE
     : {if_found = 1;} expression {
         if($2->truelist.empty() && $2->falselist.empty()) {
             int a = getCurrentSize();
@@ -3541,7 +3571,7 @@ EXPR_COND
     }
     ;
 
-EXPR_STMT_COND
+EXPR_STMT_CODE
     : {if_found = 1;} expression_statement { 
 		if($2->truelist.empty() && $2->falselist.empty()) {
             int a = getCurrentSize();
@@ -3559,7 +3589,7 @@ EXPR_STMT_COND
 
 
 iteration_statement
-    : WHILE '(' NEXT_INSTR EXPR_COND ')' NEXT_INSTR statement {
+    : WHILE '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement {
 		DBG("iteration_statement -> WHILE '(' expression ')' statement");
 		$$ = getNode("while-loop", mergeAttrs($4, $7));
 
@@ -3571,7 +3601,7 @@ iteration_statement
 		extendList($$->nextlist, $7->breaklist);
         emit("GOTO", "", "", "", $3);
 	}
-	| UNTIL '(' NEXT_INSTR EXPR_COND ')' NEXT_INSTR statement { /*** Added UNTIL grammar ***/
+	| UNTIL '(' NEXT_QUAD EXPR_CODE ')' NEXT_QUAD statement { /*** Added UNTIL grammar ***/
 		DBG("iteration_statement -> UNTIL '(' expression ')' statement");
 		$$ = getNode("until-loop", mergeAttrs($4, $7));
 
@@ -3583,7 +3613,7 @@ iteration_statement
 		extendList($$->nextlist, $7->breaklist);
 		emit("GOTO", "", "", "", $3);
 	}
-	| DO NEXT_INSTR statement WHILE '(' NEXT_INSTR EXPR_COND ')' ';' {
+	| DO NEXT_QUAD statement WHILE '(' NEXT_QUAD EXPR_CODE ')' ';' {
 		DBG("iteration_statement -> DO statement WHILE '(' expression ')' ';'");
 		$$ = getNode("do-while-loop", mergeAttrs($3, $7));
 
@@ -3594,7 +3624,7 @@ iteration_statement
 		$$->nextlist = $7->falselist;
 		extendList($$->nextlist, $3->breaklist);
 	}
-	| FOR '(' expression_statement NEXT_INSTR EXPR_STMT_COND ')' NEXT_INSTR statement {
+	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE ')' NEXT_QUAD statement {
 		DBG("iteration_statement -> FOR '(' expression_statement expression_statement ')' statement");
 		$$ = getNode("for-loop(w/o update stmt)", mergeAttrs($3, $5, $8));
 
@@ -3609,7 +3639,7 @@ iteration_statement
 
 		emit("GOTO", "", "", "", $4);
 	}
-	| FOR '(' expression_statement NEXT_INSTR EXPR_STMT_COND NEXT_INSTR expression SKIP ')' NEXT_INSTR statement {
+	| FOR '(' expression_statement NEXT_QUAD EXPR_STMT_CODE NEXT_QUAD expression N ')' NEXT_QUAD statement {
 		DBG("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
 		$$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
 
@@ -3689,7 +3719,7 @@ translation_unit
 		DBG("translation_unit -> external_declaration");
 		$$ = $1;
 	}
-	| translation_unit NEXT_INSTR external_declaration {
+	| translation_unit NEXT_QUAD external_declaration {
 		DBG("translation_unit -> translation_unit external_declaration");
 		$$ = getNode("program", mergeAttrs($1, $3));
 		//3AC
@@ -3734,7 +3764,6 @@ function_definition
 		// Semantics
 		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
-		DBG("Function name: " + $2->temp_name);
         if ($2->type.find("*") != string::npos) {
             // Use the complete type from declarator which includes pointer
             $$->type = $2->type;
@@ -3766,7 +3795,6 @@ function_definition
 		// Semantics 
 		// Extract and propagate function name and return type for classes
         $$->temp_name = $2->temp_name;  // Function name from declarator
-		DBG("Function name: " + $2->temp_name);
 		if ($2->type.find("*") != string::npos) {
             // Use the complete type from declarator which includes pointer
             $$->type = $2->type;
@@ -3799,7 +3827,6 @@ function_definition
 		// Semantics
 		type = "";
 		string fName = string($2);
-		DBG("Function name: " + fName);
 		if(fName!="("){//in case of error it gives this as fName
 			printSymbolTable(curr_table, fName + ".csv");
 			updSymbolTable(fName);
@@ -3818,7 +3845,6 @@ function_definition
 		// Semantics
 		type = "";
 		string fName = string($2);
-		DBG("Function name: " + fName);
 		if(fName!="("){//in case of error it gives this as fName
 			printSymbolTable(curr_table, fName + ".csv");
 			updSymbolTable(fName);
@@ -3845,13 +3871,9 @@ F
 		    } 
 		    qualifiedFuncName=mangleFunctionName(funcName, std::vector<string>(funcArgs.begin() + 1, funcArgs.end()));//need to skip 'this'
 			qualifiedFuncName="FUNC_" + std::to_string(className.size()) + className + "_" + qualifiedFuncName.substr(5);
+		    
 		}
 		else qualifiedFuncName = mangleFunctionName(funcName, funcArgs);
-		if(qualifiedFuncName.back() == 'm'){
-			varargsFuncs.push_back(qualifiedFuncName);
-			DBG("Pushed into var args vec: " + qualifiedFuncName);
-		}
-		DBG("Mangled Function name: " + qualifiedFuncName);
 		funcArgs.clear();
 		if (gst.find(qualifiedFuncName) != gst.end()){
 			removeFuncProto();//added for handling func redifinition

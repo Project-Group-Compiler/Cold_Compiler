@@ -108,10 +108,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
         if (isFloat(type1) && checkInt(type2))
         {
             q = getTempVariable(type1);
-            if (isLocalStaticInit)
-                staticAddLater.push_back(quad(staticAddLater.size(), "intToFloat", arg2, "", q, -1));
-            else
-                emit("intToFloat", arg2, "", q, -1);
+            emit("intToFloat", arg2, "", q, -1);
         }
         else
             q = arg2;
@@ -193,40 +190,36 @@ void addgotoLabels()
 
 void print_tac_code(const std::string &inputFile)
 {
-    // std::ofstream out(outputDir + inputFile + "_IR.txt");
-    // if (!out) {
-    //     print_error("cannot open " + outputDir + inputFile + "_IR.txt");
-    //     return;
-    // }
+    std::ofstream out(outputDir + inputFile + "_IR.txt");
+    if (!out)
+    {
+        print_error("cannot open " + outputDir + inputFile + "_IR.txt");
+        return;
+    }
 
-    // out << "Three Address Code:\n\n";
+    out << "Three Address Code:\n\n";
+    for (auto &instr : tac_code)
+        out << stringify(instr) << "\n";
+    out <<"\n"<< std::string(60, '-') << "\n";
     // std::cout << std::setw(5) << "Label" << std::setw(20) << "Op" << std::setw(20) << "Arg1"
     //   << std::setw(20) << "Arg2" << std::setw(20) << "Result" << std::setw(20) << "Goto" << "\n";
     // std::cout << "-------------------------------------------------------------------------------------------------------------\n";
 
-    for (size_t i = 0; i < tac_code.size(); i++)
-    { // FUNC -2 is also suppressed
-        const auto &q = tac_code[i];
-        std::cout << std::setw(5) << q.Label << std::setw(20) << q.op
-                  << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
-                  << std::setw(20) << q.result
-                  << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
-                  << "\n";
-    }
-
-    // for (auto &instr : tac_code)
-    // {
-    //     std::cout << stringify(instr) << std::endl;
+    // for (size_t i = 0; i < tac_code.size(); i++)
+    // { // FUNC -2 is also suppressed
+    //     const auto &q = tac_code[i];
+    //     std::cout << std::setw(5) << q.Label << std::setw(20) << q.op
+    //               << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
+    //               << std::setw(20) << q.result
+    //               << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
+    //               << "\n";
     // }
-    // std::cout << "\n-------------------------\n\n";
-    // addgotoLabels();
 }
 
 void generate_ir()
 {
     addStaticInit();
-    for (auto &instr : tac_code)
-        std::cout << stringify(instr) << "\n";
-    std::cout << "\n-------------------------\n\n";
-    addgotoLabels();
+    // for (auto &instr : tac_code)
+    //     std::cout << stringify(instr) << "\n";
+    // std::cout << "\n-------------------------\n\n";
 }

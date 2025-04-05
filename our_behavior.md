@@ -8,7 +8,7 @@
 
 5. struct and union with same name not allowed. (but class and struct of same name allowed.)
 
-6. no error produced for these 2: 
+6. no error produced for these 2 (which is ok, nice error handling has been done otherwise): 
     
 ```cpp
     union Data
@@ -37,3 +37,5 @@ and
         return;
     }
 ```
+
+7. static vars -> local scope and global scope both allowed. static can be int, char or float. CAUTION : Please don't initialize float static with an int constant (no error but wrong code), please initialize it with float constant.

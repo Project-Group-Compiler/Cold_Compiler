@@ -1,3 +1,4 @@
+// Error test case -> No need to check IR
 
 // void_in_calculation.cold
 void empty_function() {

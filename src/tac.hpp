@@ -6,7 +6,6 @@
 #include <iomanip>
 #include "data_structures.hpp"
 
-
 class quad
 {
 public:
@@ -41,6 +40,8 @@ extern std::vector<std::vector<quad>> basic_blocks;
 
 void generate_ir();
 
+void addgotoLabels();
+
 void compute_basic_blocks();
 void print_basic_blocks();
 
@@ -59,12 +60,22 @@ inline std::string stringify(const quad &instr)
     else if (curr_op.substr(0, 3) == "(f)")
     {
         if (curr_op.back() == '=')
-            s += instr.result + " = " + instr.arg1 + "\t\t(float)";
+        {
+            if (instr.result.substr(0, 3) == "_s_")
+                s += instr.result.substr(3) + " = " + instr.arg1 + "\t(float - static)";
+            else
+                s += instr.result + " = " + instr.arg1 + "\t\t(float)";
+        }
         else
             s += instr.result + " = " + instr.arg1 + " " + curr_op.back() + " " + instr.arg2 + "\t\t(float)";
     }
     else if (curr_op == "=")
-        s += instr.result + " = " + instr.arg1;
+    {
+        if (instr.result.substr(0, 3) == "_s_")
+            s += instr.result.substr(3) + " = " + instr.arg1 + "\t(static)";
+        else
+            s += instr.result + " = " + instr.arg1;
+    }
     else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
         s += instr.result + " = " + instr.arg1 + " " + curr_op + " " + instr.arg2;
     else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+")

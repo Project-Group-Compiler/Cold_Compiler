@@ -28,6 +28,7 @@ extern bool has_error;
 
 //Semantics
 bool isStaticDecl = false;
+bool isConstDecl = false;
 bool array_decl = 0;
 bool enum_decl = 0;
 string funcName = "";
@@ -44,6 +45,7 @@ int Anon_StructCounter=0;
 int Anon_ClassCounter = 0;
 std::vector<std::string> funcArgs;
 std::vector<std::string> classMethodArgs; 
+std::vector<std::string> varargsFuncs; 
 bool inMethodBody = false;  // Set true when inside a method body
 std::vector<std::string> idList;
 std::vector<std::string> currArgs;
@@ -73,12 +75,12 @@ std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
 template <typename T>
 void _print_(const T& x) {
-    std::cerr << x;
+    if (debug_enabled) out << x;
 }
 
 template <typename T, typename... Args>
 void _print_(const T& x, const Args&... rest) {
-    std::cerr << x << ", ";
+    if (debug_enabled) out << x << ", ";
     _print_(rest...);
 }
-#define debug(x...) std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; _print_(x); std::cerr << std::endl;
+#define debug(x...) if (debug_enabled) out << "(Line " << __LINE__ << "): [" << #x << "] => "; _print_(x); if (debug_enabled) out << std::endl;
