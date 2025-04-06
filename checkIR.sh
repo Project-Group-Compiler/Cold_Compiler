@@ -2,7 +2,7 @@
 
 # Directories and executable
 IR_DIR="outputs/IR"
-IR_CORR_DIR="outputs/IR_Corr"
+IR_CORR_DIR="outputs/IR_newCorr"
 
 # Ensure output and reference IR directories exist
 if [ ! -d "$IR_DIR" ]; then
