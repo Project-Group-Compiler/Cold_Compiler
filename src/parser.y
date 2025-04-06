@@ -2953,7 +2953,7 @@ direct_declarator
         funcArgs.push_back(thisType);
         
         // Insert 'this' parameter into symbol table
-        insertSymbol(*curr_table, "this", thisType, 8, true, NULL);
+        insertSymbol(*curr_table, "this", thisType, 4, true, NULL);
     	}
 		else mangledName = mangleFunctionName(baseName, funcArgs);
 		// Semantics

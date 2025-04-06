@@ -200,7 +200,8 @@ void print_tac_code(const std::string &inputFile)
     out << "Three Address Code:\n\n";
     for (auto &instr : tac_code)
         out << stringify(instr) << "\n";
-    out <<"\n"<< std::string(60, '-') << "\n";
+    out << "\n"
+        << std::string(60, '-') << "\n";
 
     std::ofstream tout(outputDir + inputFile + "_TABLE_IR.txt");
     if (!tout)
@@ -208,18 +209,18 @@ void print_tac_code(const std::string &inputFile)
         print_error("cannot open " + outputDir + inputFile + "_TABLE_IR.txt");
         return;
     }
-    tout << std::setw(5) << "Label" << std::setw(20) << "Op" << std::setw(20) << "Arg1"
-      << std::setw(20) << "Arg2" << std::setw(20) << "Result" << std::setw(20) << "Goto" << "\n";
-    tout << "-------------------------------------------------------------------------------------------------------------\n";
+    tout << std::left << std::setw(10) << "Label" << std::setw(50) << "Op" << std::setw(20) << "Arg1"
+         << std::setw(20) << "Arg2" << std::setw(20) << "Result" << std::setw(20) << "Goto" << "\n";
+    tout << std::string(150, '-') << "\n";
 
     for (size_t i = 0; i < tac_code.size(); i++)
-    { // FUNC -2 is also suppressed
+    {
         const auto &q = tac_code[i];
-        tout << std::setw(5) << q.Label << std::setw(20) << q.op
-                  << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
-                  << std::setw(20) << q.result
-                  << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
-                  << "\n";
+        tout << std::left << std::setw(10) << q.Label << std::setw(50) << q.op
+             << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
+             << std::setw(20) << q.result
+             << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
+             << "\n";
     }
 }
 

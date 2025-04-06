@@ -44,6 +44,7 @@
         // all three are OK
         ```
 
+- Function overloading is being supported through name mangling.
 - Following C library functions are supported by default (no header files need to included) :
 
     `scanf`, `printf`, `malloc`, `calloc`, `free`, `fopen`, `fputs`, `fgets`, `fclose`, `fprintf`, `fscanf`, `fgetc`, `fputc`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strcat`, `va_start`, `va_arg`, `va_end`

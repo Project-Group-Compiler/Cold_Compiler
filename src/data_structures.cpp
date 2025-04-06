@@ -6,6 +6,7 @@
 #include <iostream>
 
 extern bool print_symtab;
+extern std::string outputDir;
 
 // Global symbol table variables remain as before.
 sym_table gst;
@@ -749,7 +750,7 @@ void printSymbolTable(sym_table *table, std::string file_name) {
         std::cerr << "Error: NULL table passed to printSymbolTable.\n";
         return;
     }
-    std::ofstream outFile(file_name);
+    std::ofstream outFile(outputDir + file_name);
     if (!outFile.is_open()) {
         std::cerr << "Error: Cannot open " << file_name << " for writing.\n";
         return;
@@ -790,15 +791,15 @@ ull getSize(std::string id) {
     if (class_size.find(id) != class_size.end())
         return getClassSize(id);
     if (id == "int") {
-        return sizeof(int);
+        return 4;
     }
     if (id == "va_list") {
-        return sizeof(char *);
+        return 4;
     }
     if (id == "char") {
-        return sizeof(char);
+        return 1;
     }
-    return 8;  // for any pointer type
+    return 4;  // for any pointer type
 }
 
 bool isMatching(std::string var, std::string s2) {  // s1-> func_im , s2 -> func_iiii
