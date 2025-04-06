@@ -1,3 +1,6 @@
+#ifndef PARSERHEADER_HPP
+#define PARSERHEADER_HPP
+
 using namespace std;
 #include <stdio.h>
 #include <iostream>
@@ -84,3 +87,5 @@ void _print_(const T& x, const Args&... rest) {
     _print_(rest...);
 }
 #define debug(x...) if (debug_enabled) out << "(Line " << __LINE__ << "): [" << #x << "] => "; _print_(x); if (debug_enabled) out << std::endl;
+
+#endif // PARSERHEADER_HPP
