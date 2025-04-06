@@ -63,13 +63,17 @@ primary_expression
 		else{
 			if(temp.substr(0, 5) == "FUNC_"){
 				$$->expType = 3;
+				DBG("DEBUG: Function type = " + temp);
 			}
 			else if(temp.back() == '*'){
 				$$->expType = 2; 
+				DBG("DEBUG: Pointer type = " + temp);
 			}
 			else $$->expType = 1;
+			DBG("DEBUG: Variable type = " + temp);
 			$$->type = temp;
 			$$->isInit = lookup(string($1))->init;
+			DBG("DEBUG: Variable isInit = " + std::to_string($$->isInit));
 			$$->size = getSize(temp);
 			$$->tempName = string($1); 
 
@@ -101,12 +105,14 @@ primary_expression
 		// Semantics for constants
 		$$->type = $1->type;
 		$$->intVal = $1->intVal;
+		debug("DEBUG: value = " , $$->intVal);
 		$$->realVal = $1->realVal;
+		debug("DEBUG: value = " , $$->realVal);
 		$$->expType = 4;
 		$$->tempName = $1->str;
 		
 		if($$->type=="char"){
-			DBG("DEBUG: Constant type = " + std::string($1->str));
+			debug("DEBUG: Constant type = " + std::string($1->str));
 			std::string temp = std::string($1->str);
 			if (!checkChar(temp)) {
 				yyerror(("Invalid character constant: " + temp + ". Character constants must be a single character.").c_str(),"syntax error");
@@ -124,6 +130,8 @@ primary_expression
 		
 		// Semantics for string literals
 		$$->type = string("char*");
+		debug("DEBUG: String type = " + std::string($$->type));
+		debug("DEBUG: String value = " + std::string($1));
 		$$->tempName = string($1);
 		$$->strVal = string($1);
 
@@ -151,6 +159,7 @@ postfix_expression
 			$$->isInit = 1;
 		}
 		string temp = postfixExpression($1->type, 1);
+		debug($1->type,temp);
 		if(!temp.empty()){	
 			$$->type = temp;
 			//3AC
@@ -932,9 +941,12 @@ postfix_expression
 			// Semantics
 			$$->isInit = $1->isInit;
 			string temp = postfixExpression($1->type, 3);
+			debug(temp);
+
 			if(!temp.empty()){
 				$$->type = temp;
 				$$->intVal = $1->intVal + 1;
+				debug($$->type, $$->intVal);
 				//3AC
 				std::string q = getTempVariable($$->type);
 				$$->place = q;
@@ -963,9 +975,11 @@ postfix_expression
 			// Semantics
 			$$->isInit = $1->isInit;
 			string temp = postfixExpression($1->type, 3);
+			debug(temp);
 			if(!temp.empty()){
 				$$->type = temp;
 				$$->intVal = $1->intVal - 1;
+				debug($$->type, $$->intVal);
 				//3AC
 				std::string q = getTempVariable($$->type);
 				$$->place = q;
@@ -1023,6 +1037,7 @@ unary_expression
 		// Semantics
 		$$->isInit = $2->isInit;
 		string temp = postfixExpression($2->type, 3);
+		debug(temp);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal + 1;
@@ -1044,9 +1059,11 @@ unary_expression
 		// Semantics
 		$$->isInit = $2->isInit;
 		string temp = postfixExpression($2->type, 3);
+		debug(temp);
 		if(!temp.empty()){
 			$$->type = temp;
 			$$->intVal = $2->intVal - 1;
+			debug($$->type, $$->intVal);
 			//3AC
 			std::string q = getTempVariable($$->type);
 			$$->place = q;
@@ -1067,6 +1084,7 @@ unary_expression
 		
     	// Normal unary expression handling
     	string temp = unaryExp($1->node_name, $2->type);
+		debug(temp,rValue);
     	if(!temp.empty()){
     	    $$->type = temp;
     	    $$->intVal = $2->intVal;
@@ -1079,6 +1097,7 @@ unary_expression
 				std::string q = getTempVariable(temp);
 				$$->tempName = $2->tempName;
 				$$->place = q;
+				debug($$->place, $$->tempName);
 				$$->nextlist.clear();
 				emit($1->place, $2->place, "", q, -1);
 			}
@@ -1193,8 +1212,9 @@ multiplicative_expression
 		
 		// Semantic
 		$$->intVal = $1->intVal * $3->intVal;
-		
+		debug($1->intVal, $3->intVal);
 		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+		debug($1->type, $3->type);
 		string temp = Exp($1->type, $3->type, "*");
 		
 		if(!temp.empty()){
@@ -1239,7 +1259,9 @@ multiplicative_expression
 		
 		// Semantic
 		if($3->intVal != 0) $$->intVal = $1->intVal / $3->intVal;
+		debug($1->intVal, $3->intVal);
 		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+		debug($1->type, $3->type);
 		string temp = Exp($1->type, $3->type,"/");
 		if(!temp.empty()){
 			if(temp == "int"){
@@ -1282,7 +1304,9 @@ multiplicative_expression
 		
 		// Semantic
 		if($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
+		debug($1->intVal, $3->intVal);
 		if($3->intVal != 0) $$->intVal = $1->intVal % $3->intVal;
+		debug($1->type, $3->type);
 		string temp = Exp($1->type, $3->type, "%");
 		if(temp == "int"){
 			$$->type = "int";
@@ -1329,7 +1353,9 @@ additive_expression
         if($1->isInit && $3->isInit) $$->isInit = 1;
         $$->intVal = $1->intVal + $3->intVal;
         string temp = Exp($1->type, $3->type, "+");
+		debug($1->type, $3->type);
         if(!temp.empty()){
+			debug(temp);
             if(temp == "int") $$->type = "int";
 			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
@@ -1372,7 +1398,9 @@ additive_expression
         if($1->isInit && $3->isInit) $$->isInit = 1;
         $$->intVal = $1->intVal - $3->intVal;
         string temp = Exp($1->type, $3->type, "-");
+		debug($1->type, $3->type);
         if(!temp.empty()){
+			debug(temp);
             if(temp == "int") $$->type = "int";
 			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
@@ -1413,6 +1441,7 @@ shift_expression
         // Semantic
         if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
         string temp = shiftExp($1->type, $3->type);
+		debug($1->type, $3->type);
         if (!temp.empty()) {
             $$->type = $1->type;
 			//3AC
@@ -1430,6 +1459,7 @@ shift_expression
         // Semantic
         if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
         string temp = shiftExp($1->type, $3->type);
+		debug(temp);
         if (!temp.empty()) {
             $$->type = $1->type;
 			//3AC
@@ -1663,6 +1693,7 @@ logical_and_expression
         // Semantics
         $$->type = "bool";
         $$->isInit = ($1->isInit & $3->isInit);   
+		debug($1->place, $3->place);
         $$->intVal = $1->intVal && $3->intVal;
 		// 3AC
 		std::string q = getTempVariable($$->type);
@@ -1684,6 +1715,7 @@ logical_or_expression
         // Semantics
         $$->type = "bool";
         $$->isInit = $1->isInit & $3->isInit;
+		debug($1->intVal);
         $$->intVal = $1->intVal || $3->intVal;
 		// 3AC
 		std::string q = getTempVariable($$->type);
@@ -1712,14 +1744,16 @@ conditional_expression
         if (!temp.empty()) {
             $$->type = "int";
 			// 3AC
-			std::string q = getTempVariable($$->type);
 
 			backpatch($1->truelist, $2);
 			backpatch($1->falselist, $6);
+			debug($4-1);
 			backpatch($3->nextlist, $4-1);
+			for(auto it:$3->nextlist){ debug(it); }
+
 			backpatch($3->truelist, $4-1);
 			backpatch($3->falselist, $4-1);
-
+			std::string q = getTempVariable($$->type);
 			setArg1($4-1,$3->place);
 			setResult($4-1,q);
 
@@ -1789,9 +1823,12 @@ assignment_expression
         	    if (temp == "ok") {
         	        $$->type = $1->type;
         	    }
-				// 3AC
-				int num = assign_exp($2, $$->type, $1->type, $4->type, $1->place, $4->place);
+				// ---- 3 AC -----
+				std::string type1 = $1->type;
+				int num = assign_exp($2, $$->type, type1, $4->type, $1->place, $4->place);
+				debug($$->type, $1->type);
 				$$->place = $1->place;
+				debug(rValue);
 				backpatch($4->nextlist, num);
 				rValue = 0;
         	} else {
@@ -1834,6 +1871,7 @@ expression
 		backpatch($1->nextlist, $3);
         backpatch($1->truelist, $3);
         backpatch($1->falselist, $3);
+		for(auto it:$4->nextlist){ debug(it); }
         $$->nextlist = $4->nextlist;
         $$->place = $4->place;
 	}
@@ -1855,8 +1893,9 @@ declaration
         DBG("declaration -> declaration_specifiers init_declarator_list ';'");
           $$ = getNode("declaration", mergeAttrs($1, $2));
 
-			//changes made for classes
-		  $$->tempName = $2->tempName;
+		//changes made for classes
+		$$->tempName = $2->tempName;
+		debug($$->tempName);
         $$->type = $2->type;
         $$->size = $2->size;
         
@@ -1991,8 +2030,11 @@ init_declarator
 				array_decl = 0;
 				DBG("Array dec 0");
 			}else{
-				if(!isStaticDecl)
-					assign_exp("=", $1->type,$1->type, $5->type, $1->place, $5->place);
+				if(!isStaticDecl){
+					std::string type1 = $1->type;
+					debug(type1);
+					assign_exp("=", type1,type1, $5->type, $1->place, $5->place);
+				}
 				else
 				{
 					if(*curr_table == gst)	
@@ -2004,6 +2046,7 @@ init_declarator
 
 			$$->place = $1->tempName;
 			$$->nextlist = $5->nextlist;
+			debug($4);
 			backpatch($1->nextlist, $4);
 
 			rValue = 0;
@@ -2591,6 +2634,7 @@ struct_declarator
 		
 		// Semantics
 		if (insertStructAttr($1->tempName, $1->type, $1->size, 0) != 1) {
+			debug($1->tempName);
 			semantic_error(("The Attribute " + string($1->tempName) + " is already declared in the same struct").c_str(), "scope error");
 		}
 	}
@@ -2758,9 +2802,10 @@ direct_declarator
 		if ($1->expType == 1 || $1->expType == 2) {
 			$$->expType = 2;
 			$$->type = $1->type + "*";
+			debug(rValue,$$->type);
+
 			$$->tempName = $1->tempName;
 			$$->size = $1->size * $3->intVal;
-			debug(rValue);
 			if(rValue == 0){
 				array_decl = 1;
 				DBG("Array declaration  ");
@@ -2775,6 +2820,7 @@ direct_declarator
 		DBG("direct_declarator -> direct_declarator '[' ']'");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
+		debug($1->tempName,$1->type);
 		insertAttr(attr, NULL, "[ ]", 0);
 		$$ = getNode("direct_declarator[]", &attr);
 
@@ -2782,6 +2828,7 @@ direct_declarator
 		if ($1->expType <= 2) {
 			$$->expType = 2;
 			$$->type = $1->type + "*";
+			debug(rValue,$$->type);
 			$$->tempName = $1->tempName;
 			$$->size = 4;
 			if(rValue == 0){
@@ -2830,8 +2877,10 @@ direct_declarator
 		if($1->expType == 1) {
 			$$->tempName = $1->tempName;
 			$$->expType = 3;
+			debug($$->tempName,$$->type);
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
+			debug(mangledName);
 			vector<string> temp = getFuncArgs(mangledName);
 			
 			if(temp.size() == 1 && temp[0] == "FUNC_DNE"){
@@ -2875,10 +2924,13 @@ direct_declarator
 		// Semantics
 		fn_decl = 1;
 		$$->tempName = $1->tempName;
+		debug("USELESS PRODUCTION");
 		$$->expType = 3;
 		$$->type = $1->type;
+		debug($$->tempName,$$->type);
 		$$->size = getSize($$->type);
 		funcType = $1->type;
+		debug(funcType);
 		funcName = string($1->tempName);
 		idList.clear();
 	}
@@ -2886,6 +2938,7 @@ direct_declarator
 		DBG("direct_declarator -> direct_declarator '(' PARAM_INIT ')'");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
+		debug($1->tempName);
 		insertAttr(attr, NULL, "( )", 0);
 		$$ = getNode("direct_declarator", &attr);
 
@@ -2907,6 +2960,7 @@ direct_declarator
 		if ($1->expType == 1) {
 			$$->tempName = $1->tempName;
 			$$->expType = 3;
+			debug(mangledName,$1->tempName);
 			$$->type = $1->type;
 			$$->size = getSize($$->type);
 
@@ -3022,12 +3076,14 @@ parameter_declaration
 		// Semantics
 		type = "";
 		if ($2->expType == 1 || $2->expType == 2) {
+			debug(currLookup($2->tempName));
 			if (currLookup($2->tempName)) {
 				semantic_error(("Redeclaration of Parameter " + $2->tempName).c_str(), "scope error");
 			} else {
 				DBG("Inserting into symbol table: " + $2->tempName);
 				insertSymbol(*curr_table, $2->tempName, $2->type, $2->size, true, NULL);
 			}
+			debug($2->type);
 			funcArgs.push_back($2->type);
 		}
 	}
@@ -3169,7 +3225,8 @@ initializer
 		$$->isInit = 1;
 		// Semantics
 		$$->type = $2->type+"*"; // For checking array declaration  -- {1,2,3} -> int*
-		//3AC
+		//--- 3AC ---
+		debug($2->place);
 		$$->place = $2->place;
 		$$->nextlist = $2->nextlist;
 	}
@@ -3232,6 +3289,7 @@ labeled_statement
 
         $$->nextlist = $4->nextlist;
         $$->caselist = $4->caselist;
+		for(auto it:$4->caselist){ debug(it); }
         $$->continuelist = $4->continuelist;
         $$->breaklist = $4->breaklist;
 	}
@@ -3241,11 +3299,13 @@ labeled_statement
 
 		//3AC
 		backpatch($1->truelist, $2);
+		debug($2);
 		extendList($3->nextlist, $1->falselist); 
         $$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
-        $$->caselist = $1->caselist;
+		for(auto it:$3->continuelist){ debug(it); }
         $$->continuelist = $3->continuelist;
+        $$->caselist = $1->caselist;
 	}
 	| DEFAULT_LABEL ':' statement {
 		DBG("labeled_statement -> DEFAULT ':' statement");
@@ -3257,6 +3317,7 @@ labeled_statement
 		//3AC
 		$$->breaklist = $3->breaklist;
         $$->nextlist = $3->nextlist;
+		for(auto it:$3->continuelist){ debug(it); }
         $$->continuelist = $3->continuelist;	
 	}
 	;
@@ -3311,12 +3372,14 @@ compound_statement
 		DBG("compound_statement -> '{' SCOPE_CHANGE statement_list '}'");
 		$$ = $3;
 		
-		// Semantics - clean up block scope
-		if(func_flag >= 2){ //>=2 essentially means we are in a block within a funcion
+		// Semantics - clear block scope
+		if(func_flag >= 2){ //>=2 essentially => we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
+			debug(bc);
 			string str = "Block" + to_string(bc);
 			string name = funcName + str + ".csv";
+			debug(name);
 			printSymbolTable(curr_table, name);
 			updSymbolTable(str);
 			func_flag--;
@@ -3326,12 +3389,14 @@ compound_statement
 		DBG("compound_statement -> '{' SCOPE_CHANGE declaration_list '}'");
 		$$ = $3;
 		
-		// Semantics - clean up block scope
-		if(func_flag >= 2){//>=2 essentially means we are in a block within a funcion
+		// Semantics - clear block scope
+		if(func_flag >= 2){//>=2 essentially => we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
+			debug(bc);
 			string str = "Block" + to_string(bc);
 			string name = funcName + str + ".csv";
+			debug(name);
 			printSymbolTable(curr_table, name);
 			updSymbolTable(str);
 			func_flag--;
@@ -3341,21 +3406,25 @@ compound_statement
         DBG("compound_statement -> '{' SCOPE_CHANGE declaration_list statement_list '}'");
 		$$ = getNode("compound_statement", mergeAttrs($3, $5));
 		
-		// Semantics - clean up block scope
-		if(func_flag >= 2){//>=2 essentially means we are in a block within a funcion
+		// Semantics - clear block scope
+		if(func_flag >= 2){//>=2 essentially => we are in a block within a funcion
 			int bc = block_stack.top();
 			block_stack.pop();
+			debug(bc);
 			string str = "Block" + to_string(bc);
 			string name = funcName + str + ".csv";
+			debug(name);
 			printSymbolTable(curr_table, name);
 			updSymbolTable(str);
 			func_flag--;
 		}
 
-		//3AC
+		//--- 3AC ---
+		debug($4);
 		backpatch($3->nextlist, $4);
         $$->nextlist = $5->nextlist;
         $$->caselist = $5->caselist;
+		for(auto it:$5->nextlist){ debug(it); }
         $$->continuelist = $5->continuelist;
         $$->breaklist = $5->breaklist;
 	}
@@ -3428,13 +3497,16 @@ expression_statement
 
 IF_COND
     : IF {if_found = 1;} '(' expression ')' {
+		debug($4->place);
         if($4->truelist.empty() && $4->falselist.empty()) {
+			debug(getCurrentSize);
             int a = getCurrentSize();
 			backpatch($4->nextlist, a);
             emit("GOTO","IF", $4->place, "",0);
             int b = getCurrentSize();
             emit("GOTO","", "", "",0);
             $4->truelist.push_back(a);
+			for(auto it:$4->truelist){ debug(it); }
             $4->falselist.push_back(b);
         }
         $$ = $4;
@@ -3444,6 +3516,7 @@ IF_COND
 
 SKIP
     : %empty {
+		debug(getCurrentSize());
         int a = getCurrentSize();
 		$$ = new Node;
         emit("GOTO", "", "", "", 0);
@@ -3459,6 +3532,7 @@ selection_statement
 		backpatch($1->truelist, $2);
 		extendList($3->nextlist, $1->falselist);
 		$$->nextlist = $3->nextlist;
+		for(auto it:$3->nextlist){ debug(it); }
 		$$->continuelist = $3->continuelist;
 		$$->breaklist = $3->breaklist;
 	}
@@ -3498,34 +3572,43 @@ selection_statement
 
 EXPR_COND
     : {if_found = 1;} expression {
+		debug($2->place);
         if($2->truelist.empty() && $2->falselist.empty()) {
             int a = getCurrentSize();
 			backpatch($2->nextlist, a);
             emit("GOTO","IF", $2->place, "",0);
             int b = getCurrentSize();
             emit("GOTO","", "", "",0);
+			debug(a,b);
             $2->truelist.push_back(a);
             $2->falselist.push_back(b);
         }
+		debug(getCurrentSize());
         $$ = $2;
 		if_found = 0;
+		debug("INSIDE EXPR_COND");
     }
     ;
 
 EXPR_STMT_COND
     : {if_found = 1;} expression_statement { 
+		debug("$2->place");
 		if($2->truelist.empty() && $2->falselist.empty()) {
+			debug($2->place,getCurrentSize());
             int a = getCurrentSize();
 			backpatch($2->nextlist, a);
             emit("GOTO","IF", $2->place, "",0);
             int b = getCurrentSize();
             emit("GOTO","", "", "",0);
+			debug(a,b);
             $2->truelist.push_back(a);
             $2->falselist.push_back(b);
         }
+		debug(getCurrentSize());
         $$ = $2;
 		if_found = 0;
-	}
+		debug("INSIDE EXPR_STMT_COND");
+	}	
     ;
 
 
@@ -3570,6 +3653,7 @@ iteration_statement
 		$$ = getNode("for-loop(w/o update stmt)", mergeAttrs($3, $5, $8));
 
 		backpatch($3->nextlist, $4);
+		debug($4,$7);
 		backpatch($5->truelist, $7);
 
 		$$->nextlist = $5->falselist;
@@ -3585,6 +3669,7 @@ iteration_statement
 		$$ = getNode("for-loop", mergeAttrs($3, $5, $7, $11));
 
 		backpatch($3->nextlist, $4);
+		debug($4,$10);
 		backpatch($5->truelist, $10);
 
 		$$->nextlist = $5->falselist;
