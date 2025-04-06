@@ -4,7 +4,7 @@ An end-to-end compiler for a new custom programming language, **`Cold`**.
 
 `Cold` has a C-like syntax based on ANSI C and also supports some object-oriented features.
 
-Regarding the name of our language, since it is C-like but based on an older version, hence *`C-old`*. Also since some object-oriented features are supported, hence `Cold` can also be thought of as "`C` but with `O`bject-oriented `L`anguage `D`esign features".
+Regarding the name of our language, since it is C-like but based on an older version, hence ***`C-old`***. Also since some object-oriented features are supported, hence `Cold` can also be thought of as "`C` but with `O`bject-oriented `L`anguage `D`esign features".
 
 - Source language : `Cold`
 - Implementation language : `C++`
@@ -17,7 +17,7 @@ The C Lex specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C
 
 The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C-grammar-y.html).
 
-*All basic features required have been supported.*
+All basic features required have been supported (*including structs, library functions and static*).
 
 **List of advanced features supported apart from basic features** :
 
@@ -59,9 +59,9 @@ git clone https://github.com/Project-Group-Compiler/Cold_Compiler.git
 cd Cold_Compiler
 ```
 
-## Running the parser
+## Running the IR generator
 
-1. Build the parser
+1. Build the IR generator
    
     Run the following command in the root directory:
 
@@ -69,7 +69,7 @@ cd Cold_Compiler
     make
     ```
 
-2. Run script for executing testcases. Output IR gets saved in `outputs` directory.
+2. Run script for executing testcases. Output IR gets saved in `outputs` directory. (A sub-folder `opt` created for optimized version.)
 
     ```bash
     chmod +x run.sh
@@ -89,6 +89,7 @@ Extra Options:
     -l, --lex        Print lexical analysis table
     -a, --ast        Print abstract syntax tree as dot file
     -s, --symtab     Print symbol tables
+    -d, --debug      Print debug trace
     -f, --force      Forcefully continue even if errors are present
 ```
 

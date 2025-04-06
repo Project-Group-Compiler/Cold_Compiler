@@ -5,7 +5,7 @@ class Person
     };
 };
 
-class Faculty <- Person
+class Employee <- Person
 {
     private{
         int employeeID;
@@ -20,6 +20,6 @@ class Faculty <- Person
 
 int main()
 {
-    class Faculty emp1;
+    class Employee emp1;
     emp1.aadhar_number = 123;
 }
