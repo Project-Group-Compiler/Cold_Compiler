@@ -656,7 +656,7 @@ void insertSymbol(sym_table &table, std::string id, std::string type, ull size, 
 
 std::vector<std::string> getFuncArgs(std::string id) {
     std::vector<std::string> temp;
-    temp.push_back("#NO_FUNC");
+    temp.push_back("FUNC_DNE");
     if (func_arg.find(id) != func_arg.end())
         return func_arg[id];
     else
