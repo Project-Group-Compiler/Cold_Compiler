@@ -47,7 +47,8 @@ struct node{
 
 int main()
 {
-    struct node* head, temp;
+    struct node* head;
+    struct node* temp;
     head->x = 1;
     head->next = temp;
     (*head).x=4;
