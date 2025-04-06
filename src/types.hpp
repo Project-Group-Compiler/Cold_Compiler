@@ -115,10 +115,10 @@ inline std::string checkType(std::string a, std::string b) {
         return "ok";
 
     if (isAChar || isAInt)
-        a = "float";
+        isAFloat=true;
 
     if (isBChar || isBInt)
-        b = "float";
+        isBFloat=true;
 
     if (isAFloat && isBFloat)
         return "ok";
