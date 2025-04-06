@@ -2,7 +2,7 @@ typedef int integer;
 typedef char character;
 
 typedef struct test{
-    int n;
+    integer n;
 } Test;
 
 int main() 
