@@ -55,8 +55,17 @@ inline std::string stringify(const quad &instr)
         s += curr_op;
     else if (curr_op.substr(0, 2) == "++" || curr_op.substr(1, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op.substr(1, 2) == "--" || curr_op == "!" || curr_op == "~")
         s += instr.result + " = " + curr_op + " " + instr.arg1;
-    else if (curr_op.substr(0, 5) == "unary")
-        s += instr.result + " = " + curr_op.back() + " " + instr.arg1;
+    else if (curr_op.substr(0, 5) == "unary"){
+        if(curr_op.back() == '&')
+        { 
+            if(instr.arg1.size() > 0 && instr.arg1[0] == '*')
+                s += instr.result + " = " + instr.arg1.substr(1); //&*
+            else
+                s += instr.result + " = & " + instr.arg1;
+        }else
+            s += instr.result + " = " + curr_op.back() + " " + instr.arg1;
+        
+    }
     else if (curr_op.substr(0, 3) == "(f)")
     {
         if (curr_op.back() == '=')
