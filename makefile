@@ -17,11 +17,14 @@ TYPES_HPP = $(SRC_DIR)/types.hpp
 TAC_HPP = $(SRC_DIR)/tac.hpp
 TAC_GEN_CPP = $(SRC_DIR)/tac_gen.cpp
 TAC_OPT_CPP = $(SRC_DIR)/tac_opt.cpp
+X86_32_LIB_HPP = $(SRC_DIR)/x86_32_lib.hpp
+ASM_HPP = $(SRC_DIR)/asm.hpp
+ASM_GEN_CPP = $(SRC_DIR)/asm_gen.cpp
 DRIVER = $(SRC_DIR)/driver.cpp
 
 
 # Final binary output
-OUTPUT = $(BIN_DIR)/ir_gen
+OUTPUT = $(BIN_DIR)/compiler
 
 # Object files including new ones
 OBJS = \
@@ -31,6 +34,7 @@ OBJS = \
 	$(BUILD_DIR)/data_structures.o \
 	$(BUILD_DIR)/tac_gen.o \
 	$(BUILD_DIR)/tac_opt.o \
+	$(BUILD_DIR)/asm_gen.o \
 	$(BUILD_DIR)/driver.o
 
 # Compiler and tools
@@ -78,8 +82,12 @@ $(BUILD_DIR)/tac_gen.o: $(TAC_GEN_CPP) $(TAC_HPP) $(DS_HPP) $(TYPES_HPP)
 $(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
 
+# Compile assembly generator object file
+$(BUILD_DIR)/asm_gen.o: $(ASM_GEN_CPP) $(ASM_HPP) $(X86_32_LIB_HPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(ASM_GEN_CPP)
+
 # Compile driver object file
-$(BUILD_DIR)/driver.o: $(DRIVER) $(DS_HPP) $(TAC_HPP)
+$(BUILD_DIR)/driver.o: $(DRIVER) $(DS_HPP) $(TAC_HPP) $(ASM_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(DRIVER)
 
 # Link all object files into the final binary
@@ -91,6 +99,6 @@ clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
 files_clean:
-	rm -f *.csv *_debug_file.txt *_lexfile.txt *_IR.txt
+	rm -f *.csv *_debug_file.txt *_lexfile.txt *_IR.txt *.asm
 
 .PHONY: all clean files_clean

@@ -2,6 +2,7 @@
 #include <filesystem>
 #include "data_structures.hpp"
 #include "tac.hpp"
+#include "asm.hpp"
 
 extern FILE *yyin;
 bool print_ast = false;
@@ -41,7 +42,7 @@ int main(int argc, char *argv[])
                       << "  -a, --ast        Print abstract syntax tree\n"
                       << "  -s, --symtab     Print symbol tables\n"
                       << "  -d, --debug      Print debug trace\n"
-                      // << "  -t, --tac        Print three address code\n"
+                      << "  -t, --tac        Print three address code\n"
                       << "  -f, --force      Forcefully continue even if errors are present\n";
             return 0;
         }
@@ -58,7 +59,7 @@ int main(int argc, char *argv[])
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
     bool optimize_ir = true;
     bool lexPrint = false;
-    bool print_ir = true; // TODO : make it false in next phase
+    bool print_ir = false;
     bool force = false;
     for (int i = 2; i < argc; i++)
     {
@@ -122,7 +123,7 @@ int main(int argc, char *argv[])
             if (print_ir)
                 print_tac_code(inputFileString);
 
-            // generate asm code fn comes here
+            emit_asm(inputFileString);
         }
         else
             std::cerr << "\nsyntax or semantic errors present, use -f to forcefully continue\n";

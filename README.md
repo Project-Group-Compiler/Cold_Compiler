@@ -17,11 +17,13 @@ The C Lex specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C
 
 The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C-grammar-y.html).
 
-All basic features required have been supported (*including structs, library functions and static*).
+Syntax reference for x86 assembly has been mainly taken from [here](https://www.cs.virginia.edu/~evans/cs216/guides/x86.html).
 
-**List of advanced features supported apart from basic features** :
+<!-- All basic features required have been supported (*including structs, library functions and static*). -->
 
-- recursive function call
+<!-- **List of advanced features supported apart from basic features** : -->
+
+<!-- - recursive function call
 - classes and objects
 - inheritance
 - function call with variable arguments
@@ -33,17 +35,17 @@ All basic features required have been supported (*including structs, library fun
 - file manipulation
 - until loop
 - multi-level pointers
-- multi-dimensional arrays
+- multi-dimensional arrays -->
 
-**Extra advanced features** :
+<!-- **Extra advanced features** : -->
 
-- function overloading
+<!-- - function overloading 
 - const type qualifier
 - multi-level inheritance
 - modified operator precedence (more details in `docs/operator_precedence.md`.)
 - *machine-independent optimizations* implemented (at this point) :
-  1. constant folding
-  2. dead code elimination
+  1. constant folding -->
+<!--  2. dead code elimination -->
 
 Some syntax changes and implementation related details have been documented in `docs/lang_details.md`.
 
@@ -59,9 +61,9 @@ git clone https://github.com/Project-Group-Compiler/Cold_Compiler.git
 cd Cold_Compiler
 ```
 
-## Running the IR generator
+## Running the compiler
 
-1. Build the IR generator
+1. Build the compiler
    
     Run the following command in the root directory:
 
@@ -69,17 +71,17 @@ cd Cold_Compiler
     make
     ```
 
-2. Run script for executing testcases. Output IR gets saved in `outputs` directory. (A sub-folder `opt` created for optimized version.)
+2. Run script for executing testcases. run.sh still saves IR for time being.
 
     ```bash
     chmod +x run.sh
     ./run.sh
     ```
 
-Alternatively, generate IR for a single input file using:
+Alternatively, generate assembly for a single input file using:
 
 ```bash
-bin/ir_gen <input_file> [options]
+bin/compiler <input_file> [options]
 ```
 
 ```markdown
@@ -90,8 +92,23 @@ Extra Options:
     -a, --ast        Print abstract syntax tree as dot file
     -s, --symtab     Print symbol tables
     -d, --debug      Print debug trace
+    -t, --tac        Print three address code
     -f, --force      Forcefully continue even if errors are present
 ```
+
+## To create executable : 
+
+Install nasm if not already installed.
+
+```bash
+nasm -f elf32 <file_name>.asm # to assemble
+gcc -m32 -no-pie -z noexecstack <file_name>.o -o <some_name> # to create object file
+```
+
+-o flag is optional ofcourse.
+
+this will create binary "some_name"
+run using ./some_name.
 
 Optionally, convert AST DOT file into image using:
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-EXECUTABLE="bin/ir_gen"
+EXECUTABLE="bin/compiler"
 TEST_DIR="tests/ir_gen"
 OUTPUT_DIR="outputs/IR"
 OUTPUT_DIR_OPT="outputs/opt"
@@ -27,7 +27,7 @@ for test_case in "$TEST_DIR"/*.cold; do
     test_name=$(basename "$test_case" .cold)
     echo "Running test case: $test_name"
 
-    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" "-O0" "$@"
+    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" "-O0" "-t" "$@"
 
 
     if [ $? -eq 0 ]; then
@@ -39,7 +39,7 @@ for test_case in "$TEST_DIR"/*.cold; do
       continue
     fi
 
-    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR_OPT/" "$@"
+    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR_OPT/" "-t" "$@"
 
   else
     echo "No test cases found in '$TEST_DIR'."
