@@ -38,12 +38,16 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
 extern std::vector<quad> tac_code;
 extern std::vector<std::vector<quad>> basic_blocks;
 
+extern bool optimize_ir;
+
 void generate_ir();
 
 void addgotoLabels();
 
 void compute_basic_blocks();
 void print_basic_blocks();
+void build_cfg();
+void print_cfg();
 
 inline std::string stringify(const quad &instr)
 {
@@ -55,16 +59,17 @@ inline std::string stringify(const quad &instr)
         s += curr_op;
     else if (curr_op.substr(0, 2) == "++" || curr_op.substr(1, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op.substr(1, 2) == "--" || curr_op == "!" || curr_op == "~")
         s += instr.result + " = " + curr_op + " " + instr.arg1;
-    else if (curr_op.substr(0, 5) == "unary"){
-        if(curr_op.back() == '&')
-        { 
-            if(instr.arg1.size() > 0 && instr.arg1[0] == '*')
+    else if (curr_op.substr(0, 5) == "unary")
+    {
+        if (curr_op.back() == '&')
+        {
+            if (instr.arg1.size() > 0 && instr.arg1[0] == '*')
                 s += instr.result + " = " + instr.arg1.substr(1); //&*
             else
                 s += instr.result + " = & " + instr.arg1;
-        }else
+        }
+        else
             s += instr.result + " = " + curr_op.back() + " " + instr.arg1;
-        
     }
     else if (curr_op.substr(0, 3) == "(f)")
     {

@@ -83,7 +83,7 @@ $(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
 
 # Compile assembly generator object file
-$(BUILD_DIR)/asm_gen.o: $(ASM_GEN_CPP) $(ASM_HPP) $(X86_32_LIB_HPP)
+$(BUILD_DIR)/asm_gen.o: $(ASM_GEN_CPP) $(ASM_HPP) $(TAC_HPP) $(X86_32_LIB_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(ASM_GEN_CPP)
 
 # Compile driver object file

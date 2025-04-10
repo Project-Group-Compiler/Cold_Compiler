@@ -110,6 +110,22 @@ gcc -m32 -no-pie -z noexecstack <file_name>.o -o <some_name> # to create object 
 this will create binary "some_name"
 run using ./some_name.
 
+
+**Shortcut** : 
+
+```bash
+
+chmod +x coldc.sh
+
+./coldc.sh <input_file> <any_other_cold_compiler_flags>
+```
+
+Two important things to note : 
+
+1. Specify input file as the first argument
+2. Don't specify -h here
+
+
 Optionally, convert AST DOT file into image using:
 
 ```bash

@@ -57,7 +57,6 @@ int main(int argc, char *argv[])
     inputFilename = argv[1];
 
     std::string inputFileString = std::filesystem::path(inputFilename).stem().string();
-    bool optimize_ir = true;
     bool lexPrint = false;
     bool print_ir = false;
     bool force = false;

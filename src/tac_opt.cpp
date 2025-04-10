@@ -5,6 +5,7 @@
 #include <regex>
 #include <cmath>
 
+bool optimize_ir = true;
 std::vector<std::vector<quad>> basic_blocks;
 std::unordered_map<int, int> leader_block_map;
 std::vector<std::vector<int>> adj, rev_adj;
