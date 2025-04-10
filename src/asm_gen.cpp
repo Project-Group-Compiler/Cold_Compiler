@@ -36,12 +36,12 @@ void emit_asm(const std::string &inputFile)
     if (!optimize_ir)
         addgotoLabels();
 
-    asm_file = std::ofstream(outputDir + inputFile + ".asm");
-    if (!asm_file)
-    {
-        print_error("cannot open " + outputDir + inputFile + ".asm");
-        return;
-    }
+    // asm_file = std::ofstream(outputDir + inputFile + ".asm");
+    // if (!asm_file)
+    // {
+    //     print_error("cannot open " + outputDir + inputFile + ".asm");
+    //     return;
+    // }
 
     // TODO
 }

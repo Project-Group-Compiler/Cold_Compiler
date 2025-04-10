@@ -15,15 +15,13 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-input_file="$1"
-shift
-
 # Extract filename without extension for output name
+input_file="$1"
 filename=$(basename -- "$input_file")
 filename_noext="${filename%.*}"
 
 # Step 1: Run the Cold compiler to generate assembly
-bin/compiler "$input_file" $@
+bin/compiler $@
 
 # Check if compiler was successful
 if [ $? -ne 0 ]; then
@@ -32,15 +30,14 @@ if [ $? -ne 0 ]; then
 fi
 
 # Assembly file should be named the same as input but with .asm extension
-asm_file="${filename_noext}.asm"
 
-if [ ! -f "$asm_file" ]; then
-    echo "Error: Assembly file $asm_file not found after compilation."
+if [ ! -f "$filename_noext.asm" ]; then
+    echo "Error: Assembly file "$filename_noext.asm" not found after compilation."
     exit 1
 fi
 
 # Step 2: Assemble with nasm and link with gcc in a pipeline
-nasm -f elf32 "$asm_file" -o "$filename_noext.o"
+nasm -f elf32 "$filename_noext.asm" -o "$filename_noext.o"
 
 if [ $? -ne 0 ]; then
     echo "Assembling failed. Exiting."

@@ -10,63 +10,74 @@ inline int checkInt(std::string type)
 {
     return type == "int";
 }
- 
+
 inline bool isFloat(std::string type)
 {
     return type == "float";
 }
- 
- inline bool checkChar(std::string temp){
+
+inline bool checkChar(std::string temp)
+{
     // Validate character constant
     bool valid = false;
     // Simple character: 'x'
-    if (temp.size() == 3 && temp[0] == '\'' && temp[2] == '\'') {
+    if (temp.size() == 3 && temp[0] == '\'' && temp[2] == '\'')
+    {
         return true;
     }
     // Escape sequence: '\n', '\t', etc.
-    else if (temp.size() == 4 && temp[0] == '\'' && temp[3] == '\'' && temp[1] == '\\') {
+    else if (temp.size() == 4 && temp[0] == '\'' && temp[3] == '\'' && temp[1] == '\\')
+    {
         char esc = temp[2];
-        return (esc == 'n' || esc == 't' || esc == 'r' || esc == '0' || 
-                esc == '\\' || esc == '\'' || esc == '\"' || esc == 'a' || 
+        return (esc == 'n' || esc == 't' || esc == 'r' || esc == '0' ||
+                esc == '\\' || esc == '\'' || esc == '\"' || esc == 'a' ||
                 esc == 'b' || esc == 'f' || esc == 'v');
     }
     // Hex escape sequence: '\xhh'
-    else if (temp.size() >= 5 && temp.size() <= 8 && temp[0] == '\'' && temp.back() == '\'' && temp[1] == '\\' && temp[2] == 'x') {
-         valid = true;
-         for (size_t i = 3; i < temp.size() - 1; i++) {
-             if (!std::isxdigit(temp[i])) {
-                 valid = false;
-                 return false;
-                 break;
-             }
-         }
-     }
-     return valid;
- }
+    else if (temp.size() >= 5 && temp.size() <= 8 && temp[0] == '\'' && temp.back() == '\'' && temp[1] == '\\' && temp[2] == 'x')
+    {
+        valid = true;
+        for (size_t i = 3; i < temp.size() - 1; i++)
+        {
+            if (!std::isxdigit(temp[i]))
+            {
+                valid = false;
+                return false;
+                break;
+            }
+        }
+    }
+    return valid;
+}
 
- inline std::string searchIdentifierType(std::string id) {
-    sym_entry* n = lookup(id);
-    if(n) {
+inline std::string searchIdentifierType(std::string id)
+{
+    sym_entry *n = lookup(id);
+    if (n)
+    {
         std::string s = n->type;
-        return s;     
+        return s;
     }
     return "";
 }
 
-inline std::string postfixExpression(std::string type, int rule_num) {
-    if (type.empty()) {
+inline std::string postfixExpression(std::string type, int rule_num)
+{
+    if (type.empty())
+    {
         return "";
     }
-    
-    switch(rule_num) {
-        case 1:
-            return (type.back() == '*') ? type.substr(0, type.length() - 1) : "";
-        case 2:
-            return (type.size() >= 5 && type.substr(0, 5) == "FUNC_") ? type.substr(5, type.length() - 5) : "";
-        case 3:
-            return checkInt(type) ? type : "";
-        default:
-            return "";
+
+    switch (rule_num)
+    {
+    case 1:
+        return (type.back() == '*') ? type.substr(0, type.length() - 1) : "";
+    case 2:
+        return (type.size() >= 5 && type.substr(0, 5) == "FUNC_") ? type.substr(5, type.length() - 5) : "";
+    case 3:
+        return checkInt(type) ? type : "";
+    default:
+        return "";
     }
 }
 
@@ -81,7 +92,8 @@ inline bool isBChar = false;
 inline bool isAAnyPtr = false;
 inline bool isBAnyPtr = false;
 
-inline void setVar(std::string a, std::string b){
+inline void setVar(std::string a, std::string b)
+{
     isAInt = checkInt(a);
     isBInt = checkInt(b);
     isABool = (a == "bool");
@@ -94,7 +106,8 @@ inline void setVar(std::string a, std::string b){
     isBAnyPtr = (!b.empty() && b.back() == '*');
 }
 
-inline std::string checkType(std::string a, std::string b) {
+inline std::string checkType(std::string a, std::string b)
+{
     setVar(a, b);
     if (a.empty() || b.empty())
         return "";
@@ -115,10 +128,10 @@ inline std::string checkType(std::string a, std::string b) {
         return "ok";
 
     if (isAChar || isAInt)
-        isAFloat=true;
+        isAFloat = true;
 
     if (isBChar || isBInt)
-        isBFloat=true;
+        isBFloat = true;
 
     if (isAFloat && isBFloat)
         return "ok";
@@ -126,76 +139,108 @@ inline std::string checkType(std::string a, std::string b) {
     return "";
 }
 
-
-inline std::string unaryExp(std::string op, std::string type){
-    if(op=="*"){
+inline std::string unaryExp(std::string op, std::string type)
+{
+    if (op == "*")
+    {
         type = postfixExpression(type, 1);
-    } 
-    else if(op == "&"){
-        type+="*";
-    } 
-    else if(op=="+" || op=="-"){
-        if(!(type == "int" || type == "float")) return "";
     }
-    else if(op=="~"){
-        if(!(type == "int" || type != "bool")) return "";
+    else if (op == "&")
+    {
+        type += "*";
     }
-    else if(op=="!"){
-        if(!(type == "int" || type != "bool")) return "";
-    } 
+    else if (op == "+" || op == "-")
+    {
+        if (!(type == "int" || type == "float"))
+            return "";
+    }
+    else if (op == "~")
+    {
+        if (!(type == "int" || type != "bool"))
+            return "";
+    }
+    else if (op == "!")
+    {
+        if (!(type == "int" || type != "bool"))
+            return "";
+    }
     return type;
 }
 
-inline std::string Exp(std::string a, std::string b, std::string op){
+inline std::string Exp(std::string a, std::string b, std::string op)
+{
     setVar(a, b);
-    if(op=="*" || op =="/"){
-        if(isAInt && isBInt) return "int";
-        else if((isAInt || isAFloat) && (isBInt || isBFloat)) return "float";
+    if (op == "*" || op == "/")
+    {
+        if (isAInt && isBInt)
+            return "int";
+        else if ((isAInt || isAFloat) && (isBInt || isBFloat))
+            return "float";
         return "";
     }
-    else if(op=="%"){
-        if(isAInt && isBInt) return "int";
+    else if (op == "%")
+    {
+        if (isAInt && isBInt)
+            return "int";
         return "";
     }
-    else if(op=="+" || op=="-"){
-        if(isAInt && isBInt) return "int";
-        else if((isAInt || isAFloat) && (isBInt || isBFloat)) return "float";
-        else if((isAInt && isBChar) || (isAChar && isBInt)) return "int";
-        else if(isAInt && isBAnyPtr) return b;
-        else if(isAAnyPtr && isBInt) return a;
+    else if (op == "+" || op == "-")
+    {
+        if (isAInt && isBInt)
+            return "int";
+        else if ((isAInt || isAFloat) && (isBInt || isBFloat))
+            return "float";
+        else if ((isAInt && isBChar) || (isAChar && isBInt))
+            return "int";
+        else if (isAInt && isBAnyPtr)
+            return b;
+        else if (isAAnyPtr && isBInt)
+            return a;
         return "";
     }
     return "";
 }
 
-inline std::string shiftExp(std::string a, std::string b){
+inline std::string shiftExp(std::string a, std::string b)
+{
     setVar(a, b);
-    if(isAInt && isBInt) return "ok";
+    if (isAInt && isBInt)
+        return "ok";
     return "";
 }
 
-inline std::string relExp(std::string a, std::string b) {
+inline std::string relExp(std::string a, std::string b)
+{
     setVar(a, b);
-    if ((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar)) return "ok";
+    if ((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar))
+        return "ok";
     return "";
 }
 
-inline std::string eqExp(std::string a, std::string b){
+inline std::string eqExp(std::string a, std::string b)
+{
     setVar(a, b);
-    if(a == b) return "ok";
-    if((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar)) return "ok";
+    if (a == b)
+        return "ok";
+    if ((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar))
+        return "ok";
     return "";
 }
 
-inline std::string bitExp(std::string a, std::string b){
+inline std::string bitExp(std::string a, std::string b)
+{
     setVar(a, b);
-    if(isABool && isBBool) return "ok";
-    if((isABool || isAInt) && (isBBool || isBInt)) return "int";
+    if (isABool && isBBool)
+        return "ok";
+    if ((isABool || isAInt) && (isBBool || isBInt))
+        return "int";
     return "";
 }
 
-inline std::string assignExp(const std::string& a, const std::string& b, const std::string& op) {
-    if (op == "=") {
+inline std::string assignExp(const std::string &a, const std::string &b, const std::string &op)
+{
+    if (op == "=")
+    {
         return checkType(a, b);
     }
 
@@ -203,31 +248,39 @@ inline std::string assignExp(const std::string& a, const std::string& b, const s
     const std::string bitwiseOps = "&|^";
 
     // Arithmetic assignments: *=, /=, %=, +=, -=
-    if (op.size() == 2 && op[1] == '=' && arithOps.find(op[0]) != std::string::npos) {
+    if (op.size() == 2 && op[1] == '=' && arithOps.find(op[0]) != std::string::npos)
+    {
         return Exp(a, b, std::string(1, op[0])) != "" ? "ok" : "";
     }
 
     // Shift assignments: >>=, <<=
-    if (op == ">>=" || op == "<<=") {
+    if (op == ">>=" || op == "<<=")
+    {
         return shiftExp(a, b) != "" ? "ok" : "";
     }
 
     // Bitwise assignments: &=, |=, ^=
-    if (op.size() == 2 && op[1] == '=' && bitwiseOps.find(op[0]) != std::string::npos) {
+    if (op.size() == 2 && op[1] == '=' && bitwiseOps.find(op[0]) != std::string::npos)
+    {
         return bitExp(a, b) != "" ? "ok" : "";
     }
 
     return "";
 }
 
-
-inline std::string condExp(std::string a, std::string b) {
+inline std::string condExp(std::string a, std::string b)
+{
     setVar(a, b);
-    if (a == b) return a;
-    if (isAChar || isAInt) a = "float";
-    if (isBChar || isBInt) b = "float";
-    if (isAFloat && isBFloat) return "float";
-    if (isAAnyPtr && isBAnyPtr) return "void*";
+    if (a == b)
+        return a;
+    if (isAChar || isAInt)
+        a = "float";
+    if (isBChar || isBInt)
+        b = "float";
+    if (isAFloat && isBFloat)
+        return "float";
+    if (isAAnyPtr && isBAnyPtr)
+        return "void*";
     return "";
 }
 

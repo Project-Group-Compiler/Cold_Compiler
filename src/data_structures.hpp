@@ -1,7 +1,6 @@
 #ifndef SYMBOL_TABLE_H
 #define SYMBOL_TABLE_H
 
-#pragma once
 #include <fstream>
 #include <cstring>
 #include <stdio.h>
@@ -20,10 +19,10 @@
 
 struct TOKEN
 {
-    int line;
-    int column;
-    std::string token_type;
-    std::string lexeme;
+	int line;
+	int column;
+	std::string token_type;
+	std::string lexeme;
 };
 
 typedef struct sym_entry
@@ -36,6 +35,7 @@ typedef struct sym_entry
 	std::string access; //  field: "public", "private", "protected", etc.
 	bool isStatic;
 	bool isConst;
+	int next_use = -1; // TODO
 } sym_entry;
 
 typedef std::map<std::string, sym_entry *> sym_table;
@@ -49,7 +49,7 @@ extern class_sym_table class_gst;
 extern std::map<sym_table *, sym_table *> parent_table;
 extern std::map<struct_sym_table *, struct_sym_table *> struct_parent_table;
 extern std::map<class_sym_table *, class_sym_table *> class_parent_table;
-extern bool inClassContext;  // Flag to indicate if we're in a class definition
+extern bool inClassContext; // Flag to indicate if we're in a class definition
 extern std::map<std::string, ull> struct_size;
 extern std::map<std::string, ull> class_size;
 extern std::map<std::string, std::vector<std::string>> func_arg;
@@ -67,7 +67,7 @@ extern typ_table typ_gst;
 extern std::map<typ_table *, typ_table *> typ_parent_table;
 extern typ_table *curr_typ;
 
-//old functions
+// old functions
 extern std::vector<std::pair<std::string, std::string>> typedefTable;
 
 void print_error(const std::string &message);
@@ -75,7 +75,7 @@ std::string searchTypedefTable(std::string Token);
 void printType(std::ofstream &out);
 void printTables(const std::string &inputFile);
 bool searchIdConst(std::string id);
-std::string getSizeOfType(const std::string& typeStr);
+std::string getSizeOfType(const std::string &typeStr);
 
 void symTable_init();
 sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access = "", bool isStatic = false, bool isConst = false);
@@ -104,10 +104,10 @@ int findClass(std::string class_name);
 int lookupClass(std::string class_name, std::string id);
 
 void createParamList();
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr,std::string access="",bool isStatic = false,bool isConst = false);
+void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access = "", bool isStatic = false, bool isConst = false);
 std::vector<std::string> getFuncArgs(std::string id);
-std::string mangleFunctionName(const std::string& name, const std::vector<std::string>& paramTypes);
-std::string getTypeCode(const std::string& type);
+std::string mangleFunctionName(const std::string &name, const std::vector<std::string> &paramTypes);
+std::string getTypeCode(const std::string &type);
 void updInit(std::string id);
 void updTableSize(std::string id);
 void insertFuncArg(std::string &func, std::vector<std::string> &arg);
