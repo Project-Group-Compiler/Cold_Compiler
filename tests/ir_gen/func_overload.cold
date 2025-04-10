@@ -1,40 +1,23 @@
-// SEMANTICS WORKING
-// IR WORKING
+// Function overloading example
 
-struct a
+int func()
 {
-    int x;
-    int y;
-    char c;
-};
-struct person
-{
-    int age;
-    struct a a1;
-    float f2;
-    char c2;
-};
-class A{
-    public{
-        int x;
-        int y;
-        char c;
-        struct a a1;
-        struct person p;
-        void func(int x, int y, char c)
-        {
-            this->x = x+y;
-            this->y = y+x;
-            this->c = c;
-        }
-    };
-};
-int ok(int x){
-    return 0;
+    return 0; 
 }
-void solve()
+
+int func(int x) 
 {
-    struct person p;
-    struct a a1;
-    p.a1.y = 25;
+    return x * x; 
+}
+
+int func(int x,int y) 
+{
+    return x + y;
+}
+
+void solve() 
+{
+    func();
+    func(4);
+    func(1, 2);
 }
