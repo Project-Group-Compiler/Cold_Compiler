@@ -390,6 +390,234 @@ namespace x86_lib
     {
         return "leave";
     }
+
+    // ===== x87 FPU Instructions =====
+
+    // Basic FPU Stack Operations
+    inline std::string fld(const std::string &src)
+    {
+        return "fld " + src;
+    }
+
+    inline std::string fld_mem(const std::string &size, const std::string &addr)
+    {
+        return "fld " + size + " " + mem(addr);
+    }
+
+    inline std::string fld1() { return "fld1"; }     // Push +1.0 onto stack
+    inline std::string fldz() { return "fldz"; }     // Push +0.0 onto stack
+    inline std::string fldpi() { return "fldpi"; }   // Push π onto stack
+    inline std::string fldl2e() { return "fldl2e"; } // Push log2(e) onto stack
+    inline std::string fldl2t() { return "fldl2t"; } // Push log2(10) onto stack
+    inline std::string fldlg2() { return "fldlg2"; } // Push log10(2) onto stack
+    inline std::string fldln2() { return "fldln2"; } // Push loge(2) onto stack
+
+    inline std::string fst(const std::string &dest)
+    {
+        return "fst " + dest;
+    }
+
+    inline std::string fst_mem(const std::string &size, const std::string &addr)
+    {
+        return "fst " + size + " " + mem(addr);
+    }
+
+    inline std::string fstp(const std::string &dest)
+    {
+        return "fstp " + dest;
+    }
+
+    inline std::string fstp_mem(const std::string &size, const std::string &addr)
+    {
+        return "fstp " + size + " " + mem(addr);
+    }
+
+    inline std::string fxch(const std::string &reg = "st1")
+    {
+        return "fxch " + reg;
+    }
+
+    // FPU Arithmetic Instructions
+    inline std::string fadd(const std::string &src = "")
+    {
+        return src.empty() ? "fadd" : "fadd " + src;
+    }
+
+    inline std::string fadd_mem(const std::string &size, const std::string &addr)
+    {
+        return "fadd " + size + " " + mem(addr);
+    }
+
+    inline std::string faddp(const std::string &dest = "st1")
+    {
+        return "faddp " + dest;
+    }
+
+    inline std::string fsub(const std::string &src = "")
+    {
+        return src.empty() ? "fsub" : "fsub " + src;
+    }
+
+    inline std::string fsub_mem(const std::string &size, const std::string &addr)
+    {
+        return "fsub " + size + " " + mem(addr);
+    }
+
+    inline std::string fsubp(const std::string &dest = "st1")
+    {
+        return "fsubp " + dest;
+    }
+
+    inline std::string fsubr(const std::string &src = "")
+    {
+        return src.empty() ? "fsubr" : "fsubr " + src;
+    }
+
+    inline std::string fsubr_mem(const std::string &size, const std::string &addr)
+    {
+        return "fsubr " + size + " " + mem(addr);
+    }
+
+    inline std::string fsubrp(const std::string &dest = "st1")
+    {
+        return "fsubrp " + dest;
+    }
+
+    inline std::string fmul(const std::string &src = "")
+    {
+        return src.empty() ? "fmul" : "fmul " + src;
+    }
+
+    inline std::string fmul_mem(const std::string &size, const std::string &addr)
+    {
+        return "fmul " + size + " " + mem(addr);
+    }
+
+    inline std::string fmulp(const std::string &dest = "st1")
+    {
+        return "fmulp " + dest;
+    }
+
+    inline std::string fdiv(const std::string &src = "")
+    {
+        return src.empty() ? "fdiv" : "fdiv " + src;
+    }
+
+    inline std::string fdiv_mem(const std::string &size, const std::string &addr)
+    {
+        return "fdiv " + size + " " + mem(addr);
+    }
+
+    inline std::string fdivp(const std::string &dest = "st1")
+    {
+        return "fdivp " + dest;
+    }
+
+    inline std::string fdivr(const std::string &src = "")
+    {
+        return src.empty() ? "fdivr" : "fdivr " + src;
+    }
+
+    inline std::string fdivr_mem(const std::string &size, const std::string &addr)
+    {
+        return "fdivr " + size + " " + mem(addr);
+    }
+
+    inline std::string fdivrp(const std::string &dest = "st1")
+    {
+        return "fdivrp " + dest;
+    }
+
+    // FPU Comparison Instructions
+    inline std::string fcom(const std::string &src = "")
+    {
+        return src.empty() ? "fcom" : "fcom " + src;
+    }
+
+    inline std::string fcom_mem(const std::string &size, const std::string &addr)
+    {
+        return "fcom " + size + " " + mem(addr);
+    }
+
+    inline std::string fcomp(const std::string &src = "")
+    {
+        return src.empty() ? "fcomp" : "fcomp " + src;
+    }
+
+    inline std::string fcomp_mem(const std::string &size, const std::string &addr)
+    {
+        return "fcomp " + size + " " + mem(addr);
+    }
+
+    inline std::string fcompp() { return "fcompp"; }
+    inline std::string ftst() { return "ftst"; } // Compare ST0 with 0.0
+    inline std::string fxam() { return "fxam"; } // Examine ST0
+    inline std::string fucom(const std::string &src = "")
+    {
+        return src.empty() ? "fucom" : "fucom " + src;
+    }
+    inline std::string fucomp(const std::string &src = "")
+    {
+        return src.empty() ? "fucomp" : "fucomp " + src;
+    }
+    inline std::string fucompp() { return "fucompp"; }
+    inline std::string fcomi(const std::string &src = "st1") { return "fcomi " + src; }
+    inline std::string fcomip(const std::string &src = "st1") { return "fcomip " + src; }
+    inline std::string fucomi(const std::string &src = "st1") { return "fucomi " + src; }
+    inline std::string fucomip(const std::string &src = "st1") { return "fucomip " + src; }
+
+    // FPU Transcendental Instructions
+    inline std::string fsqrt() { return "fsqrt"; }
+    inline std::string fsin() { return "fsin"; }
+    inline std::string fcos() { return "fcos"; }
+    inline std::string fsincos() { return "fsincos"; }
+    inline std::string fptan() { return "fptan"; }
+    inline std::string fpatan() { return "fpatan"; }
+    inline std::string f2xm1() { return "f2xm1"; }     // 2^x-1
+    inline std::string fyl2x() { return "fyl2x"; }     // ST(1) * log2(ST(0))
+    inline std::string fyl2xp1() { return "fyl2xp1"; } // ST(1) * log2(ST(0) + 1.0)
+
+    // FPU Control Instructions
+    inline std::string finit() { return "finit"; }   // Initialize FPU
+    inline std::string fninit() { return "fninit"; } // Initialize FPU (no wait)
+    inline std::string fclex() { return "fclex"; }   // Clear exceptions
+    inline std::string fnclex() { return "fnclex"; } // Clear exceptions (no wait)
+    inline std::string fstcw(const std::string &addr) { return "fstcw " + mem(addr); }
+    inline std::string fnstcw(const std::string &addr) { return "fnstcw " + mem(addr); }
+    inline std::string fldcw(const std::string &addr) { return "fldcw " + mem(addr); }
+    inline std::string fstenv(const std::string &addr) { return "fstenv " + mem(addr); }
+    inline std::string fnstenv(const std::string &addr) { return "fnstenv " + mem(addr); }
+    inline std::string fldenv(const std::string &addr) { return "fldenv " + mem(addr); }
+    inline std::string fsave(const std::string &addr) { return "fsave " + mem(addr); }
+    inline std::string fnsave(const std::string &addr) { return "fnsave " + mem(addr); }
+    inline std::string frstor(const std::string &addr) { return "frstor " + mem(addr); }
+    inline std::string ffree(const std::string &reg = "st0") { return "ffree " + reg; }
+    inline std::string fincstp() { return "fincstp"; } // Increment FPU stack pointer
+    inline std::string fdecstp() { return "fdecstp"; } // Decrement FPU stack pointer
+    inline std::string fwait() { return "fwait"; }     // Wait for FPU
+    inline std::string fnop() { return "fnop"; }       // FPU no operation
+
+    // Integer Transfers
+    inline std::string fild(const std::string &size, const std::string &addr)
+    {
+        return "fild " + size + " " + mem(addr);
+    }
+
+    inline std::string fist(const std::string &size, const std::string &addr)
+    {
+        return "fist " + size + " " + mem(addr);
+    }
+
+    inline std::string fistp(const std::string &size, const std::string &addr)
+    {
+        return "fistp " + size + " " + mem(addr);
+    }
+
+    inline std::string fisttp(const std::string &size, const std::string &addr)
+    {
+        return "fisttp " + size + " " + mem(addr);
+    }
+
 } // namespace x86_lib
 
 #endif

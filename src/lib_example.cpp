@@ -1,9 +1,9 @@
-// https://www.cs.virginia.edu/~evans/cs216/guides/x86.html  : Reference
-
 // Example of how to use the library
 
 // Generates all reqd instructions
 // except extern, section, data in the end etc
+
+// Don't assemble this
 
 #include "x86_32_lib.hpp"
 #include <iostream>

@@ -17,7 +17,7 @@ The C Lex specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C
 
 The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-C-grammar-y.html).
 
-Syntax reference for x86 assembly has been mainly taken from [here](https://www.cs.virginia.edu/~evans/cs216/guides/x86.html).
+Syntax reference for x86 assembly has been mainly taken from [here](https://www.cs.virginia.edu/~evans/cs216/guides/x86.html). For floating-point operations, x87 instruction set has been used whose reference has taken mainly from [here](https://people.hsc.edu/faculty-staff/robbk/Coms480/Lectures/Spring%202009/Lecture%2018%20-%20The%20x87%20FPU.pdf).
 
 <!-- All basic features required have been supported (*including structs, library functions and static*). -->
 
