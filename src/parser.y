@@ -2408,7 +2408,8 @@ class_member
 		    ));
 		}
 		manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
-        insertClassAttr(manglemethod, "FUNC_"+$1->type, $1->size, 0,currentAccess);
+        insertClassAttr(manglemethod, "FUNC_"+$1->type, classMethodSize, 0,currentAccess);
+		classMethodSize=0;
 		classMethodArgs.clear();
 		$$ = $1; 
 	}
@@ -3804,9 +3805,9 @@ function_definition
 
 		type = "";
 		string fName = string($3);
-		if(fName!="("){//in case of error it gives this as fName
+		if(fName!="("){//in case of error it gives "(" as fName
 			printSymbolTable(curr_table, fName + ".csv");
-			updSymbolTable(fName);
+			classMethodSize=updSymbolTable(fName);
 			inMethodBody = false;
 			//3AC
 			for(auto i: gotolablelist){
@@ -3816,7 +3817,7 @@ function_definition
         	remainingBackpatch();
 		}
 	}
-	| declaration_specifiers declarator F_MANGLE compound_statement {
+	| declaration_specifiers declarator F_MANGLE compound_statement {//function with only return statement
 		DBG("function_definition -> declaration_specifiers declarator F_MANGLE compound_statement");
 		$$ = getNode("function (w/o decl_list)", mergeAttrs($1, $2, $4));
 		// Semantics 
@@ -3838,7 +3839,7 @@ function_definition
 		string fName = string($3);
 		if(fName!="("){//in case of error it gives this as fName  ->this check works perfectly for this case need to review for others
 			printSymbolTable(curr_table, fName + ".csv");
-			updSymbolTable(fName);
+			classMethodSize=updSymbolTable(fName);
 			inMethodBody = false;
 			//3AC
 			for(auto i: gotolablelist){
@@ -3858,7 +3859,7 @@ function_definition
 		DBG("Function name: " + fName);
 		if(fName!="("){//in case of error it gives this as fName
 			printSymbolTable(curr_table, fName + ".csv");
-			updSymbolTable(fName);
+			classMethodSize=updSymbolTable(fName);
 			inMethodBody = false;
 			//3AC
 			for(auto i: gotolablelist){
@@ -3877,7 +3878,7 @@ function_definition
 		DBG("Function name: " + fName);
 		if(fName!="("){//in case of error it gives this as fName
 			printSymbolTable(curr_table, fName + ".csv");
-			updSymbolTable(fName);
+			classMethodSize=updSymbolTable(fName);
 			inMethodBody = false;
 			//3AC
 			for (auto &i : gotolablelist) {
@@ -3910,7 +3911,7 @@ F_MANGLE
 		DBG("Mangled Function name: " + qualifiedFuncName);
 		funcArgs.clear();
 		if (gst.find(qualifiedFuncName) != gst.end()){
-			removeFuncProto();//added for handling func redifinition
+			removeFuncProto();//added for handling func redefinition
 			semantic_error(("Redefinition of function " + funcName).c_str(), "scope error");
 		}
 		else{
