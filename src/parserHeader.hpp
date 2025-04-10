@@ -50,6 +50,7 @@ std::vector<std::string> funcArgs;
 std::vector<std::string> classMethodArgs; 
 std::vector<std::string> varargsFuncs; 
 bool inMethodBody = false;  // Set true when inside a method body
+int classMethodSize=0;
 std::vector<std::string> idList;
 std::vector<std::string> currArgs;
 std::vector<std::string> actualArgs;
