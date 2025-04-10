@@ -14,7 +14,6 @@ struct_sym_table struct_gst;
 std::map<sym_table *, sym_table *> parent_table;
 std::map<struct_sym_table *, struct_sym_table *> struct_parent_table;
 
-std::map<std::string, ull> struct_size;
 std::map<std::string, std::vector<std::string>> func_arg;
 ull struct_offset;
 sym_table *curr_table;  // store pointer of the current symbol table
@@ -29,7 +28,6 @@ typ_table *curr_typ;
 
 class_sym_table class_gst;
 std::map<class_sym_table *, class_sym_table *> class_parent_table;
-std::map<std::string, ull> class_size;
 ull class_offset;
 sym_table *curr_class_structure;
 class_sym_table *curr_class_table;
@@ -786,9 +784,9 @@ void printSymbolTable(sym_table *table, std::string file_name) {
 }
 
 ull getSize(std::string id) {
-    if (struct_size.find(id) != struct_size.end())
+    if (findStruct(id))
         return getStructsize(id);
-    if (class_size.find(id) != class_size.end())
+    if (findClass(id))
         return getClassSize(id);
     if (id == "int") {
         return 4;
