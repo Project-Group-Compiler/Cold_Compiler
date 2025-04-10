@@ -81,7 +81,7 @@ void symTable_init();
 sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access = "", bool isStatic = false, bool isConst = false);
 void makeSymbolTable(std::string name, std::string f_type);
 void removeFuncProto();
-void updSymbolTable(std::string id);
+int updSymbolTable(std::string id);
 sym_entry *lookup(std::string id);
 sym_entry *currLookup(std::string id);
 void insertKeywords();

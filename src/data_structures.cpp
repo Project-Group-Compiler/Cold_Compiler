@@ -197,10 +197,10 @@ void removeFuncProto() {
         Loffset.pop();
 }
 
-void updSymbolTable(std::string id) {
+int updSymbolTable(std::string id) {
     if (Goffset.empty() || blockSz.empty()) {
         std::cerr << "Error: Goffset or blockSz stack is empty in updSymbolTable.\n";
-        return;
+        return 0;
     }
     ull temp = Goffset.top();
     Goffset.pop();
@@ -229,7 +229,9 @@ void updSymbolTable(std::string id) {
     if (sym_entry *entry = lookup(id)) {
         entry->size = blockSz.top();
     }
-
+    else if (id.find("FUNC_") == 0) {
+        return blockSz.top();//sending the size of class method
+    }
     temp = blockSz.top();
     blockSz.pop();
     if (!blockSz.empty())
@@ -238,6 +240,7 @@ void updSymbolTable(std::string id) {
         std::cerr << "Error: blockSz stack became empty in updSymbolTable.\n";
         exit(EXIT_FAILURE);
     }
+    return 0;
 }
 
 sym_entry *lookup(std::string id) {
@@ -584,8 +587,7 @@ int inheritFromClass(std::string childClassName, std::string parentClassName) {
                 if (firstUnderPos != std::string::npos) {
                     // Extract parent class name length and name
                     std::string parentLenStr = memberName.substr(5, firstUnderPos - 5);
-                    int parentNameLen = std::stoi(parentLenStr);
-
+                    int parentNameLen = std::stoi(parentLenStr);//this has length of <class Name len>+ <class Name>
                     // Extract method name and signature (everything after parent class name)
                     std::string methodSuffix = memberName.substr(5 + parentNameLen + 1 + 1);
                     // Create new mangled name with child class
