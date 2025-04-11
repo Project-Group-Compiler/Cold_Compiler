@@ -78,6 +78,8 @@ cd Cold_Compiler
     ./run.sh
     ```
 
+**Having int main() is mandatory.**
+
 Alternatively, generate assembly for a single input file using:
 
 ```bash

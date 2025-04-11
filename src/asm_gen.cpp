@@ -8,39 +8,6 @@ void print_error(const std::string &message);
 
 std::ofstream asm_file;
 
-void emit_instr(const std::string &instr)
-{
-    // asm_file << "\t" << instr << "\n";
-    std::cout << "\t" << instr << "\n";
-}
-
-void emit_label(const std::string &label)
-{
-    // asm_file << label << ":\n";
-    std::cout << label << ":\n";
-}
-
-void emit_data(const std::string &data)
-{
-    // asm_file << "\t" << data << "\n";
-    std::cout << "\t" << data << "\n";
-}
-
-void emit_section(const std::string &section)
-{
-    // asm_file << "section " << section << "\n";
-    std::cout << "section " << section << "\n";
-}
-
-void add_extern_funcs()
-{
-    for (auto &func : called_lib_funcs)
-    {
-        // asm_file << "extern " << func << "\n";
-        std::cout << "extern " << func << "\n";
-    }
-}
-
 void emit_asm(const std::string &inputFile)
 {
     if (!optimize_ir)
@@ -54,7 +21,43 @@ void emit_asm(const std::string &inputFile)
     // }
 
     compute_basic_blocks();
-    add_extern_funcs();
+    emit_section(".data");
+    // add initialized data
+    emit_section(".bss");
+    // add uninitialized data
     emit_section(".text");
     emit_data("global main");
+    add_extern_funcs();
+
+    for (auto &block : basic_blocks)
+    {
+        for (auto &instr : block)
+        {
+            const std::string curr_op = instr.op;
+            if (curr_op.substr(0, 5) == "FUNC_")
+            {
+                if (curr_op.substr(curr_op.length() - 7) == "start :")
+                {
+                    emit_label("\n" + curr_op.substr(0, curr_op.length() - 7));
+                    // TODO : add function prologue
+                }
+                // no code emitted for func_end
+            }
+            else if (curr_op.back() == ':')
+                emit_label(curr_op.substr(0, curr_op.length() - 1));
+        }
+    }
+}
+
+void add_extern_funcs()
+{
+    for (auto &func : called_lib_funcs)
+        emit_data("extern " + func);
+    // asm_file << "\n";
+    std::cout << "\n";
+}
+
+void next_use_analysis(std::vector<quad> &block)
+{
+    // TODO after pairs made
 }
