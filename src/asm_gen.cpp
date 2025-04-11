@@ -1,5 +1,6 @@
 #include "asm.hpp"
 #include "tac.hpp"
+#include "data_structures.hpp"
 #include "x86_32_lib.hpp"
 
 extern std::string outputDir;
@@ -31,6 +32,15 @@ void emit_section(const std::string &section)
     std::cout << "section " << section << "\n";
 }
 
+void add_extern_funcs()
+{
+    for (auto &func : called_lib_funcs)
+    {
+        // asm_file << "extern " << func << "\n";
+        std::cout << "extern " << func << "\n";
+    }
+}
+
 void emit_asm(const std::string &inputFile)
 {
     if (!optimize_ir)
@@ -43,5 +53,8 @@ void emit_asm(const std::string &inputFile)
     //     return;
     // }
 
-    // TODO
+    compute_basic_blocks();
+    add_extern_funcs();
+    emit_section(".text");
+    emit_data("global main");
 }

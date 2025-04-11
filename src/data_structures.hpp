@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <set>
 #include <map>
 #include <stack>
 #include <iomanip>
@@ -117,5 +118,8 @@ std::string lookupType(std::string a);
 void insertType(std::string a, std::string b);
 
 bool isMatching(std::string s1, std::string s2);
+
+extern std::vector<std::string> lib_funcs;
+extern std::set<std::string> called_lib_funcs;
 
 #endif // SYMBOL_TABLE_H

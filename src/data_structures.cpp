@@ -45,6 +45,7 @@ int blockCnt = 1;
 
 const char *func_array[] = {LIB_FUNC_LIST};
 std::vector<std::string> lib_funcs(std::begin(func_array), std::end(func_array));
+std::set<std::string> called_lib_funcs;
 
 std::vector<std::pair<std::string, std::string>> typedefTable;
 extern std::string outputDir;

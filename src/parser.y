@@ -211,6 +211,11 @@ postfix_expression
 					{
 						emit("CALL", mangledName, "0", "", -1);
 					}
+					for(auto&lib_f : lib_funcs)
+					{
+						if(mangledName == lib_f)
+							called_lib_funcs.insert(mangledName);
+					}
 					$$->nextlist.clear();
 				}
 			}
@@ -314,6 +319,11 @@ postfix_expression
 				else
 				{
 					emit("CALL", mangledName, std::to_string(currArgs.size()), "", -1);
+				}
+				for(auto&lib_f : lib_funcs)
+				{
+					if(mangledName == lib_f)
+						called_lib_funcs.insert(mangledName);
 				}
 				$$->nextlist.clear();
 			}
