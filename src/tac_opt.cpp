@@ -107,7 +107,7 @@ void build_cfg()
             int target_block = leader_block_map[block.back().gotoLabel];
             adj[i].push_back(target_block);
             rev_adj[target_block].push_back(i);
-            if (block.back().arg1 == "IF")
+            if (block.back().arg1.value == "IF")
             {
                 if (i + 1 < basic_blocks.size() && i + 1 != target_block)
                 {
@@ -209,12 +209,12 @@ void constant_folding()
         std::string &curr_op = instr.op;
         if (curr_op.length() > 3 && curr_op.substr(0, 3) == "(f)" && curr_op.back() != '=')
         {
-            if (is_num_constant(instr.arg1) && is_num_constant(instr.arg2))
+            if (is_num_constant(instr.arg1.value) && is_num_constant(instr.arg2.value))
             {
                 bool modify_instr = true;
                 char actual_op = curr_op.back();
-                float arg1 = std::stof(instr.arg1);
-                float arg2 = std::stof(instr.arg2);
+                float arg1 = std::stof(instr.arg1.value);
+                float arg2 = std::stof(instr.arg2.value);
                 if (actual_op == '+')
                     arg1 = arg1 + arg2;
                 else if (actual_op == '-')
@@ -233,19 +233,19 @@ void constant_folding()
                 if (modify_instr)
                 {
                     curr_op = "=";
-                    instr.arg1 = std::to_string(arg1);
-                    instr.arg2 = "";
+                    instr.arg1.value = std::to_string(arg1);//TODO: what about entry??
+                    instr.arg2.value = "";
                 }
             }
         }
         else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
         {
-            if (is_int_constant(instr.arg1) && is_int_constant(instr.arg2))
+            if (is_int_constant(instr.arg1.value) && is_int_constant(instr.arg2.value))
             {
                 bool modify_instr = true;
                 char actual_op = curr_op.back();
-                int arg1 = std::stoi(instr.arg1);
-                int arg2 = std::stoi(instr.arg2);
+                int arg1 = std::stoi(instr.arg1.value);
+                int arg2 = std::stoi(instr.arg2.value);
                 if (actual_op == '+')
                     arg1 = arg1 + arg2;
                 else if (actual_op == '-')
@@ -271,16 +271,16 @@ void constant_folding()
                 if (modify_instr)
                 {
                     curr_op = "=";
-                    instr.arg1 = std::to_string(arg1);
-                    instr.arg2 = "";
+                    instr.arg1.value = std::to_string(arg1);
+                    instr.arg2.value = "";
                 }
             }
         }
         else if (curr_op.substr(0, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op == "!" || curr_op == "~" || curr_op == "unary-" || curr_op == "unary+")
         {
-            if (is_int_constant(instr.arg1))
+            if (is_int_constant(instr.arg1.value))
             {
-                int arg1 = std::stoi(instr.arg1);
+                int arg1 = std::stoi(instr.arg1.value);
                 if (curr_op.substr(0, 2) == "++")
                     arg1++;
                 else if (curr_op.substr(0, 2) == "--")
@@ -294,15 +294,15 @@ void constant_folding()
                 else if (curr_op == "unary+")
                     arg1 = +arg1;
                 curr_op = "=";
-                instr.arg1 = std::to_string(arg1);
+                instr.arg1.value = std::to_string(arg1);
             }
         }
         else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^")
         {
-            if (is_int_constant(instr.arg1) && is_int_constant(instr.arg2))
+            if (is_int_constant(instr.arg1.value) && is_int_constant(instr.arg2.value))
             {
-                int arg1 = std::stoi(instr.arg1);
-                int arg2 = std::stoi(instr.arg2);
+                int arg1 = std::stoi(instr.arg1.value);
+                int arg2 = std::stoi(instr.arg2.value);
                 if (curr_op == "==")
                     arg1 = arg1 == arg2;
                 else if (curr_op == "!=")
@@ -330,21 +330,21 @@ void constant_folding()
                 else if (curr_op == "^")
                     arg1 = arg1 ^ arg2;
                 curr_op = "=";
-                instr.arg1 = std::to_string(arg1);
-                instr.arg2 = "";
+                instr.arg1.value = std::to_string(arg1);
+                instr.arg2.value = "";
             }
         }
         // computing conditional jumps
-        else if (curr_op == "GOTO" && instr.arg1 == "IF")
+        else if (curr_op == "GOTO" && instr.arg1.value == "IF")
         {
-            if (is_int_constant(instr.arg2))
+            if (is_int_constant(instr.arg2.value))
             {
-                if (std::stoi(instr.arg2) == 0)
+                if (std::stoi(instr.arg2.value) == 0)
                     add_instr = false;
                 else
                 {
-                    instr.arg1 = "";
-                    instr.arg2 = "";
+                    instr.arg1.value = "";
+                    instr.arg2.value = "";
                 }
             }
         }

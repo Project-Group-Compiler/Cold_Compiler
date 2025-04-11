@@ -53,7 +53,7 @@ bool inMethodBody = false;  // Set true when inside a method body
 int classMethodSize=0;
 std::vector<std::string> idList;
 std::vector<std::string> currArgs;
-std::vector<std::string> actualArgs;
+std::vector<operand> actualArgs;
 std::vector<int>previousCaseList;
 std::vector<int>CaseContinueList;
 
@@ -74,7 +74,7 @@ int warning(const char*);
 int rValue = 0;
 int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
 int previous_if_found = 0; // TODO: May need later
-std::vector<std::string> list_values;
+std::vector<operand> list_values;
 std::map<std::string, std::vector<int>> gotolablelist;
 std::map<std::string, int> gotolabel;
 template <typename T>

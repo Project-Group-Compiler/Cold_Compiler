@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <cstdio>
+#include "tac.hpp"
 
 struct Node
 {
@@ -21,7 +22,7 @@ struct Node
     std::string tempName;
     long long int size;
 
-    std::string place;
+    operand place;
     std::vector<int> truelist;
     std::vector<int> falselist;
     std::vector<int> breaklist;

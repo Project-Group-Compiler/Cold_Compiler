@@ -16,12 +16,12 @@ int getCurrentSize()
     return tac_code.size();
 }
 
-void setArg1(int ind, std::string value)
+void setArg1(int ind, operand value)
 {
     tac_code[ind].arg1 = value;
 }
 
-void setResult(int ind, std::string value)
+void setResult(int ind, operand value)
 {
     tac_code[ind].result = value;
 }
@@ -32,7 +32,7 @@ void extendList(std::vector<int> &list1, std::vector<int> &list2)
         list1.push_back(it);
 }
 
-int emit(std::string op, std::string arg1, std::string arg2, std::string result, int gotoLabel)
+int emit(std::string op, operand arg1, operand arg2, operand result, int gotoLabel)
 {
     tac_code.emplace_back(tac_code.size(), op, arg1, arg2, result, gotoLabel);
     return (int)tac_code.size() - 1;
@@ -51,7 +51,7 @@ void singlePatch(int label, int gotoLabel)
     tac_code[label].gotoLabel = gotoLabel;
 }
 
-void casepatch(std::vector<int> &bplist, std::string target)
+void casepatch(std::vector<int> &bplist, operand target)
 {
     for (auto i : bplist)
     {
@@ -59,20 +59,22 @@ void casepatch(std::vector<int> &bplist, std::string target)
     }
 }
 
-std::string getTempVariable(std::string type)
+operand getTempVariable(std::string type)
 {
     std::string tempName = "_t_" + std::to_string(counter++);
-    insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL);
-    return tempName;
+    insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL); //TODO: Check
+    operand q = {tempName,lookup(tempName)};
+    return q;
 }
 
 // Emit for assignment expressions
-int assign_exp(std::string op, std::string type, std::string type1, std::string type2, std::string arg1, std::string arg2, bool isLocalStaticInit)
+int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, bool isLocalStaticInit)
 {
     // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1 << "#" << arg2 << std::endl;
     std::string temp_op = "";
     std::string str = op;
-    std::string q;
+    operand q;
+    
     str.pop_back();
     if (op != "=")
     {
@@ -81,8 +83,8 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
         {
             if (isFloat(type1) && checkInt(type2))
             {
-                std::string q1 = getTempVariable(type1);
-                emit("intToFloat", arg2, "", q1, -1);
+                operand q1 = getTempVariable(type1);
+                emit("intToFloat", arg2, {}, q1, -1);
                 q = getTempVariable(type);
                 emit("(f)" + temp_op, arg1, q1, q, -1);
             }
@@ -108,7 +110,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
         if (isFloat(type1) && checkInt(type2))
         {
             q = getTempVariable(type1);
-            emit("intToFloat", arg2, "", q, -1);
+            emit("intToFloat", arg2, operand(), q, -1);
         }
         else
             q = arg2;
@@ -117,16 +119,16 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
     if (isFloat(type))
     {
         if (isLocalStaticInit)
-            staticAddLater.push_back(quad(staticAddLater.size(), "(f)=", q, "", arg1, -1));
+            staticAddLater.push_back(quad(staticAddLater.size(), "(f)=", q, operand(), arg1, -1));
         else
-            x = emit("(f)=", q, "", arg1, -1);
+            x = emit("(f)=", q, operand(), arg1, -1);
     }
     else
     {
         if (isLocalStaticInit)
-            staticAddLater.push_back(quad(staticAddLater.size(), "=", q, "", arg1, -1));
+            staticAddLater.push_back(quad(staticAddLater.size(), "=", q, operand(), arg1, -1));
         else
-            x = emit("=", q, "", arg1, -1);
+            x = emit("=", q, operand(), arg1, -1);
     }
     return x;
 }
@@ -174,7 +176,7 @@ void addgotoLabels()
         int newid = labelled_tac_code.size();
         if (gotoTargets.find(q.Label) != gotoTargets.end())
         {
-            labelled_tac_code.push_back(quad(newid, ("L" + std::to_string(labelcnt) + " :"), "", "", "", -1));
+            labelled_tac_code.push_back(quad(newid, ("L" + std::to_string(labelcnt) + " :"), operand(), operand(), operand(), -1));
             newid++;
             labelcnt++;
         }
@@ -217,8 +219,8 @@ void print_tac_code(const std::string &inputFile)
     {
         const auto &q = tac_code[i];
         tout << std::left << std::setw(10) << q.Label << std::setw(50) << q.op
-             << std::setw(20) << q.arg1 << std::setw(20) << q.arg2
-             << std::setw(20) << q.result
+             << std::setw(20) << q.arg1.value << std::setw(20) << q.arg2.value
+             << std::setw(20) << q.result.value
              << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
              << "\n";
     }

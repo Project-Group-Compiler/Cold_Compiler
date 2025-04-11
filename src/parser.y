@@ -78,12 +78,14 @@ primary_expression
 			$$->tempName = string($1); 
 
 			//3AC
-			if(temp.substr(0, 5) == "FUNC_") {//remove
-				$$->place = "CALL " + std::string($1);
-			} 
-			else {
-				$$->place = std::string($1);
-			}
+			// if(temp.substr(0, 5) == "FUNC_") {//remove
+			// 	$$->place = "CALL " + std::string($1);
+			// } 
+			// else {
+				// $$->place = std::string($1);
+			// }
+
+			$$->place = {std::string($1),lookup(std::string($1))};
 			$$->nextlist.clear();
 		}
     }
@@ -120,7 +122,8 @@ primary_expression
 			}
 		}
 		//3AC
-		$$->place = $$->tempName;
+		sym_entry* newEntry = new sym_entry;
+		$$->place = {$$->tempName,newEntry};
 		$$->nextlist.clear();
 
 	}
@@ -136,7 +139,8 @@ primary_expression
 		$$->strVal = string($1);
 
 		//3AC
-		$$->place = $$->tempName;
+		sym_entry* newEntry = new sym_entry;
+		$$->place = {$$->tempName,newEntry};
 		$$->nextlist.clear();
 	}
 	| '(' expression ')' {
@@ -164,15 +168,15 @@ postfix_expression
 			$$->type = temp;
 			//3AC
 			if($$->type == "int"){
-				std::string q = getTempVariable("int*");
-				emit("=", $1->place,"", q, -1);
-				std::string q2 = getTempVariable("int");
-				emit("*", $3->place, getSizeOfType("int"), q2, -1);
-				std::string q3 = getTempVariable("int*");
+				operand q = getTempVariable("int*");
+				emit("=", $1->place,{}, q, -1);
+				operand q2 = getTempVariable("int");
+				emit("*", $3->place, {getSizeOfType("int")}, q2, -1);
+				operand q3 = getTempVariable("int*");
 				emit("ptr+", q, q2, q3, -1);
-				$$->place = "*" + q3;
+				$$->place = {"*" + q3.value,NULL}; //TODO: entry
 			}else{
-				std::string q = getTempVariable($$->type);
+				operand q = getTempVariable($$->type);
 				$$->place = q;
 				emit("[ ]", $1->place, $3->place, q, -1);
 			}
@@ -203,13 +207,13 @@ postfix_expression
 					$$->tempName = $1->tempName;
 					if($$->type != "void")
 					{
-						std::string q2 = getTempVariable($$->type);
-						emit("CALL", mangledName, "0", q2, -1);
+						operand q2 = getTempVariable($$->type);
+						emit("CALL", {mangledName}, {"0"}, q2, -1);
         				$$->place = q2;
 					}
 					else
 					{
-						emit("CALL", mangledName, "0", "", -1);
+						emit("CALL", {mangledName}, {"0"}, {}, -1);
 					}
 					for(auto&lib_f : lib_funcs)
 					{
@@ -309,16 +313,16 @@ postfix_expression
 				$$->tempName = $1->tempName;
 				reverse(actualArgs.begin(), actualArgs.end());
 				for(auto&x : actualArgs)
-					emit("param", x, "", "", -1);
+					emit("param", x, {}, {}, -1);//ToDO:
 				if($$->type != "void")
 				{
-					std::string q2 = getTempVariable($$->type);
-					emit("CALL", mangledName, std::to_string(currArgs.size()), q2, -1);
+					operand q2 = getTempVariable($$->type);
+					emit("CALL", {mangledName}, {std::to_string(currArgs.size())}, q2, -1);
 					$$->place = q2;
 				}
 				else
 				{
-					emit("CALL", mangledName, std::to_string(currArgs.size()), "", -1);
+					emit("CALL", {mangledName}, {std::to_string(currArgs.size())}, {}, -1);
 				}
 				for(auto&lib_f : lib_funcs)
 				{
@@ -394,11 +398,11 @@ postfix_expression
     	    }
     	}
 		//3AC
-		std::string q = getTempVariable($1->type+'*'); 
-		emit("unary&", $1->place, "", q, -1);
+		operand q = getTempVariable($1->type+'*'); 
+		emit("unary&", $1->place, {}, q, -1);
 		if(type.substr(0, 6) != "UNION_")
-			emit("ptr+", q, std::string($3), q, -1); //TODO: REPLACE $3 with $3->offset 
-		q = "*" + q;
+			emit("ptr+", q, {std::string($3)}, q, -1); //TODO: REPLACE $3 with $3->offset 
+		q.value = "*" + q.value;
         $$->place = q;
 		$$->nextlist.clear();
 	}
@@ -486,18 +490,18 @@ postfix_expression
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 		//3AC
-		std::string q = getTempVariable($1->type+'*'); 
-		emit("unary&", $1->place, "", q, -1);
-		emit("param", q, "", "", -1);
+		operand q = getTempVariable($1->type+'*'); 
+		emit("unary&", $1->place, {}, q, -1);
+		emit("param", q, {}, {}, -1);
 		if($$->type != "void")
 		{
-			std::string q2 = getTempVariable($$->type);
-			emit("CALL", manglemethod, "1", q2, -1);
+			operand q2 = getTempVariable($$->type);
+			emit("CALL", {manglemethod}, {"1"}, q2, -1);
 			$$->place = q2;
 		}
 		else
 		{
-			emit("CALL", manglemethod, "1", "", -1);
+			emit("CALL", {manglemethod}, {"1"}, {}, -1);
 		}
 	    currArgs.clear();
 		actualArgs.clear();
@@ -608,21 +612,21 @@ postfix_expression
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 		//3AC
-		std::string q = getTempVariable($1->type+'*'); 
-		emit("unary&", $1->place, "", q, -1);
+		operand q = getTempVariable($1->type+'*'); 
+		emit("unary&", $1->place, {}, q, -1);
 		reverse(actualArgs.begin(), actualArgs.end());
 		for(auto&x : actualArgs)
-			emit("param", x, "", "", -1);
-		emit("param", q, "", "", -1); 
+			emit("param", x, {}, {}, -1);
+		emit("param", q, {}, {}, -1); 
 		if($$->type != "void")
 		{
-			std::string q2 = getTempVariable($$->type);
-			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
+			operand q2 = getTempVariable($$->type);
+			emit("CALL", {manglemethod}, {std::to_string(currArgs.size()+1)}, q2, -1);
 			$$->place = q2;
 		}
 		else
 		{
-			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
+			emit("CALL", {manglemethod}, {std::to_string(currArgs.size()+1)}, {}, -1);
 		}
 		$$->nextlist.clear();
 	    currArgs.clear();
@@ -694,10 +698,10 @@ postfix_expression
     	    }
     	}
 		//3AC
-		std::string q = getTempVariable($1->type); 
+		operand q = getTempVariable($1->type); 
 		if(type.substr(0, 6) != "UNION_")
-			emit("ptr+", $1->place, std::string($3), q, -1); //TODO: REPLACE $3 with $3->offset 
-		q = "*" + q;
+			emit("ptr+", $1->place, {std::string($3)}, q, -1); //TODO: REPLACE $3 with $3->offset 
+		q.value = "*" + q.value;
         $$->place = q;
 		$$->nextlist.clear();
 	}
@@ -791,16 +795,16 @@ postfix_expression
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 		//3AC
-		emit("param", $1->place, "", "", -1);
+		emit("param", $1->place, {}, {}, -1);
 		if($$->type != "void")
 		{
-			std::string q2 = getTempVariable($$->type);
-			emit("CALL", manglemethod, "1", q2, -1);
+			operand q2 = getTempVariable($$->type);
+			emit("CALL", {manglemethod}, {"1"}, q2, -1);
 			$$->place = q2;
 		}
 		else
 		{
-			emit("CALL", manglemethod, "1", "", -1);
+			emit("CALL", {manglemethod}, {"1"}, {}, -1);
 		}
 	    currArgs.clear();
 		actualArgs.clear();
@@ -918,17 +922,17 @@ postfix_expression
 		//3AC
 		reverse(actualArgs.begin(), actualArgs.end());
 		for(auto&x : actualArgs)
-			emit("param", x, "", "", -1);
-		emit("param", $1->place, "", "", -1); 
+			emit("param", x, {}, {}, -1);
+		emit("param", $1->place, {}, {}, -1); 
 		if($$->type != "void")
 		{
-			std::string q2 = getTempVariable($$->type);
-			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), q2, -1);
+			operand q2 = getTempVariable($$->type);
+			emit("CALL", {manglemethod}, {std::to_string(currArgs.size()+1)}, q2, -1);
 			$$->place = q2;
 		}
 		else
 		{
-			emit("CALL", manglemethod, std::to_string(currArgs.size()+1), "", -1);
+			emit("CALL", {manglemethod}, {std::to_string(currArgs.size()+1)}, {}, -1);
 		}
 	    currArgs.clear();
 		actualArgs.clear();
@@ -938,7 +942,6 @@ postfix_expression
         DBG("postfix_expression -> postfix_expression INC_OP");
 		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
-		DBG("unary name: "+string($1->place));
 		DBG("node name: "+string($1->node_name));
 		DBG("tempName: "+string($1->tempName));
 		DBG("type: "+string($1->type));
@@ -958,10 +961,10 @@ postfix_expression
 				$$->intVal = $1->intVal + 1;
 				debug($$->type, $$->intVal);
 				//3AC
-				std::string q = getTempVariable($$->type);
+				operand q = getTempVariable($$->type);
 				$$->place = q;
 				$$->nextlist.clear();
-				emit("S++", $1->place, "", q, -1);
+				emit("S++", $1->place, {}, q, -1);
 			}
 			else{
 				semantic_error("Increment not defined for this type", "type error");
@@ -972,7 +975,6 @@ postfix_expression
         DBG("postfix_expression -> postfix_expression DEC_OP");
 		$$ = getNode($2, mergeAttrs($1, nullptr));
 		
-		DBG("unary name: "+string($1->place));
 		DBG("node name: "+string($1->node_name));
 		DBG("tempName: "+string($1->tempName));
 		DBG("type: "+string($1->type));
@@ -991,10 +993,10 @@ postfix_expression
 				$$->intVal = $1->intVal - 1;
 				debug($$->type, $$->intVal);
 				//3AC
-				std::string q = getTempVariable($$->type);
+				operand q = getTempVariable($$->type);
 				$$->place = q;
 				$$->nextlist.clear();
-				emit("S--", $1->place, "", q, -1);
+				emit("S--", $1->place, {}, q, -1);
 			}
 			else{
 				semantic_error("Decrement not defined for this type", "type error");
@@ -1052,10 +1054,10 @@ unary_expression
 			$$->type = temp;
 			$$->intVal = $2->intVal + 1;
 			//3AC
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			$$->place = q;
 			$$->nextlist.clear();
-			emit("++P", $2->place, "", q, -1);
+			emit("++P", $2->place, {}, q, -1);
 		}
 		else{
 			semantic_error("Increment not defined for this type", "type error");
@@ -1075,10 +1077,10 @@ unary_expression
 			$$->intVal = $2->intVal - 1;
 			debug($$->type, $$->intVal);
 			//3AC
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			$$->place = q;
 			$$->nextlist.clear();
-			emit("--P", $2->place, "", q, -1);
+			emit("--P", $2->place, {}, q, -1);
 		}
 		else{
 			semantic_error("Decrement not defined for this type", "type error");
@@ -1098,18 +1100,17 @@ unary_expression
     	if(!temp.empty()){
     	    $$->type = temp;
     	    $$->intVal = $2->intVal;
-			if(rValue == 0 && $1->place == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
+			if(rValue == 0 && $1->place.value == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
 				$$->tempName = $2->tempName;
-				$$->place = "*" + $2->place;
+				$$->place.value = "*" + $2->place.value;
 				$$->nextlist.clear();
 			}
 			else{
-				std::string q = getTempVariable(temp);
+				operand q = getTempVariable(temp);
 				$$->tempName = $2->tempName;
 				$$->place = q;
-				debug($$->place, $$->tempName);
 				$$->nextlist.clear();
-				emit($1->place, $2->place, "", q, -1);
+				emit($1->place.value, $2->place, {}, q, -1);
 			}
     	}
     	else{
@@ -1125,10 +1126,10 @@ unary_expression
 		$$->isInit = 1;
 		$$->intVal = $2->size;
 		//3AC
-        std::string q = getTempVariable("int");
+        operand q = getTempVariable("int");
         $$->place = q;
         $$->nextlist.clear();
-        emit("SIZEOF", $2->place, "", q, -1);
+        emit("SIZEOF", $2->place, {}, q, -1);
 	}
 	| SIZEOF '(' type_name ')' {
         DBG("unary_expression -> SIZEOF '(' type_name ')'");
@@ -1139,10 +1140,10 @@ unary_expression
 		$$->isInit = 1;
 		$$->intVal = $3->size;
 		//3AC
-        std::string q = getTempVariable("int");
+        operand q = getTempVariable("int");
         $$->place = q;
         $$->nextlist.clear();
-        emit("SIZEOF", $3->type, "", q, -1);
+        emit("SIZEOF", {$3->type}, {}, q, -1);//TODO:
 	}
 	;
 
@@ -1151,37 +1152,37 @@ unary_operator
 		DBG("unary_operator -> '&'");
 		$$ = getNode("&");
 		//3AC
-        $$->place = "unary&";
+        $$->place.value = "unary&";
 	}
 	| '*' {
 		DBG("unary_operator -> '*'");
 		$$ = getNode("*");
 		//3AC
-        $$->place = "unary*";
+        $$->place.value = "unary*";
 	}
 	| '+' {
 		DBG("unary_operator -> '+'");
 		$$ = getNode("+");
 		//3AC
-        $$->place = "unary+";
+        $$->place.value = "unary+";
 	}
 	| '-' {
 		DBG("unary_operator -> '-'");
 		$$ = getNode("-");
 		//3AC
-        $$->place = "unary-";
+        $$->place.value = "unary-";
 	}
 	| '~' {
 		DBG("unary_operator -> '~'");
 		$$ = getNode("~");
 		//3AC
-        $$->place = "~";
+        $$->place.value = "~";
 	}
 	| '!' {
 		DBG("unary_operator -> '!'");
 		$$ = getNode("!");
 		//3AC
-        $$->place = "!";
+        $$->place.value = "!";
 	}
 	;
 
@@ -1204,10 +1205,10 @@ cast_expression
 		if(checkType($2->type, $4->type) == ""){
 			semantic_error(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
 		}
-		std::string q = getTempVariable($2->type);
+		operand q = getTempVariable($2->type);
         $$->place = q;
 		$4->nextlist.clear();
-        emit("CAST_" +$2->type, $4->place, "", q, -1);
+        emit("CAST_" +$2->type, $4->place, {}, q, -1);
 	}
 	;
 
@@ -1237,24 +1238,24 @@ multiplicative_expression
 
 			//3AC
 			if(isFloat(temp)){
-				std::string q = getTempVariable($$->type);
+				operand q = getTempVariable($$->type);
 				if(checkInt($1->type)){
-					std::string q1 = getTempVariable($$->type);
-					emit("intToFloat",$1->place,"",q1,-1);					
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,{},q1,-1);					
 					emit("(f)*", q1, $3->place, q, -1);
 				}else if(checkInt($3->type)){
-					std::string q1 = getTempVariable($$->type);
-					emit("intToFloat",$3->place,"",q1,-1);
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,{},q1,-1);
 					emit("(f)*", $1->place, q1, q, -1);
 				}else{
 					emit("(f)*", $1->place, $3->place, q, -1);
 				}
 				$$->place = q;
-				$$->tempName = q;
+				$$->tempName = q.value;
 			}else{ 
-				std::string q = getTempVariable($$->type); //TODO not always int
+				operand q = getTempVariable($$->type); //TODO not always int
 				$$->place = q;
-				$$->tempName = q;
+				$$->tempName = q.value;
 				emit("*", $1->place, $3->place, q, -1);
 			}
 			$$->nextlist.clear();
@@ -1282,24 +1283,24 @@ multiplicative_expression
 			}
 			//3AC
 			if(isFloat(temp)){
-				std::string q = getTempVariable($$->type);
+				operand q = getTempVariable($$->type);
 				if(checkInt($1->type)){
-					std::string q1 = getTempVariable($$->type);
-					emit("intToFloat",$1->place,"",q1,-1);					
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,{},q1,-1);					
 					emit("(f)/", q1, $3->place, q, -1);
 				}else if(checkInt($3->type)){
-					std::string q1 = getTempVariable($$->type);
-					emit("intToFloat",$3->place,"",q1,-1);
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,{},q1,-1);
 					emit("(f)/", $1->place, q1, q, -1);
 				}else{
 					emit("(f)/", $1->place, $3->place, q, -1);
 				}
 				$$->place = q;
-				$$->tempName = q;
+				$$->tempName = q.value;
 			}else{ 
-				std::string q = getTempVariable($$->type); //TODO not always int
+				operand q = getTempVariable($$->type); //TODO not always int
 				$$->place = q;
-				$$->tempName = q;
+				$$->tempName = q.value;
 				emit("/", $1->place, $3->place, q, -1);
 			}
 			$$->nextlist.clear();
@@ -1322,24 +1323,24 @@ multiplicative_expression
 			$$->type = "int";
 			//3AC
 			if(isFloat(temp)){
-				std::string q = getTempVariable($$->type);
+				operand q = getTempVariable($$->type);
 				if(checkInt($1->type)){
-					std::string q1 = getTempVariable($$->type);
-					emit("intToFloat",$1->place,"",q1,-1);					
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,{},q1,-1);					
 					emit("(f)%", q1, $3->place, q, -1);
 				}else if(checkInt($3->type)){
-					std::string q1 = getTempVariable($$->type);
-					emit("intToFloat",$3->place,"",q1,-1);
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,{},q1,-1);
 					emit("(f)%", $1->place, q1, q, -1);
 				}else{
 					emit("(f)%", $1->place, $3->place, q, -1);
 				}
 				$$->place = q;
-				$$->tempName = q;
+				$$->tempName = q.value;
 			}else{ 
-				std::string q = getTempVariable($$->type); //TODO not always int
+				operand q = getTempVariable($$->type); //TODO not always int
 				$$->place = q;
-				$$->tempName = q;
+				$$->tempName = q.value;
 				emit("%", $1->place, $3->place, q, -1);
 			}
 			$$->nextlist.clear();
@@ -1370,23 +1371,23 @@ additive_expression
 			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
 			//3AC
-			std::string q = getTempVariable($$->type);//TODO not always int
+			operand q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
-			$$->tempName = q;
+			$$->tempName = q.value;
 			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
-				std::string q2 = getTempVariable($3->type);
-				emit("*", $3->place, getSizeOfType($1->type.substr(0, $1->type.size()-1)), q2, -1);
+				operand q2 = getTempVariable($3->type);
+				emit("*", $3->place, {getSizeOfType($1->type.substr(0, $1->type.size()-1))}, q2, -1); //TODO
 				emit("ptr+", $1->place, q2, q, -1);
 			}else{
 				//TODO : Handle float pointer 
 				if(isFloat(temp)){
 					if(checkInt($1->type)){
-						std::string q1 = getTempVariable($$->type);
-						emit("intToFloat",$1->place,"",q1,-1);					
+						operand q1 = getTempVariable($$->type);
+						emit("intToFloat",$1->place,{},q1,-1);					
 						emit("(f)+", q1, $3->place, q, -1);
 					}else if(checkInt($3->type)){
-						std::string q1 = getTempVariable($$->type);
-						emit("intToFloat",$3->place,"",q1,-1);
+						operand q1 = getTempVariable($$->type);
+						emit("intToFloat",$3->place,{},q1,-1);
 						emit("(f)+", $1->place, q1, q, -1);
 					}else{
 						emit("(f)+", $1->place, $3->place, q, -1);
@@ -1415,17 +1416,17 @@ additive_expression
 			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
 			//3AC
-			std::string q = getTempVariable($$->type);//TODO not always int
+			operand q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
-			$$->tempName = q;
+			$$->tempName = q.value;
 			if(isFloat(temp)){
 				if(checkInt($1->type)){
-					std::string q1 = getTempVariable($$->type);
-					emit("intToFloat",$1->place,"",q1,-1);					
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,{},q1,-1);					
 					emit("(f)-", q1, $3->place, q, -1);
 				}else if(checkInt($3->type)){
-					std::string q1 = getTempVariable($$->type);
-					emit("intToFloat",$3->place,"",q1,-1);
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,{},q1,-1);
 					emit("(f)-", $1->place, q1, q, -1);
 				}else{
 					emit("(f)-", $1->place, $3->place, q, -1);
@@ -1455,7 +1456,7 @@ shift_expression
         if (!temp.empty()) {
             $$->type = $1->type;
 			//3AC
-			std::string q = getTempVariable($$->type);//TODO not always int
+			operand q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
 			$$->nextlist.clear();
 			emit("<<", $1->place, $3->place, q, -1);
@@ -1473,7 +1474,7 @@ shift_expression
         if (!temp.empty()) {
             $$->type = $1->type;
 			//3AC
-			std::string q = getTempVariable($$->type);//TODO not always int
+			operand q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
 			$$->nextlist.clear();
 			emit(">>", $1->place, $3->place, q, -1);
@@ -1498,7 +1499,7 @@ relational_expression
             $$->type = "bool";
             if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
 			// 3AC 
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			emit("<", $1->place, $3->place, q, -1);
 			$$->place = q;
 			$$->nextlist.clear();
@@ -1516,7 +1517,7 @@ relational_expression
             $$->type = "bool";
 			if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
 			// 3AC
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			emit(">", $1->place, $3->place, q, -1);
 			$$->place = q;
 			$$->nextlist.clear();
@@ -1534,7 +1535,7 @@ relational_expression
             $$->type = "bool";
             if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
 			//3AC
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			emit("<=", $1->place, $3->place, q, -1);
 			$$->place = q;
 			$$->nextlist.clear();
@@ -1552,7 +1553,7 @@ relational_expression
             $$->type = "bool";
             if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
 			// 3AC
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			emit(">=", $1->place, $3->place, q, -1);
 			$$->place = q;
 			$$->nextlist.clear();
@@ -1577,7 +1578,7 @@ equality_expression
         if(!temp.empty()){
             $$->type = "bool";
 			//3AC
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			emit("==", $1->place, $3->place, q, -1);
 			$$->place = q;
 			$$->nextlist.clear();
@@ -1596,7 +1597,7 @@ equality_expression
         if(!temp.empty()){
             $$->type = "bool";
 			//3AC
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			emit("!=", $1->place, $3->place, q, -1);
 			$$->place = q;
 			$$->nextlist.clear();
@@ -1625,7 +1626,7 @@ and_expression
             }
             else $$->type = "int";
 			// 3AC
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			emit("&", $1->place, $3->place, q, -1);
 			$$->place = q;
         }
@@ -1656,7 +1657,7 @@ exclusive_or_expression
 			}
 
 			// -3AC ---
-			std::string q = getTempVariable($$->type);  
+			operand q = getTempVariable($$->type);  
 			emit("^", $1->place, $3->place, q, -1);
 			$$->place = q;
 			$$->nextlist.clear();
@@ -1681,7 +1682,7 @@ inclusive_or_expression
         if(!temp.empty()){
             $$->type = (temp == "ok") ? "bool" : "int";
 			// -3AC ---
-			std::string q = getTempVariable($$->type); 
+			operand q = getTempVariable($$->type); 
 			emit("|", $1->place, $3->place, q, -1);
 			$$->place = q;
 			$$->nextlist.clear();
@@ -1703,10 +1704,10 @@ logical_and_expression
         // Semantics
         $$->type = "bool";
         $$->isInit = ($1->isInit & $3->isInit);   
-		debug($1->place, $3->place);
+		debug($1->place.value, $3->place.value);
         $$->intVal = $1->intVal && $3->intVal;
 		// 3AC
-		std::string q = getTempVariable($$->type);
+		operand q = getTempVariable($$->type);
 		emit("&&", $1->place, $3->place, q, -1);
 		$$->place = q;
 		$$->nextlist.clear();
@@ -1728,7 +1729,7 @@ logical_or_expression
 		debug($1->intVal);
         $$->intVal = $1->intVal || $3->intVal;
 		// 3AC
-		std::string q = getTempVariable($$->type);
+		operand q = getTempVariable($$->type);
 		emit("||", $1->place, $3->place, q, -1);
 		$$->place = q;
 		$$->nextlist.clear();
@@ -1763,7 +1764,7 @@ conditional_expression
 
 			backpatch($3->truelist, $4-1);
 			backpatch($3->falselist, $4-1);
-			std::string q = getTempVariable($$->type);
+			operand q = getTempVariable($$->type);
 			setArg1($4-1,$3->place);
 			setResult($4-1,q);
 
@@ -1771,7 +1772,7 @@ conditional_expression
 			backpatch($7->falselist, getCurrentSize());
 			backpatch($7->truelist, getCurrentSize());
 
-			emit("=", $7->place, "", q, -1);
+			emit("=", $7->place, {}, q, -1);
 			singlePatch($4, getCurrentSize());
 			$$->place = q;
         } else {
@@ -1790,9 +1791,9 @@ OR_WHAT
 		// 3AC
 		if ($1->truelist.empty()) {
 			backpatch($1->nextlist, getCurrentSize());
-			int label = emit("GOTO", "IF", $1->place, "", 0);
+			int label = emit("GOTO", {"IF"}, $1->place, {}, 0);
 			$1->truelist.push_back(label);
-			label = emit("GOTO", "", "", "", 0);
+			label = emit("GOTO", {}, {}, {}, 0);
 			$1->falselist.push_back(label);
 		}
 	}
@@ -1801,8 +1802,8 @@ OR_WHAT
 WRITE_GOTO
 	: %empty {
 		// 3AC
-		emit("=", "", "", "", -1);
-		int label = emit("GOTO", "", "", "", 0);
+		emit("=", {}, {}, {}, -1);
+		int label = emit("GOTO", {}, {}, {}, 0);
 		$$ = label;
 	}
 	;
@@ -1817,7 +1818,6 @@ assignment_expression
         DBG("assignment_expression -> unary_expression assignment_operator assignment_expression");
         $$ = getNode($2, mergeAttrs($1, $4));
         
-		DBG("unary name: "+string($1->place));
 		DBG("node name: "+string($1->node_name));
 		DBG("tempName: "+string($1->tempName));
 		DBG("type: "+string($1->type));
@@ -2003,7 +2003,7 @@ init_declarator
 			flag = 0;
 		}
 		//3AC
-		$$->place = $1->tempName;
+		$$->place = {$1->tempName,lookup($1->tempName)};
 		isStaticDecl=0;
 	}
 	| declarator '=' {rValue = 1;} NEXT_INSTR initializer {
@@ -2035,7 +2035,7 @@ init_declarator
 			if(array_decl){
 				DBG("Array declaration  ");
 				for(int i = 0; i<list_values.size();i++){
-					emit("CopyToOffset", list_values[i], std::to_string(i*4), $1->tempName, -1);
+					emit("CopyToOffset", list_values[i], {std::to_string(i*4)}, {$1->tempName}, -1);//TODO $1->place 
 				}
 				array_decl = 0;
 				DBG("Array dec 0");
@@ -2048,13 +2048,13 @@ init_declarator
 				else
 				{
 					if(*curr_table == gst)	
-						assign_exp("=", $1->type,$1->type, $5->type, "_s_" + $1->place, $5->place);
+						assign_exp("=", $1->type,$1->type, $5->type, {"_s_" + $1->place.value, $1->place.entry}, $5->place);//TODO
 					else
-						assign_exp("=", $1->type,$1->type, $5->type, "_s_(" + funcName + ") " + $1->place, $5->place, isStaticDecl);
+						assign_exp("=", $1->type,$1->type, $5->type, {"_s_(" + funcName + ") " + $1->place.value, $1->place.entry}, $5->place, isStaticDecl);//TODO
 				}
 			}
 
-			$$->place = $1->tempName;
+			$$->place = {$1->tempName,lookup($1->tempName)};//TODO $$->place = $1->place
 			$$->nextlist = $5->nextlist;
 			debug($4);
 			backpatch($1->nextlist, $4);
@@ -2711,7 +2711,7 @@ enumerator
 		enum_decl = 1;
 		insertSymbol(*curr_table, std::string($1), "int", 4, 0, NULL,"",false,1);
 		//3AC
-		emit("=", std::to_string(enum_ctr), "" , std::string($1), -1);
+		emit("=", {std::to_string(enum_ctr)}, {} , {std::string($1)}, -1);//ToDO
 		enum_ctr++;
 		
 	}
@@ -2723,7 +2723,7 @@ enumerator
 		enum_ctr = $3->intVal;
 
 		//3AC
-		emit("=", std::to_string(enum_ctr), "" ,  std::string($1), -1);
+		emit("=", {std::to_string(enum_ctr)}, {}, {std::string($1)}, -1);
 		enum_ctr++;
 	}
 	;
@@ -2762,13 +2762,13 @@ declarator
 			$$->expType = 2;
 		}
 		//3AC
-		$$->place = $$->tempName;
+		$$->place = {$$->tempName};
 	}
 	| direct_declarator {
 		DBG("declarator -> direct_declarator");
 		$$ = $1;
 		//3AC
-		$$->place = $$->tempName;
+		$$->place = {$$->tempName};
 	}
 	;
 
@@ -2791,7 +2791,7 @@ direct_declarator
 		$$->tempName = string($1);
 		$$->size = getSize(type);
 		//3AC
-		$$->place = $$->tempName;
+		$$->place = {$$->tempName};
 	}
 	| CONSTANT IDENTIFIER {
 		DBG("direct_declarator -> CONSTANT IDENTIFIER");
@@ -2802,7 +2802,7 @@ direct_declarator
 		DBG("direct_declarator -> '(' declarator ')'");
 		$$ = $2;  // Just pass through the declarator node
 		//3AC
-		$$->place = $$->tempName;
+		$$->place = {$$->tempName};
 	}
 	| direct_declarator '[' constant_expression ']' {
 		DBG("direct_declarator -> direct_declarator '[' constant_expression ']'");
@@ -2822,7 +2822,7 @@ direct_declarator
 				DBG("Array declaration  ");
 			}
 			//3AC
-			$$->place = $$->tempName;
+			$$->place = {$$->tempName};
 		} else {
 			semantic_error(("Function " + $1->tempName + " cannot be used as an array").c_str(), "type error");
 		}
@@ -2847,7 +2847,7 @@ direct_declarator
 				DBG("Array declaration  ");
 			}
 			//3AC
-			$$->place = $$->tempName;
+			$$->place = {$$->tempName};
 		}
 		else{
 			semantic_error(("Function " + $1->tempName + " cannot be used as an array").c_str(), "type error");
@@ -2914,9 +2914,9 @@ direct_declarator
 				}
 			}
 			//3 AC
-			$$->place =$$->tempName;
+			$$->place ={$$->tempName};
 			backpatch($4->nextlist,$6);
-			emit(mangledName + " start :", "", "", "", -2);
+			emit(mangledName + " start :", {}, {}, {}, -2);
 		}
 		else{
 			if($1->expType == 2){
@@ -2984,8 +2984,8 @@ direct_declarator
 				semantic_error(("Conflicting types for function " + $1->tempName).c_str(), "type error");
 			}
 			//3 AC
-			$$->place =$$->tempName;
-			emit(mangledName + " start :", "", "", "", -2);
+			$$->place = {$$->tempName};
+			emit(mangledName + " start :", {}, {}, {}, -2);
 		} else {
 			if ($1->expType == 2) {
 				semantic_error(($1->tempName + " declared as array of function").c_str(), "type error");
@@ -3237,7 +3237,6 @@ initializer
 		// Semantics
 		$$->type = $2->type+"*"; // For checking array declaration  -- {1,2,3} -> int*
 		//--- 3AC ---
-		debug($2->place);
 		$$->place = $2->place;
 		$$->nextlist = $2->nextlist;
 	}
@@ -3350,22 +3349,22 @@ DEFAULT_LABEL
 CASE_LABEL
 	: CASE constant_expression ':' {
         $$ = $2;
-		std::string t = getTempVariable($$->type);
+		operand t = getTempVariable($$->type);
 
 		int a = getCurrentSize();
 		if(previousCaseList.size() > 0){
 			int prevCaseLabel = previousCaseList.back();
 			previousCaseList.pop_back();
-			emit("GOTO", "", "", "", a+4);
+			emit("GOTO", {}, {}, {}, a+4);
 			a = getCurrentSize();
 			singlePatch(prevCaseLabel, a);
 		}
 
-		emit("==", "", $2->place, t, -1); //for switch ('a'){} -> arg1 -> 'a' 
+		emit("==", {}, $2->place, t, -1); //for switch ('a'){} -> arg1 -> 'a' 
 		int b = getCurrentSize();
-		emit("GOTO", "IF", t, "", 0);
+		emit("GOTO", {"IF"}, t, {}, 0);
 		int c = getCurrentSize();
-		emit("GOTO", "", "", "", 0);
+		emit("GOTO", {}, {}, {}, 0);
 		$$->caselist.push_back(a);
 		$$->truelist.push_back(b);
 		previousCaseList.push_back(c);
@@ -3508,14 +3507,13 @@ expression_statement
 
 IF_COND
     : IF {if_found = 1;} '(' expression ')' {
-		debug($4->place);
         if($4->truelist.empty() && $4->falselist.empty()) {
 			debug(getCurrentSize);
             int a = getCurrentSize();
 			backpatch($4->nextlist, a);
-            emit("GOTO","IF", $4->place, "",0);
+            emit("GOTO",{"IF"}, $4->place, {},0);
             int b = getCurrentSize();
-            emit("GOTO","", "", "",0);
+            emit("GOTO",{}, {}, {},0);
             $4->truelist.push_back(a);
 			for(auto it:$4->truelist){ debug(it); }
             $4->falselist.push_back(b);
@@ -3530,7 +3528,7 @@ SKIP
 		debug(getCurrentSize());
         int a = getCurrentSize();
 		$$ = new Node;
-        emit("GOTO", "", "", "", 0);
+        emit("GOTO", {}, {}, {}, 0);
         $$->nextlist.push_back(a);
     }
     ;
@@ -3583,13 +3581,12 @@ selection_statement
 
 EXPR_COND
     : {if_found = 1;} expression {
-		debug($2->place);
         if($2->truelist.empty() && $2->falselist.empty()) {
             int a = getCurrentSize();
 			backpatch($2->nextlist, a);
-            emit("GOTO","IF", $2->place, "",0);
+            emit("GOTO",{"IF"}, $2->place, {},0);
             int b = getCurrentSize();
-            emit("GOTO","", "", "",0);
+            emit("GOTO",{}, {}, {},0);
 			debug(a,b);
             $2->truelist.push_back(a);
             $2->falselist.push_back(b);
@@ -3603,14 +3600,12 @@ EXPR_COND
 
 EXPR_STMT_COND
     : {if_found = 1;} expression_statement { 
-		debug("$2->place");
 		if($2->truelist.empty() && $2->falselist.empty()) {
-			debug($2->place,getCurrentSize());
             int a = getCurrentSize();
 			backpatch($2->nextlist, a);
-            emit("GOTO","IF", $2->place, "",0);
+            emit("GOTO",{"IF"}, $2->place, {},0);
             int b = getCurrentSize();
-            emit("GOTO","", "", "",0);
+            emit("GOTO",{}, {}, {},0);
 			debug(a,b);
             $2->truelist.push_back(a);
             $2->falselist.push_back(b);
@@ -3634,7 +3629,7 @@ iteration_statement
         
         $$->nextlist = $4->falselist;
 		extendList($$->nextlist, $7->breaklist);
-        emit("GOTO", "", "", "", $3);
+        emit("GOTO", {}, {}, {}, $3);
 	}
 	| UNTIL '(' NEXT_INSTR EXPR_COND ')' NEXT_INSTR statement { /*** Added UNTIL grammar ***/
 		DBG("iteration_statement -> UNTIL '(' expression ')' statement");
@@ -3646,7 +3641,7 @@ iteration_statement
 		
 		$$->nextlist = $4->truelist;
 		extendList($$->nextlist, $7->breaklist);
-		emit("GOTO", "", "", "", $3);
+		emit("GOTO", {}, {}, {}, $3);
 	}
 	| DO NEXT_INSTR statement WHILE '(' NEXT_INSTR EXPR_COND ')' ';' {
 		DBG("iteration_statement -> DO statement WHILE '(' expression ')' ';'");
@@ -3673,7 +3668,7 @@ iteration_statement
 		extendList($8->nextlist, $8->continuelist);
 		backpatch($8->nextlist, $4);
 
-		emit("GOTO", "", "", "", $4);
+		emit("GOTO", {}, {}, {}, $4);
 	}
 	| FOR '(' expression_statement NEXT_INSTR EXPR_STMT_COND NEXT_INSTR expression SKIP ')' NEXT_INSTR statement {
 		DBG("iteration_statement -> FOR '(' expression_statement expression_statement expression ')' statement");
@@ -3692,7 +3687,7 @@ iteration_statement
 		extendList($7->nextlist, $8->nextlist);
 		backpatch($7->nextlist, $4);
 
-		emit("GOTO", "", "", "", $6);
+		emit("GOTO", {}, {}, {}, $6);
 	}
 	| WHILE '[' expression ']' statement {
 		DBG("iteration_statement -> WHILE '[' expression ']' statement");
@@ -3717,7 +3712,7 @@ jump_statement
 		$$ = getNode(std::string($1) + " : " + std::string($2));
 		//3AC
 		int a = getCurrentSize();
-        emit("GOTO", "", "", "", 0);
+        emit("GOTO", {}, {}, {}, 0);
         gotolablelist[$2].push_back(a);
 	}
 	| CONTINUE ';' {
@@ -3725,7 +3720,7 @@ jump_statement
 		$$ = getNode($1);
 		//3AC
 		int a = getCurrentSize();
-        emit("GOTO", "", "", "", 0);
+        emit("GOTO", {}, {}, {}, 0);
         $$->continuelist.push_back(a);
 	}
 	| BREAK ';' {
@@ -3733,21 +3728,21 @@ jump_statement
 		$$ = getNode($1);
 		//3AC
 		int a = getCurrentSize();
-        emit("GOTO", "", "", "", 0);
+        emit("GOTO", {}, {}, {}, 0);
         $$->breaklist.push_back(a);
 	}
 	| RETURN ';' {
 		DBG("jump_statement -> RETURN ';'");
 		$$ = getNode($1);
 		//3AC
-		emit("RETURN", "", "", "", -1);
+		emit("RETURN", {}, {}, {}, -1);
 	}
 	| RETURN expression ';' {
 		DBG("jump_statement -> RETURN expression ';'");
 		$$ = getNode("jump_stmt", mergeAttrs(getNode($1), $2));
 		//3AC
 		backpatch($2->nextlist,getCurrentSize());
-        emit("RETURN", $2->place, "", "", -1);
+        emit("RETURN", $2->place, {}, {}, -1);
 	}
 	;
 
@@ -3823,7 +3818,7 @@ function_definition
 			for(auto i: gotolablelist){
 				backpatch(i.second, gotolabel[i.first]);
 			}
-        	emit(fName + " end", "", "", "", -1);
+        	emit(fName + " end", {}, {}, {}, -1);
         	remainingBackpatch();
 		}
 	}
@@ -3855,7 +3850,7 @@ function_definition
 			for(auto i: gotolablelist){
 				backpatch(i.second, gotolabel[i.first]);
 			}
-        	emit(fName + " end", "", "", "", -1);
+        	emit(fName + " end", {}, {}, {}, -1);
         	remainingBackpatch();
 		}
 		
@@ -3875,7 +3870,7 @@ function_definition
 			for(auto i: gotolablelist){
 				backpatch(i.second, gotolabel[i.first]);
 			}
-        	emit(fName + " end", "", "", "", -1);
+        	emit(fName + " end", {}, {}, {}, -1);
         	remainingBackpatch();
 		}
 	}
@@ -3894,7 +3889,7 @@ function_definition
 			for (auto &i : gotolablelist) {
 				backpatch(i.second, gotolabel[i.first]);
         	}
-        	emit(fName + " end", "", "", "", -1);
+        	emit(fName + " end", {}, {}, {}, -1);
         	remainingBackpatch();
 		}
 	}
