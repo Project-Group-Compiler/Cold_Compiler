@@ -32,9 +32,22 @@ inline void emit_section(const std::string &section)
     // std::cout << "section " << section << "\n";
 }
 
-void add_extern_funcs();
+inline void add_extern_funcs()
+{
+    if (called_lib_funcs.empty())
+        return;
+    for (auto &func : called_lib_funcs)
+        asm_file << "extern " << func << "\n";
+    // std::cout << "extern " << func << "\n";
+    asm_file << "\n";
+    // std::cout << "\n";
+}
+
 void emit_asm(const std::string &);
 
 void next_use_analysis(std::vector<quad> &block);
+
+void print_global_data();
+void get_string_literals();
 
 #endif

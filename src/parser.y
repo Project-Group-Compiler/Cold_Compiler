@@ -3939,9 +3939,13 @@ void performParsing(const std::string &inputFile)
 		out = std::ofstream(outputDir + inputFile + "_debug_file.txt");
     beginAST(inputFile);
     yyparse();
+	for (auto &[name, entry] : gst) // mark globals
+    {
+        if (entry->type != "class" && entry->type != "struct" && entry->type.substr(0, 5) != "FUNC_")
+            entry->isGlobal = true;
+    }
     endAST();
 }
-// Add this function near the yyerror function (before the end of the file)
 
 void semantic_error(const char* s, const std::string &errorType) {
     // Mark that an error occurred but DON'T call yyclearin

@@ -920,7 +920,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
     else
     {
         // Original format for non-class tables
-        outFile << "Name, Type, Size, isInitialized, Offset,isStatic,isConst\n";
+        outFile << "Name, Type, Size, isInitialized, Offset, isGlobal, isStatic, isConst\n";
         for (auto it : (*table))
         {
             outFile << it.first << ", "
@@ -928,6 +928,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
                     << it.second->size << ", "
                     << it.second->init << ", "
                     << it.second->offset << ", "
+                    << (it.second->isGlobal ? "global" : "") << ", "
                     << (it.second->isStatic ? "static" : "") << ", "
                     << (it.second->isConst ? "const" : "") << "\n";
         }

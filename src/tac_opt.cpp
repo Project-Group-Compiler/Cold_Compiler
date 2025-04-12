@@ -484,6 +484,8 @@ void dead_code_elimination()
 
 void run_optimisations()
 {
+    if(tac_code.empty())
+        return;
     addgotoLabels();
     constant_folding();
     dead_code_elimination();
