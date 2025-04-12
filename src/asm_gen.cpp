@@ -13,12 +13,12 @@ void emit_asm(const std::string &inputFile)
     if (!optimize_ir)
         addgotoLabels();
 
-    // asm_file = std::ofstream(outputDir + inputFile + ".asm");
-    // if (!asm_file)
-    // {
-    //     print_error("cannot open " + outputDir + inputFile + ".asm");
-    //     return;
-    // }
+    asm_file = std::ofstream(outputDir + inputFile + ".asm");
+    if (!asm_file)
+    {
+        print_error("cannot open " + outputDir + inputFile + ".asm");
+        return;
+    }
 
     compute_basic_blocks();
     emit_section(".data");
@@ -31,6 +31,7 @@ void emit_asm(const std::string &inputFile)
 
     for (auto &block : basic_blocks)
     {
+        next_use_analysis(block);
         for (auto &instr : block)
         {
             const std::string curr_op = instr.op;
@@ -38,7 +39,10 @@ void emit_asm(const std::string &inputFile)
             {
                 if (curr_op.substr(curr_op.length() - 7) == "start :")
                 {
-                    emit_label("\n" + curr_op.substr(0, curr_op.length() - 7));
+                    if (curr_op.substr(5, 5) == "4main")
+                        emit_label("\nmain ");
+                    else
+                        emit_label("\n" + curr_op.substr(0, curr_op.length() - 7));
                     // TODO : add function prologue
                 }
                 // no code emitted for func_end
@@ -53,8 +57,8 @@ void add_extern_funcs()
 {
     for (auto &func : called_lib_funcs)
         emit_data("extern " + func);
-    // asm_file << "\n";
-    std::cout << "\n";
+    asm_file << "\n";
+    // std::cout << "\n";
 }
 
 void next_use_analysis(std::vector<quad> &block)

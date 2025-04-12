@@ -62,8 +62,8 @@ void casepatch(std::vector<int> &bplist, operand target)
 operand getTempVariable(std::string type)
 {
     std::string tempName = "_t_" + std::to_string(counter++);
-    insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL); //TODO: Check
-    operand q = {tempName,lookup(tempName)};
+    insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL); // TODO: Check
+    operand q = {tempName, lookup(tempName)};
     return q;
 }
 
@@ -74,7 +74,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
     std::string temp_op = "";
     std::string str = op;
     operand q;
-    
+
     str.pop_back();
     if (op != "=")
     {

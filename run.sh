@@ -1,9 +1,9 @@
 #!/bin/bash
 
 EXECUTABLE="bin/compiler"
-TEST_DIR="tests/ir_gen"
-OUTPUT_DIR="outputs/IR"
-OUTPUT_DIR_OPT="outputs/opt"
+TEST_DIR="tests/asm_gen"
+OUTPUT_DIR="outputs"
+# OUTPUT_DIR_OPT="outputs/opt"
 
 # Ensure test directory exists
 if [ ! -d "$TEST_DIR" ]; then
@@ -18,7 +18,8 @@ if [ ! -f "$EXECUTABLE" ]; then
 fi
 
 # Create the outputs directory if it doesn't exist
-mkdir -p "$OUTPUT_DIR" "$OUTPUT_DIR_OPT"
+mkdir -p "$OUTPUT_DIR" 
+# mkdir -p "$OUTPUT_DIR_OPT"
 
 # Run the executable over each test case
 for test_case in "$TEST_DIR"/*.cold; do
@@ -27,7 +28,7 @@ for test_case in "$TEST_DIR"/*.cold; do
     test_name=$(basename "$test_case" .cold)
     echo "Running test case: $test_name"
 
-    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" "-O0" "-t" "$@"
+    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" "-O0" "$@"
 
 
     if [ $? -eq 0 ]; then
@@ -39,7 +40,7 @@ for test_case in "$TEST_DIR"/*.cold; do
       continue
     fi
 
-    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR_OPT/" "-t" "$@"
+    # "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR_OPT/" "$@"
 
   else
     echo "No test cases found in '$TEST_DIR'."

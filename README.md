@@ -71,7 +71,7 @@ cd Cold_Compiler
     make
     ```
 
-2. Run script for executing testcases. run.sh still saves IR for time being.
+2. Run script for executing testcases. run.sh saves only unoptimised (-O0) assembly for time being.
 
     ```bash
     chmod +x run.sh

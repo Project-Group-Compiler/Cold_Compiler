@@ -233,8 +233,8 @@ void constant_folding()
                 if (modify_instr)
                 {
                     curr_op = "=";
-                    instr.arg1.value = std::to_string(arg1);//TODO: what about entry??
-                    instr.arg2.value = "";
+                    instr.arg1.value = std::to_string(arg1);  // TODO : check
+                    instr.arg2 = operand();  // TODO : check
                 }
             }
         }
@@ -272,7 +272,7 @@ void constant_folding()
                 {
                     curr_op = "=";
                     instr.arg1.value = std::to_string(arg1);
-                    instr.arg2.value = "";
+                    instr.arg2 = operand();  // TODO : check
                 }
             }
         }
@@ -331,7 +331,7 @@ void constant_folding()
                     arg1 = arg1 ^ arg2;
                 curr_op = "=";
                 instr.arg1.value = std::to_string(arg1);
-                instr.arg2.value = "";
+                instr.arg2 = operand(); // TODO : check
             }
         }
         // computing conditional jumps
@@ -343,8 +343,8 @@ void constant_folding()
                     add_instr = false;
                 else
                 {
-                    instr.arg1.value = "";
-                    instr.arg2.value = "";
+                    instr.arg1 = operand();  // TODO : check
+                    instr.arg2 = operand();  // TODO : check
                 }
             }
         }

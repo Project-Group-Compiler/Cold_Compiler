@@ -1,0 +1,54 @@
+void arith_log()
+{
+    int a = 6;
+    int b = 3;
+    int c = 2;
+    int res1, res2, res3, res4, res5;
+
+    ++a;
+    c += 7;
+    
+    res1 = a * b + c;
+    res2 = a / b;
+    res3 = (a << 1) & (b | c) ^ (a >> 1);
+}
+
+void ifElse(){
+    int x;
+    if (x > 10)
+        x = x - 1;
+    else if(x == 10){
+        x = x + 2;
+    }else{
+        x --;
+    }
+}
+
+void forLoop(){
+    int j;
+
+    for (j = 0; j < 5; j++)
+    {
+        j += j;
+    }
+    return j;
+}
+
+
+void whileLoop(){
+    int i = 10;
+
+    while(i>=0){
+        if(i==5)break;
+        i--;
+    }
+}
+
+void doWhile(){
+    int i = 10;
+    do{
+        i--;
+    }while(i>=0);
+}
+
+

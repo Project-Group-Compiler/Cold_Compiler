@@ -1,0 +1,12 @@
+int main(int argc, char* argv[])
+{   
+    char* x = argv[2];
+	return 0;
+}
+
+void fileMng()
+{
+    FILE *file = fopen("test.txt", "w");
+    fprintf(file, "Hello, File!");
+    fclose(file);
+}

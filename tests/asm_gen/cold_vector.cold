@@ -1,0 +1,127 @@
+// IR generated except 2 issues
+// ptr = 0
+// memcpy
+
+class cold_vector
+{
+    private{
+        int *data;
+        int capacity;
+        int length;
+    };
+
+    public{
+        void init() // Initialize the vector (to be called manually)
+        {
+            this->data = (int *)malloc(sizeof(int) * 4); // Start with capacity of 4
+            this->capacity = 4;
+            this->length = 0;
+        }
+
+        void clear() // Clear memory (to be called manually)
+        {
+            if (this->data)
+            {
+                free(this->data);
+                // this->data = 0;
+            }
+            this->length = 0;
+            this->capacity = 0;
+        }
+
+        // Add element to the end
+        void push_back(int value)
+        {
+            int *new_data;
+            if (this->length == this->capacity)
+            {
+                // Double capacity when full
+                this->capacity *= 2;
+                new_data = (int *)malloc(sizeof(int) * this->capacity);
+                // if (new_data == 0)
+                    // return;
+
+                // Copy existing data
+                // memcpy(new_data, data, sizeof(int) * length);
+
+                // Free old data and update pointer
+                free(this->data);
+                this->data = new_data;
+            }
+
+            this->data[this->length++] = value;
+        }
+
+        // Remove last element
+        void pop_back()
+        {
+            if (this->length > 0)
+                this->length--;
+        }
+
+        // Get current size
+        int size()
+        {
+            return this->length;
+        }
+
+        // Check if empty
+        int empty()
+        {
+            return this->length == 0;
+        }
+
+        // Access elements by index
+        int get(int index)
+        {
+            return this->data[index];
+        }
+
+        // Set element at index
+        void set(int index, int value)
+        {
+            if (index < this->length)
+                this->data[index] = value;
+        }
+    };
+};
+
+int main()
+{
+    class cold_vector v;
+    int i, x;
+    v.init();
+
+    v.push_back(10);
+    v.push_back(20);
+    v.push_back(30);
+
+    for (i = 0; i < v.size(); i++)
+    {
+        x = v.get(i);
+        printf("%d ", x);
+    }
+    printf("\n");
+
+    v.pop_back();
+
+    if(v.empty())
+        printf("Is empty: yes\n");
+    else
+        printf("Is empty: no\n");
+
+    x = v.size();
+    printf("Size: %d\n", x);
+
+    v.set(0, 100);
+    printf("Modified: \n");
+    for (i = 0; i < v.size(); i++)
+    {
+        x = v.get(i);
+        printf("%d ", x);
+    }
+    printf("\n");
+
+    v.clear();
+    return 0;
+}

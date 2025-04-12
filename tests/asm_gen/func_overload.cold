@@ -1,0 +1,23 @@
+// Function overloading example
+
+int func()
+{
+    return 0; 
+}
+
+int func(int x) 
+{
+    return x * x; 
+}
+
+int func(int x,int y) 
+{
+    return x + y;
+}
+
+void solve() 
+{
+    func();
+    func(4);
+    func(1, 2);
+}

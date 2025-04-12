@@ -6,23 +6,26 @@
 #include <iomanip>
 #include "data_structures.hpp"
 
-struct operand{
+struct operand
+{
     std::string value;
-    sym_entry* entry;
+    sym_entry *entry;
 
-    operand() {
+    operand()
+    {
         value = "";
         entry = nullptr;
     }
-    operand(std::string value){
+    operand(std::string value)
+    {
         this->value = value;
         this->entry = nullptr;
     }
-    operand(std::string value, sym_entry* entry){
+    operand(std::string value, sym_entry *entry)
+    {
         this->value = value;
         this->entry = entry;
     }
-
 };
 
 class quad

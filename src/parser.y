@@ -123,7 +123,7 @@ primary_expression
 		}
 		//3AC
 		sym_entry* newEntry = new sym_entry;
-		$$->place = {$$->tempName,newEntry};
+		$$->place = {$$->tempName,newEntry}; // TODO : check
 		$$->nextlist.clear();
 
 	}
@@ -140,7 +140,7 @@ primary_expression
 
 		//3AC
 		sym_entry* newEntry = new sym_entry;
-		$$->place = {$$->tempName,newEntry};
+		$$->place = {$$->tempName,newEntry}; // TODO : check
 		$$->nextlist.clear();
 	}
 	| '(' expression ')' {
@@ -169,9 +169,9 @@ postfix_expression
 			//3AC
 			if($$->type == "int"){
 				operand q = getTempVariable("int*");
-				emit("=", $1->place,{}, q, -1);
+				emit("=", $1->place,{}, q, -1); // TODO : check
 				operand q2 = getTempVariable("int");
-				emit("*", $3->place, {getSizeOfType("int")}, q2, -1);
+				emit("*", $3->place, {getSizeOfType("int")}, q2, -1); // TODO : check
 				operand q3 = getTempVariable("int*");
 				emit("ptr+", q, q2, q3, -1);
 				$$->place = {"*" + q3.value,NULL}; //TODO: entry
@@ -313,7 +313,7 @@ postfix_expression
 				$$->tempName = $1->tempName;
 				reverse(actualArgs.begin(), actualArgs.end());
 				for(auto&x : actualArgs)
-					emit("param", x, {}, {}, -1);//ToDO:
+					emit("param", x, {}, {}, -1);
 				if($$->type != "void")
 				{
 					operand q2 = getTempVariable($$->type);
@@ -2723,7 +2723,7 @@ enumerator
 		enum_ctr = $3->intVal;
 
 		//3AC
-		emit("=", {std::to_string(enum_ctr)}, {}, {std::string($1)}, -1);
+		emit("=", {std::to_string(enum_ctr)}, {}, {std::string($1)}, -1); // TODO : check
 		enum_ctr++;
 	}
 	;
