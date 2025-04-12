@@ -47,6 +47,8 @@ const char *func_array[] = {LIB_FUNC_LIST};
 std::vector<std::string> lib_funcs(std::begin(func_array), std::end(func_array));
 std::set<std::string> called_lib_funcs;
 
+std::map<std::string, std::string> global_init;
+
 std::vector<std::pair<std::string, std::string>> typedefTable;
 extern std::string outputDir;
 
@@ -140,10 +142,10 @@ void symTable_init()
     insertKeywords();
 }
 
-sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, bool isStatic, bool isConst)
+sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray)
 {
     sym_entry *new_sym = new (std::nothrow) sym_entry{
-        type, size, init, offset, ptr, access, isStatic, isConst};
+        type, size, init, offset, ptr, access, isStatic, isConst, isArray};
 
     if (!new_sym)
     {
@@ -751,9 +753,9 @@ void createParamList()
     avl = 1;
 }
 
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access, bool isStatic, bool isConst)
+void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray)
 {
-    table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr, access, isStatic, isConst)));
+    table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr, access, isStatic, isConst, isArray)));
     if (!blockSz.empty())
         blockSz.top() += size;
     else
@@ -920,7 +922,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
     else
     {
         // Original format for non-class tables
-        outFile << "Name, Type, Size, isInitialized, Offset, isGlobal, isStatic, isConst\n";
+        outFile << "Name, Type, Size, isInitialized, Offset, isGlobal, isStatic, isConst, isArray\n";
         for (auto it : (*table))
         {
             outFile << it.first << ", "
@@ -930,7 +932,8 @@ void printSymbolTable(sym_table *table, std::string file_name)
                     << it.second->offset << ", "
                     << (it.second->isGlobal ? "global" : "") << ", "
                     << (it.second->isStatic ? "static" : "") << ", "
-                    << (it.second->isConst ? "const" : "") << "\n";
+                    << (it.second->isConst ? "const" : "") << ", "
+                    << (it.second->isArray ? "array" : "") << "\n";
         }
     }
 }

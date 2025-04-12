@@ -1949,6 +1949,7 @@ init_declarator_list
 		DBG("init_declarator_list -> init_declarator");
 		$$ = $1;
 		array_decl = 0;
+		is_arr = false;
 		DBG("Array dec 0");
 	}
 	| init_declarator_list ',' NEXT_INSTR init_declarator {
@@ -1992,7 +1993,7 @@ init_declarator
 					enum_decl = 0;
 				}
 				else
-					insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 0, NULL,"",isStaticDecl);
+					insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 0, NULL,"",isStaticDecl, false, is_arr);
 			}
 		}
 		if(flag3){
@@ -2020,7 +2021,7 @@ init_declarator
 					insertSymbol(*curr_table, $1->tempName, "int", 4, 0, NULL);
 					enum_decl = 0;
 			} else
-				insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 1, NULL,"",isStaticDecl,isConstDecl);
+				insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 1, NULL,"",isStaticDecl,isConstDecl, is_arr);
 			std::string type = $1->type;
 			DBG("Type of variable: " + $1->type);
 			DBG("Type of initializer: " + $5->type);
@@ -2038,6 +2039,7 @@ init_declarator
 					emit("CopyToOffset", list_values[i], {std::to_string(i*4)}, {$1->tempName}, -1);//TODO $1->place 
 				}
 				array_decl = 0;
+				is_arr = false;
 				DBG("Array dec 0");
 			}else{
 				if(!isStaticDecl){
@@ -2817,6 +2819,7 @@ direct_declarator
 
 			$$->tempName = $1->tempName;
 			$$->size = $1->size * $3->intVal;
+			is_arr = true;
 			if(rValue == 0){
 				array_decl = 1;
 				DBG("Array declaration  ");
@@ -3052,6 +3055,7 @@ parameter_type_list
 		DBG("parameter_type_list -> parameter_list");
 		$$ = $1;
 		array_decl = 0;
+		is_arr = false;
 	}
 	| parameter_list ',' ELLIPSIS {
 		DBG("parameter_type_list -> parameter_list ',' ELLIPSIS");
@@ -3061,6 +3065,7 @@ parameter_type_list
 		//3AC
 		$$->nextlist = $1->nextlist;
 		array_decl = 0;
+		is_arr = false;
 	}
 	;
 
@@ -3185,6 +3190,7 @@ direct_abstract_declarator
 		$$ = getNode("direct_abstract_declarator", mergeAttrs($1, getNode("[ ]", mergeAttrs($3))));
 		$$->type = $1->type + "*"; // Semantics
 		$$->size = $1->size * $3->intVal;
+		is_arr = true;
 	}
 	| '(' ')' {
 		DBG("direct_abstract_declarator -> '(' ')'");

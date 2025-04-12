@@ -1,0 +1,34 @@
+struct node{
+    int x;
+    int y;
+    struct node* next;
+};
+
+struct node head;
+struct n{
+    int x;
+    char ch;
+    char ch2;
+};
+
+struct n n1;
+
+
+
+struct o{
+    char ch3;
+    int x;
+    char ch;
+};
+
+struct o o1;
+struct o o2 = o1;
+
+
+struct p{
+    char ch3;
+    int x;
+};
+
+
+struct p p1;

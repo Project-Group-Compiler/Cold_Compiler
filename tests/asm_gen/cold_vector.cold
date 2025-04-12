@@ -1,5 +1,4 @@
 // IR generated except 2 issues
-// ptr = 0
 // memcpy
 
 class cold_vector
@@ -21,10 +20,7 @@ class cold_vector
         void clear() // Clear memory (to be called manually)
         {
             if (this->data)
-            {
                 free(this->data);
-                // this->data = 0;
-            }
             this->length = 0;
             this->capacity = 0;
         }
@@ -38,8 +34,6 @@ class cold_vector
                 // Double capacity when full
                 this->capacity *= 2;
                 new_data = (int *)malloc(sizeof(int) * this->capacity);
-                // if (new_data == 0)
-                    // return;
 
                 // Copy existing data
                 // memcpy(new_data, data, sizeof(int) * length);

@@ -71,6 +71,7 @@ int yylex();
 int warning(const char*);
 
 //3 - AC 
+bool is_arr = false;
 int rValue = 0;
 int if_found = 0; //TODO : Rename to inside a selection stmt/also in while 
 int previous_if_found = 0; // TODO: May need later

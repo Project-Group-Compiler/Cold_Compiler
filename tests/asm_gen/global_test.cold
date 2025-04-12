@@ -1,0 +1,33 @@
+// any more complex assignment is problematic
+// that includes y = x + 5
+// arr3 = &x and so on
+
+int x;
+int y = 7;
+
+char c = 'a';
+char d;
+
+float f = 3.14;
+float g;
+
+int arr[9];
+
+// int arr2[3] = {1, 2, 3}; // not supported yet
+
+float arrg[8];
+char arrh[5];
+
+
+int *arr3;
+
+int *arr4 = arr;
+int *arr5 = arr3;
+
+float *arr8;
+float *arr6 = arr8;
+float *arr7 = arrg;
+
+char *arr10;
+char *arr11 = arrh;
+char *arr9 = arr10;
