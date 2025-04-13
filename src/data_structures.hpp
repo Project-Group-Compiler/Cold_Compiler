@@ -34,10 +34,10 @@ typedef struct sym_entry
 	ull offset;
 	std::map<std::string, sym_entry *> *entry;
 	std::string access; //  field: "public", "private", "protected", etc.
-	bool isStatic;
-	bool isConst;
-	bool isArray;
-	bool isEnum;
+	bool isStatic = false;
+	bool isConst = false;
+	bool isArray = false;
+	bool isEnum = false;
 	bool isGlobal = false;
 	int nextUse = -1; // TODO
 	int isLive = 0;

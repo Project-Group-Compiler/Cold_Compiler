@@ -2032,6 +2032,8 @@ init_declarator
 							"' with expression of type '" + $5->type + "'").c_str(), "type error");
 			}
 			//3AC
+			$1->place.entry = lookup($1->tempName);
+			$$->place = {$1->tempName, $1->place.entry};
 			debug(rValue,array_decl);
 			if(array_decl){
 				DBG("Array declaration  ");
@@ -2055,8 +2057,13 @@ init_declarator
 						assign_exp("=", $1->type,$1->type, $5->type, {"_s_(" + funcName + ") " + $1->place.value, $1->place.entry}, $5->place, isStaticDecl);//TODO
 				}
 			}
-
-			$$->place = {$1->tempName,lookup($1->tempName)};//TODO $$->place = $1->place
+			
+			// $$->place = {$1->tempName,lookup($1->tempName)};//TODO $$->place = $1->place
+			// std::cerr << $1->tempName << '\n';
+			// if($$->place.entry){
+			// 	std::cerr << $$->place.value << ' ';
+			// 	std::cerr << "NOT NULL\n";
+			// }
 			$$->nextlist = $5->nextlist;
 			debug($4);
 			backpatch($1->nextlist, $4);

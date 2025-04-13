@@ -248,7 +248,7 @@ void emit_asm(const std::string &inputFile)
     add_extern_funcs();
     emit_section(".text");
     emit_data("global main");
-
+    
     for (auto &block : basic_blocks)
     {
         next_use_analysis(block);
@@ -332,9 +332,17 @@ void global_init_pass()
     for (auto &instr : tac_code)
     {
         if (instr.arg1.entry && instr.arg1.entry->isEnum)
+        {
             instr.arg1.value = global_init[instr.arg1.value];
+            instr.arg1.entry->isEnum = false;
+            instr.arg1.entry->isGlobal = false;
+        }
         if (instr.arg2.entry && instr.arg2.entry->isEnum)
+        {
             instr.arg2.value = global_init[instr.arg2.value];
+            instr.arg2.entry->isEnum = false;
+            instr.arg2.entry->isGlobal = false;
+        }
     }
 }
 
@@ -428,32 +436,26 @@ void print_bss_section()
     }
 }
 
-//Assume symbol table shows all non-temporary variables in B as live on exit
-//and all temporaries are dead on exit
-
-//B1 -> x = y+z
-//B2 -> y = x
-
 void next_use_analysis(std::vector<quad> &block)
 {
-    //initialize
-    // for(int j=0;j<block.size();j++){
-    //     quad& I = block[j];
-    //     I.arg1.isLive = 0;
-    //     if(I.arg1.entry != NULL){
-    //         I.arg1.entry->isLive = 0;
-    //     }
+    // Assume symbol table shows all non-temporary and temporaries variables in B as live on exit
+    for(int j=0;j<block.size();j++){
+        quad& I = block[j];
+        if(I.arg1.entry != NULL){
+            I.arg1.entry->isLive = 1;
+            I.arg1.entry->nextUse = -1;
+        }
         
-    //     I.arg2.isLive = 0;
-    //     if(I.arg2.entry != NULL){
-    //         I.arg2.entry->isLive = 0;
-    //     }
+        if(I.arg2.entry != NULL){
+            I.arg2.entry->isLive = 1;
+            I.arg2.entry->nextUse = -1;
+        }
     
-    //     I.result.isLive = 0;
-    //     if(I.result.entry != NULL){
-    //         I.result.entry->isLive = 0;
-    //     }
-    // }
+        if(I.result.entry != NULL){
+            I.result.entry->isLive = 1;
+            I.result.entry->nextUse = -1;
+        }
+    }
 
     for(int j=(int)block.size()-1;j>=0;j--){
         quad& I = block[j];
@@ -498,9 +500,18 @@ void print_next_use(){
         for (auto &instr : block)
         {
             std::cout << stringify(instr) << std::endl;
-            std::cout << '(' << (instr.arg1.entry != NULL) << ' ' << instr.arg1.isLive << ' ' << instr.arg1.nextUse << ')';
-            std::cout << '(' << (instr.arg2.entry != NULL) << ' ' << instr.arg2.isLive << ' ' << instr.arg2.nextUse << ')';
-            std::cout << '(' << (instr.result.entry != NULL) << ' ' << instr.result.isLive << ' ' << instr.result.nextUse << ")\n";
+            if(instr.result.entry){
+                std::cout << '\t' << instr.result.value << ": " << instr.result.isLive << ' ' << instr.result.nextUse << '\n';
+            }
+            if(instr.arg1.entry){
+                std::cout << '\t' << instr.arg1.value << ": " << instr.arg1.isLive << ' ' << instr.arg1.nextUse << '\n';
+            }
+            if(instr.arg2.entry){
+                std::cout << '\t' << instr.arg2.value << ": " << instr.arg2.isLive << ' ' << instr.arg2.nextUse << '\n';
+            }
+            // std::cout << '(' << (instr.arg1.entry != NULL) << ' ' << instr.arg1.isLive << ' ' << instr.arg1.nextUse << ')';
+            // std::cout << '(' << (instr.arg2.entry != NULL) << ' ' << instr.arg2.isLive << ' ' << instr.arg2.nextUse << ')';
+            // std::cout << '(' << (instr.result.entry != NULL) << ' ' << instr.result.isLive << ' ' << instr.result.nextUse << ")\n";
         }
         std::cout << "\n";
     }
