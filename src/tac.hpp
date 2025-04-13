@@ -28,6 +28,9 @@ struct operand
         this->value = value;
         this->entry = entry;
     }
+    bool operator==(const operand& other) const {
+        return value == other.value && entry == other.entry;
+    }
 };
 
 class quad

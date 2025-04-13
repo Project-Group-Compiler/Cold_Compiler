@@ -11,218 +11,159 @@ std::ofstream asm_file;
 std::map<std::string, int> string_literals;
 bool inside_fn = false;
 
-// // Structure to store alignment information
-// struct AlignmentInfo
-// {
-//     std::map<std::string, ull> memberOffsets; // Aligned member offsets
-//     ull totalSize;                            // Total size with padding
-// };
+/*
+curr handle
+x = y op z
+x = y
+*/
+enum {
+    EAX = 0,
+    EBX = 1,
+    ECX = 2,
+    EDX = 3,
+    ESI = 4,
+    EDI = 5,
+    ESP = 6,
+    EBP = 7
+};
 
-// // Maps to store alignment information for structs and classes
-// std::map<std::string, AlignmentInfo> structAlignments;
-// std::map<std::string, AlignmentInfo> classAlignments;
+std::string reg_names[] = {
+    "EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "ESP", "EBP"
+};
 
-// // Calculate aligned offset based on type and current offset
-// ull align_offset(ull current_offset, std::string type)
-// {
-//     // Default alignment is 4 bytes (for most types)
-//     ull alignment = 4;
+int uRegCnt = 6; //usableRegCnt
+std::vector<std::vector<operand>> regDesc(uRegCnt);
 
-//     // Determine alignment based on type
-//     if (type == "char")
-//     {
-//         alignment = 1;
-//     }
-//     else if (type == "short")
-//     {
-//         alignment = 2;
-//     }
-//     else if (type == "int" || type == "float" || type.find("*") != std::string::npos)
-//     {
-//         alignment = 4;
-//     }
-//     else if (type == "double" || type == "long long")
-//     {
-//         alignment = 8;
-//     }
-//     else if (type.substr(0, 7) == "STRUCT_")
-//     {
-//         std::string struct_name = type.substr(7);
-//         // If we've already calculated alignment for this struct, use it
-//         if (structAlignments.find(struct_name) != structAlignments.end())
-//         {
-//             // For nested structs, use the largest alignment of any member
-//             // This is a simplification - a more accurate approach would be to track the max alignment
-//             alignment = 4; // Default to 4 for structs if we don't have better info
-//         }
-//     }
-//     else if (type.substr(0, 6) == "CLASS_")
-//     {
-//         // Similar logic for classes
-//         alignment = 4;
-//     }
+/*
+Input 3AC I:x = yopz
+Output Returns registers to hold the value of x, y, and z
+Assumption There is no global register allocation
+*/
 
-//     // Calculate padding needed to align correctly
-//     ull padding = (alignment - (current_offset % alignment)) % alignment;
-//     return current_offset + padding;
-// }
+std::string getMem(operand& op){
+    return "EBP - 4";
+}
 
-// // Calculate proper struct alignment and padding
-// void calculate_struct_alignment(std::string struct_name)
-// {
-//     struct_sym_table *temp = curr_struct_table;
-//     while (temp)
-//     {
-//         if ((*temp).find(struct_name) != (*temp).end())
-//         {
-//             sym_table *struct_table = (*temp)[struct_name].second;
-//             AlignmentInfo info;
-//             ull current_offset = 0;
+// Stop after removing one, since all elements are unique
+template <typename T>
+void eraseFromVector(std::vector<T>& vec, const T& value) {
+    for (size_t i = 0; i < vec.size(); ++i) {
+        if (vec[i] == value) {
+            vec.erase(vec.begin() + i);
+            break;
+        }
+    }
+}
 
-//             // First pass: calculate aligned offsets for each member
-//             for (auto &member : (*struct_table))
-//             {
-//                 // Align this member
-//                 current_offset = align_offset(current_offset, member.second->type);
+//Make sure to use op.isLive not op->entry.isLive
+//Store only that op that islive and not present other than this reg
+//Check: op.entry null ho skti hai kya at this point
 
-//                 // Store the aligned offset
-//                 info.memberOffsets[member.first] = current_offset;
+void spillReg(int reg){
+    for(auto& op: regDesc[reg]){
+        eraseFromVector(op.entry->addrDesc.inRegs,reg);
+        if(op.isLive){
+            if(!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap)){
+                std::string memAddr = getMem(op);
+                op.entry->addrDesc.inStack = 1;
+                emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));
+            }
+        }
+    }
 
-//                 // Move offset past this member
-//                 current_offset += member.second->size;
-//             }
+    regDesc[reg].clear();
+}
 
-//             // Calculate final struct size with proper alignment
-//             // Structs typically align to their most strictly aligned member
-//             ull struct_alignment = 4;                             // Default to 4-byte alignment
-//             info.totalSize = align_offset(current_offset, "int"); // Align to int boundary by default
+int getBestReg(){
+    for(int reg=0;reg<uRegCnt;reg++){
+        if(regDesc[reg].size() == 0) return reg;
+    }
 
-//             // Store the alignment info for this struct
-//             structAlignments[struct_name] = info;
-//             return;
-//         }
-//         if (struct_parent_table.find(temp) == struct_parent_table.end())
-//             break;
-//         temp = struct_parent_table[temp];
-//     }
-// }
+    int bestReg = 0;
+    int minCnt = 100;
+    for(int reg=0;reg<uRegCnt;reg++){
+        int cnt = 0;
+        for(auto& op: regDesc[reg]){
+            if(op.isLive){
+                if(op.entry == NULL || !(op.entry->addrDesc.inRegs.size() > 1 || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap)){
+                    cnt ++;
+                }
+            }
+        }
+        if(minCnt > cnt){
+            minCnt = cnt;
+            bestReg = reg;
+        }
+    }
 
-// // Calculate proper class alignment and padding
-// void calculate_class_alignment(std::string class_name)
-// {
-//     class_sym_table *temp = curr_class_table;
-//     while (temp)
-//     {
-//         if ((*temp).find(class_name) != (*temp).end())
-//         {
-//             sym_table *class_table = (*temp)[class_name].second;
-//             AlignmentInfo info;
-//             ull current_offset = 0;
+    spillReg(bestReg);
+    return bestReg;
+}
 
-//             // First pass: calculate aligned offsets for each member
-//             for (auto &member : (*class_table))
-//             {
-//                 // Skip methods (they don't need memory in the object)
-//                 if (member.first.find("FUNC_") == 0)
-//                 {
-//                     continue;
-//                 }
+//Check reference 
+//Warning : make sure that addrDesc and regDesc contain unique entry
+int getReg(operand& op, bool willYouModify){
+    if(!op.entry) return -1; 
+    auto& addrDesc = op.entry->addrDesc;
 
-//                 // Align this member
-//                 current_offset = align_offset(current_offset, member.second->type);
+    if(willYouModify == 0){
+        if(addrDesc.inRegs.size()){
+            return addrDesc.inRegs[0];
+        }
+        return -1;
+    }
 
-//                 // Store the aligned offset
-//                 info.memberOffsets[member.first] = current_offset;
+    if(addrDesc.inRegs.size()){
+        int bestReg = addrDesc.inRegs[0];
+        int minCnt = 100;
+        for(auto reg : addrDesc.inRegs){
+            int cnt = 0;
+            for(auto tempOp: regDesc[reg]){
+                if(tempOp.isLive){
+                    if(tempOp.entry == NULL || !((tempOp.entry->addrDesc.inRegs.size() > 1) || 
+                        tempOp.entry->addrDesc.inStack || tempOp.entry->addrDesc.inHeap)){
+                            cnt++;
+                    }
+                }
+            }
+            if(minCnt > cnt){
+                minCnt = cnt;
+                bestReg = reg;
+            }
+        }
+        
+        spillReg(bestReg);
+        return bestReg;
+    }else{
+        int bestReg = getBestReg();
+        std::string memAddr = getMem(op);
+        emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
 
-//                 // Move offset past this member
-//                 current_offset += member.second->size;
-//             }
+        regDesc[bestReg].push_back(op);
+        op.entry->addrDesc.inRegs.push_back(bestReg);
 
-//             // Calculate final class size with proper alignment
-//             ull class_alignment = 4;                              // Default to 4-byte alignment
-//             info.totalSize = align_offset(current_offset, "int"); // Align to int boundary
+        //TODO: Handle __str__
 
-//             // Store the alignment info for this class
-//             classAlignments[class_name] = info;
-//             return;
-//         }
-//         if (class_parent_table.find(temp) == class_parent_table.end())
-//             break;
-//         temp = class_parent_table[temp];
-//     }
-// }
+        return bestReg;
+    }
+}
 
-// // Calculate all struct and class alignments before code generation
-// void calculate_all_alignments()
-// {
-//     // Calculate alignments for all structs
-//     struct_sym_table *struct_temp = curr_struct_table;
-//     while (struct_temp)
-//     {
-//         for (auto &s : (*struct_temp))
-//         {
-//             calculate_struct_alignment(s.first);
-//         }
-//         if (struct_parent_table.find(struct_temp) == struct_parent_table.end())
-//             break;
-//         struct_temp = struct_parent_table[struct_temp];
-//     }
+void updateRegDesc(int reg, operand &op){
+    for(auto &top:regDesc[reg]){
+        eraseFromVector(top.entry->addrDesc.inRegs,reg);
+    }
 
-//     // Calculate alignments for all classes
-//     class_sym_table *class_temp = curr_class_table;
-//     while (class_temp)
-//     {
-//         for (auto &c : (*class_temp))
-//         {
-//             calculate_class_alignment(c.first);
-//         }
-//         if (class_parent_table.find(class_temp) == class_parent_table.end())
-//             break;
-//         class_temp = class_parent_table[class_temp];
-//     }
-// }
+    for(int i=0;i<uRegCnt;i++){
+        eraseFromVector(regDesc[i],op);
+    }
 
-// // Get the aligned size of a struct or class
-// ull get_aligned_size(std::string type_name)
-// {
-//     if (type_name.substr(0, 7) == "STRUCT_")
-//     {
-//         std::string struct_name = type_name.substr(7);
-//         if (structAlignments.find(struct_name) != structAlignments.end())
-//             return structAlignments[struct_name].totalSize;
-//     }
-//     else if (type_name.substr(0, 6) == "CLASS_")
-//     {
-//         std::string class_name = type_name.substr(6);
-//         if (classAlignments.find(class_name) != classAlignments.end())
-//             return classAlignments[class_name].totalSize;
-//     }
-
-//     // If not found or not a struct/class, return the regular size
-//     return getSize(type_name);
-// }
-
-// // Get the aligned member offset
-// ull get_aligned_member_offset(std::string container_type, std::string member_name)
-// {
-//     if (container_type.substr(0, 7) == "STRUCT_")
-//     {
-//         std::string struct_name = container_type.substr(7);
-//         if (structAlignments.find(struct_name) != structAlignments.end() &&
-//             structAlignments[struct_name].memberOffsets.find(member_name) != structAlignments[struct_name].memberOffsets.end())
-//             return structAlignments[struct_name].memberOffsets[member_name];
-//     }
-//     else if (container_type.substr(0, 6) == "CLASS_")
-//     {
-//         std::string class_name = container_type.substr(6);
-//         if (classAlignments.find(class_name) != classAlignments.end() &&
-//             classAlignments[class_name].memberOffsets.find(member_name) != classAlignments[class_name].memberOffsets.end())
-//             return classAlignments[class_name].memberOffsets[member_name];
-//     }
-
-//     // If not found, return 0 (error case)
-//     return 0;
-// }
+    regDesc[reg].clear();
+    regDesc[reg].push_back(op);
+    op.entry->addrDesc.inRegs.clear();
+    op.entry->addrDesc.inRegs.push_back(reg);
+    op.entry->addrDesc.inStack = 0;
+    op.entry->addrDesc.inHeap = 0;
+}
 
 void emit_asm(const std::string &inputFile)
 {
@@ -248,7 +189,7 @@ void emit_asm(const std::string &inputFile)
     add_extern_funcs();
     emit_section(".text");
     emit_data("global main");
-    
+
     for (auto &block : basic_blocks)
     {
         next_use_analysis(block);
@@ -273,6 +214,18 @@ void emit_asm(const std::string &inputFile)
                 emit_label(curr_op.substr(0, curr_op.length() - 1));
             else if (curr_op == "=" || curr_op == "(f)=")
                 emit_assign(instr);
+            else if(curr_op == "+"){// x = y + z
+                //TODO: Handle constant ...
+                int reg1 = getReg(instr.arg1, 1);
+                int reg2 = getReg(instr.arg2, 0);
+                if(reg2 != -1){//emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
+                    emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
+                }else{
+                    std::string mem = getMem(instr.arg2);
+                    emit_instr(x86_lib::add_reg_mem(reg_names[reg1], mem));
+                }
+                updateRegDesc(reg1,instr.result);
+            }
         }
     }
 

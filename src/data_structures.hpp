@@ -26,6 +26,13 @@ struct TOKEN
 	std::string lexeme;
 };
 
+struct Desc{
+	std::vector<int> inRegs; 
+	// enum {EAX = 0,EBX = 1,ECX = 2,EDX = 3,ESI = 4,EDI = 5,ESP = 6,EBP = 7 };
+	bool inStack = false;
+	bool inHeap = false;
+};
+
 typedef struct sym_entry
 {
 	std::string type;
@@ -39,8 +46,10 @@ typedef struct sym_entry
 	bool isArray = false;
 	bool isEnum = false;
 	bool isGlobal = false;
-	int nextUse = -1; // TODO
+	int nextUse = -1;
 	int isLive = 0;
+
+	Desc addrDesc;
 } sym_entry;
 
 typedef std::map<std::string, sym_entry *> sym_table;

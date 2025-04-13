@@ -1,16 +1,19 @@
-void foo(int x){
-
-}
-int f2(){
+int main(){
     int x = 0;
     int y = 5;
     int z = 10;
     y = z + x;
     x = y + z;
-    z = y+x;
-    foo((x > 0 ? x : x));
+    z = y + x;
+    z = y + x;
+    z = y + x;
+    z = y + x;
+    z = y + x;
 }
 
+// void foo(int x){
+
+// }
 // foo((x > 0 ? y : z));
 // int f3(){
 //     int x = 0;
