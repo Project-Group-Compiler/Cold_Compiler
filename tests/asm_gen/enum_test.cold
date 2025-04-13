@@ -1,0 +1,42 @@
+enum COLOR
+{
+    R,
+    G,
+    B
+};
+
+enum Code
+{
+    X,
+    Y = 205,
+    A,
+    Z = 890
+};
+
+
+int main()
+{
+    int x = G + 5;
+    enum COLOR myColor1 = 75;
+    enum COLOR myColor2 = G * B + Z - Y;
+
+    switch (myColor1)
+    {
+    case R:
+        x = 0;
+        break;
+    case G:
+        x = 1;
+        break;
+    case B:
+        x = 2;
+        break;
+    }
+
+    if (myColor2 == X)
+        x++;
+    else
+        x--;
+
+    return 0;
+}

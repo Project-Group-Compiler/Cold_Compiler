@@ -43,6 +43,7 @@ void next_use_analysis(std::vector<quad> &block);
 void print_data_section();
 void print_bss_section();
 void get_string_literals();
+void global_init_pass();
 
 void emit_assign(quad &instr);
 

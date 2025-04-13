@@ -142,10 +142,10 @@ void symTable_init()
     insertKeywords();
 }
 
-sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray)
+sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray, bool isEnum)
 {
     sym_entry *new_sym = new (std::nothrow) sym_entry{
-        type, size, init, offset, ptr, access, isStatic, isConst, isArray};
+        type, size, init, offset, ptr, access, isStatic, isConst, isArray, isEnum};
 
     if (!new_sym)
     {
@@ -753,9 +753,9 @@ void createParamList()
     avl = 1;
 }
 
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray)
+void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray, bool isEnum)
 {
-    table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr, access, isStatic, isConst, isArray)));
+    table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr, access, isStatic, isConst, isArray, isEnum)));
     if (!blockSz.empty())
         blockSz.top() += size;
     else
@@ -922,7 +922,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
     else
     {
         // Original format for non-class tables
-        outFile << "Name, Type, Size, isInitialized, Offset, isGlobal, isStatic, isConst, isArray\n";
+        outFile << "Name, Type, Size, isInitialized, Offset, isGlobal, isStatic, isConst, isArray, isEnum\n";
         for (auto it : (*table))
         {
             outFile << it.first << ", "
@@ -933,7 +933,8 @@ void printSymbolTable(sym_table *table, std::string file_name)
                     << (it.second->isGlobal ? "global" : "") << ", "
                     << (it.second->isStatic ? "static" : "") << ", "
                     << (it.second->isConst ? "const" : "") << ", "
-                    << (it.second->isArray ? "array" : "") << "\n";
+                    << (it.second->isArray ? "array" : "") << ", "
+                    << (it.second->isEnum ? "enum const" : "") << "\n";
         }
     }
 }

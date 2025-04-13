@@ -2711,7 +2711,10 @@ enumerator
 		DBG("enumerator -> IDENTIFIER");
 		$$ = getNode($1);
 		enum_decl = 1;
-		insertSymbol(*curr_table, std::string($1), "int", 4, 0, NULL,"",false,1);
+		if(currLookup(std::string($1))){
+			semantic_error((std::string($1) + " is already declared").c_str(), "scope error");
+		}
+		insertSymbol(*curr_table, std::string($1), "int", 4, 0, NULL,"",false,1, false, enum_decl);
 		//3AC
 		emit("=", {std::to_string(enum_ctr)}, {} , {std::string($1)}, -1);//ToDO
 		enum_ctr++;
@@ -2721,7 +2724,10 @@ enumerator
 		DBG("enumerator -> IDENTIFIER '=' constant_expression");
 		$$ = getNode("=", mergeAttrs(getNode($1), $3));
 		enum_decl = 1;
-		insertSymbol(*curr_table, std::string($1), "int", 4, 1, NULL,"",false,1);
+		if(currLookup(std::string($1))){
+			semantic_error((std::string($1) + " is already declared").c_str(), "scope error");
+		}
+		insertSymbol(*curr_table, std::string($1), "int", 4, 1, NULL,"",false,1, false, enum_decl);
 		enum_ctr = $3->intVal;
 
 		//3AC

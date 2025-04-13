@@ -239,6 +239,7 @@ void emit_asm(const std::string &inputFile)
         addgotoLabels();
 
     get_string_literals();
+    global_init_pass();
     compute_basic_blocks();
 
     // Calculate proper alignment for all structs and classes
@@ -258,7 +259,7 @@ void emit_asm(const std::string &inputFile)
             {
                 if (curr_op.substr(curr_op.length() - 7) == "start :")
                 {
-                    inside_fn = true;
+                    inside_fn = true; // TODO : comment if useless
                     if (curr_op.substr(5, 5) == "4main")
                         emit_label("\nmain ");
                     else
@@ -266,7 +267,7 @@ void emit_asm(const std::string &inputFile)
                     // TODO : add function prologue
                 }
                 else
-                    inside_fn = false;
+                    inside_fn = false; // TODO : comment if useless
             }
             else if (curr_op.back() == ':')
                 emit_label(curr_op.substr(0, curr_op.length() - 1));
@@ -307,11 +308,40 @@ void get_string_literals()
     }
 }
 
+void global_init_pass()
+{
+    for (const auto &instr : tac_code)
+    {
+        const std::string curr_op = instr.op;
+        if (curr_op.substr(0, 5) == "FUNC_")
+        {
+            if (curr_op.substr(curr_op.length() - 7) == "start :")
+                inside_fn = true;
+            else
+                inside_fn = false;
+        }
+        else if (curr_op == "=" || curr_op == "(f)=")
+        {
+            if (!inside_fn)
+                global_init[instr.result.value] = instr.arg1.value;
+        }
+    }
+
+    // Replace enums with their corresponding values
+    for (auto &instr : tac_code)
+    {
+        if (instr.arg1.entry && instr.arg1.entry->isEnum)
+            instr.arg1.value = global_init[instr.arg1.value];
+        if (instr.arg2.entry && instr.arg2.entry->isEnum)
+            instr.arg2.value = global_init[instr.arg2.value];
+    }
+}
+
 void print_data_section()
 {
     for (auto &[name, entry] : gst)
     {
-        if (entry->isGlobal && entry->init)
+        if (entry->isGlobal && !entry->isEnum && entry->init)
         {
             if (entry->type == "char")
                 emit_data(name + ": db " + global_init[name]);
@@ -349,7 +379,7 @@ void print_data_section()
         for (const auto &[str, cnt] : string_literals)
         {
             if (cnt == i)
-                emit_data("__str_" + std::to_string(cnt) + ": db " + str + ", 0\n");
+                emit_data("__str_" + std::to_string(cnt) + ": db " + str + ", 0");
         }
     }
 }
@@ -358,7 +388,7 @@ void print_bss_section()
 {
     for (auto &[name, entry] : gst)
     {
-        if (entry->isGlobal && !entry->init)
+        if (entry->isGlobal && !entry->isEnum && !entry->init)
         {
             if (entry->type == "char")
                 emit_data(name + ": resb 1");
@@ -404,10 +434,7 @@ void next_use_analysis(std::vector<quad> &block)
 
 void emit_assign(quad &instr)
 {
-    if (!inside_fn)
-    {
-        global_init[instr.result.value] = instr.arg1.value;
+    if (!inside_fn) // TODO : comment if better way found
         return;
-    }
     // TODO complete the function
 }
