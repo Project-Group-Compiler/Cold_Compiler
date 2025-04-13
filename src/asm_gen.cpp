@@ -241,7 +241,7 @@ void emit_asm(const std::string &inputFile)
     get_string_literals();
     global_init_pass();
     compute_basic_blocks();
-
+    print_basic_blocks();
     // Calculate proper alignment for all structs and classes
     // calculate_all_alignments();
 
@@ -280,6 +280,7 @@ void emit_asm(const std::string &inputFile)
     print_data_section(); // add initialized data
     emit_section(".bss");
     print_bss_section(); // add uninitialized data
+    print_next_use(); 
 }
 
 void get_string_literals()
@@ -427,9 +428,82 @@ void print_bss_section()
     }
 }
 
+//Assume symbol table shows all non-temporary variables in B as live on exit
+//and all temporaries are dead on exit
+
+//B1 -> x = y+z
+//B2 -> y = x
+
 void next_use_analysis(std::vector<quad> &block)
 {
-    // TODO after pairs made
+    //initialize
+    // for(int j=0;j<block.size();j++){
+    //     quad& I = block[j];
+    //     I.arg1.isLive = 0;
+    //     if(I.arg1.entry != NULL){
+    //         I.arg1.entry->isLive = 0;
+    //     }
+        
+    //     I.arg2.isLive = 0;
+    //     if(I.arg2.entry != NULL){
+    //         I.arg2.entry->isLive = 0;
+    //     }
+    
+    //     I.result.isLive = 0;
+    //     if(I.result.entry != NULL){
+    //         I.result.entry->isLive = 0;
+    //     }
+    // }
+
+    for(int j=(int)block.size()-1;j>=0;j--){
+        quad& I = block[j];
+        if(I.arg1.entry != NULL){
+            I.arg1.isLive = I.arg1.entry->isLive;
+            I.arg1.nextUse = I.arg1.entry->nextUse;
+        }
+        
+        if(I.arg2.entry != NULL){
+            I.arg2.isLive = I.arg2.entry->isLive;
+            I.arg2.nextUse = I.arg2.entry->nextUse;
+        }
+
+        if(I.result.entry != NULL){
+            I.result.isLive = I.result.entry->isLive;
+            I.result.nextUse = I.result.entry->nextUse;
+        }
+
+        if(I.arg1.entry != NULL){
+            I.arg1.entry->isLive = 1;
+            I.arg1.entry->nextUse = I.Label;
+        }
+        
+        if(I.arg2.entry != NULL){
+            I.arg2.entry->isLive = 1;
+            I.arg2.entry->nextUse = I.Label;
+        }
+
+        if(I.result.entry != NULL){
+            I.result.entry->isLive = 0;
+            I.result.entry->nextUse = -1;
+        }
+    }
+}
+
+void print_next_use(){
+    std::cout << "NEXT USE INFO\n";
+    int block_no = 0;
+    for (auto &block : basic_blocks)
+    {
+        std::cout << "Block " << block_no++ << ":\n";
+        for (auto &instr : block)
+        {
+            std::cout << stringify(instr) << std::endl;
+            std::cout << '(' << (instr.arg1.entry != NULL) << ' ' << instr.arg1.isLive << ' ' << instr.arg1.nextUse << ')';
+            std::cout << '(' << (instr.arg2.entry != NULL) << ' ' << instr.arg2.isLive << ' ' << instr.arg2.nextUse << ')';
+            std::cout << '(' << (instr.result.entry != NULL) << ' ' << instr.result.isLive << ' ' << instr.result.nextUse << ")\n";
+        }
+        std::cout << "\n";
+    }
 }
 
 void emit_assign(quad &instr)

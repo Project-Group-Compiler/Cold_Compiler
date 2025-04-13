@@ -144,15 +144,23 @@ void symTable_init()
 
 sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray, bool isEnum)
 {
-    sym_entry *new_sym = new (std::nothrow) sym_entry{
-        type, size, init, offset, ptr, access, isStatic, isConst, isArray, isEnum};
+    sym_entry* new_sym = new (std::nothrow) sym_entry;
 
     if (!new_sym)
     {
         std::cerr << "Error: Memory allocation failed in createEntry.\n";
         exit(EXIT_FAILURE);
     }
-
+    new_sym->type     = type;
+    new_sym->size     = size;
+    new_sym->init     = init;
+    new_sym->offset   = offset;
+    new_sym->entry    = ptr;
+    new_sym->access   = access;
+    new_sym->isStatic = isStatic;
+    new_sym->isConst  = isConst;
+    new_sym->isArray  = isArray;
+    new_sym->isEnum   = isEnum;
     return new_sym;
 }
 

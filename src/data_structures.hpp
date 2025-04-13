@@ -39,7 +39,8 @@ typedef struct sym_entry
 	bool isArray;
 	bool isEnum;
 	bool isGlobal = false;
-	int next_use = -1; // TODO
+	int nextUse = -1; // TODO
+	int isLive = 0;
 } sym_entry;
 
 typedef std::map<std::string, sym_entry *> sym_table;

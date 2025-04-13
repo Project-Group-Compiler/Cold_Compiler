@@ -10,6 +10,8 @@ struct operand
 {
     std::string value;
     sym_entry *entry;
+    int nextUse = -1; // TODO
+	int isLive = 0;
 
     operand()
     {

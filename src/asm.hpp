@@ -40,6 +40,7 @@ void emit_asm(const std::string &);
 
 void next_use_analysis(std::vector<quad> &block);
 
+void print_next_use();
 void print_data_section();
 void print_bss_section();
 void get_string_literals();
