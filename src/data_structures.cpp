@@ -37,11 +37,14 @@ int struct_count = 1;
 int avl = 0;
 int blockCnt = 1;
 
-#define LIB_FUNC_LIST "scanf", "printf", "malloc", "calloc", "free",       \
-                      "fopen", "fputs", "fgets", "fclose", "fprintf",      \
-                      "fscanf", "fgetc", "fputc", "strlen", "strcmp",      \
-                      "strncmp", "strcpy", "strcat", "va_start", "va_arg", \
-                      "va_end"
+#define LIB_FUNC_LIST "scanf", "printf", "malloc", "calloc", "free",            \
+                      "fopen", "fputs", "fgets", "fclose", "fprintf",           \
+                      "fscanf", "fgetc", "fputc", "strlen", "strcmp",           \
+                      "strncmp", "strcpy", "strcat", "va_start", "va_arg",      \
+                      "va_end", "fread", "fwrite", "fseek", "ftell", "rewind",  \
+                      "memcpy", "memset", "atoi", "atof", "abs", "sin", "cos",  \
+                      "tan", "exp", "log", "log10", "pow", "sqrt", "ceil",      \
+                      "floor", "fmod", "round", "fabs", "fmax", "fmin"
 
 const char *func_array[] = {LIB_FUNC_LIST};
 std::vector<std::string> lib_funcs(std::begin(func_array), std::end(func_array));
@@ -353,6 +356,11 @@ void insertKeywords()
     insert_std_func("fscanf", {"file*", "char*", "..."}, "int");
     insert_std_func("fgetc", {"file*"}, "char");
     insert_std_func("fputc", {"char", "file*"}, "char");
+    insert_std_func("fread", {"void*", "int", "int", "file*"}, "int");
+    insert_std_func("fwrite", {"void*", "int", "int", "file*"}, "int");
+    insert_std_func("fseek", {"file*", "int", "int"}, "int");
+    insert_std_func("ftell", {"file*"}, "int");
+    insert_std_func("rewind", {"file*"}, "void");
 
     // string Functions
     insert_std_func("strlen", {"char*"}, "int");
@@ -360,6 +368,30 @@ void insertKeywords()
     insert_std_func("strncmp", {"char*", "char*", "int"}, "int");
     insert_std_func("strcpy", {"char*", "char*"}, "char*");
     insert_std_func("strcat", {"char*", "char*"}, "char*");
+    insert_std_func("memcpy", {"void*", "void*", "int"}, "void*");
+    insert_std_func("memset", {"void*", "int", "int"}, "void*");
+
+    // conversion functions
+    insert_std_func("atoi", {"char*"}, "int");
+    insert_std_func("atof", {"char*"}, "float");
+
+    // math functions
+    insert_std_func("abs", {"int"}, "int");
+    insert_std_func("fabs", {"float"}, "float");
+    insert_std_func("sin", {"float"}, "float");
+    insert_std_func("cos", {"float"}, "float");
+    insert_std_func("tan", {"float"}, "float");
+    insert_std_func("exp", {"float"}, "float");
+    insert_std_func("log", {"float"}, "float");
+    insert_std_func("log10", {"float"}, "float");
+    insert_std_func("pow", {"float", "float"}, "float");
+    insert_std_func("sqrt", {"float"}, "float");
+    insert_std_func("ceil", {"float"}, "float");
+    insert_std_func("floor", {"float"}, "float");
+    insert_std_func("round", {"float"}, "float");
+    insert_std_func("fmod", {"float", "float"}, "float");
+    insert_std_func("fmax", {"float", "float"}, "float");
+    insert_std_func("fmin", {"float", "float"}, "float");
 
     // variable arguments functions
     insert_std_func("va_start", {"va_list", "int"}, "void");

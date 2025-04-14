@@ -1,0 +1,408 @@
+// Function using scanf to read an integer
+int read_integer()
+{
+    int num;
+    printf("Enter an integer: ");
+    scanf("%d", &num);
+    return num;
+}
+
+// Function using printf to print a formatted string
+void print_message(char *message, int value)
+{
+    printf("%s: %d\n", message, value);
+}
+
+// Function using malloc to allocate memory for a string
+char *allocate_string(int size)
+{
+    return (char *)malloc(size * sizeof(char));
+}
+
+// Function using calloc to allocate memory for an integer array
+int *allocate_integer_array(int count)
+{
+    return (int *)calloc(count, sizeof(int));
+}
+
+// Function using free to deallocate memory
+void deallocate_memory(void *ptr)
+{
+    free(ptr);
+}
+
+// Function using fopen to open a file for writing
+FILE *open_file_write(char *filename)
+{
+    return fopen(filename, "w");
+}
+
+// Function using fputs to write a string to a file
+void write_string_to_file(FILE *file, char *str)
+{
+    fputs(str, file);
+}
+
+// Function using fgets to read a line from a file
+char *read_line_from_file(FILE *file, char *buffer, int size)
+{
+    return fgets(buffer, size, file);
+}
+
+// Function using fclose to close a file
+void close_file(FILE *file)
+{
+    if (file)
+    {
+        fclose(file);
+    }
+}
+
+// Function using fprintf to write formatted output to a file
+void write_formatted_to_file(FILE *file, char *format, int num)
+{
+    fprintf(file, format, num);
+}
+
+// Function using fscanf to read formatted input from a file
+int read_formatted_from_file(FILE *file, char *format, int *num)
+{
+    return fscanf(file, format, num);
+}
+
+// Function using fgetc to read a character from a file
+int read_char_from_file(FILE *file)
+{
+    return fgetc(file);
+}
+
+// Function using fputc to write a character to a file
+int write_char_to_file(FILE *file, int ch)
+{
+    return fputc(ch, file);
+}
+
+// Function using strlen to get the length of a string
+int get_string_length(char *str)
+{
+    return strlen(str);
+}
+
+// Function using strcmp to compare two strings
+int compare_strings(char *str1, char *str2)
+{
+    return strcmp(str1, str2);
+}
+
+// Function using strncmp to compare the first n characters of two strings
+int compare_n_strings(char *str1, char *str2, int n)
+{
+    return strncmp(str1, str2, n);
+}
+
+// Function using strcpy to copy a string
+char *copy_string(char *dest, char *src)
+{
+    return strcpy(dest, src);
+}
+
+// Function using strcat to concatenate two strings
+char *concatenate_strings(char *dest, char *src)
+{
+    return strcat(dest, src);
+}
+
+// Function using variable arguments (va_start, va_arg, va_end) to calculate sum
+int sum_numbers(int count, ...)
+{
+    int sum, i;
+    va_list args;
+    va_start(args, count);
+    sum = 0;
+    for (i = 0; i < count; i++)
+    {
+        sum += va_arg(args, "int");
+    }
+    va_end(args);
+    return sum;
+}
+
+// Function using fread to read a block of data from a file
+int read_data_from_file(FILE *file, void *buffer, int size, int count)
+{
+    return fread(buffer, size, count, file);
+}
+
+// Function using fwrite to write a block of data to a file
+int write_data_to_file(FILE *file, void *buffer, int size, int count)
+{
+    return fwrite(buffer, size, count, file);
+}
+
+// Function using fseek to set the file position
+int set_file_position(FILE *file, int offset, int whence)
+{
+    return fseek(file, offset, whence);
+}
+
+// Function using ftell to get the current file position
+int get_file_position(FILE *file)
+{
+    return ftell(file);
+}
+
+// Function using rewind to set the file position to the beginning
+void reset_file_position(FILE *file)
+{
+    rewind(file);
+}
+
+// Function using memcpy to copy a block of memory
+void *copy_memory(void *dest, void *src, int n)
+{
+    return memcpy(dest, src, n);
+}
+
+// Function using memset to fill a block of memory with a value
+void *fill_memory(void *s, int c, int n)
+{
+    return memset(s, c, n);
+}
+
+// Function using atoi to convert a string to an integer
+int string_to_integer(char *str)
+{
+    return atoi(str);
+}
+
+// Function using atof to convert a string to a float
+float string_to_float(char *str)
+{
+    return atof(str);
+}
+
+// Function using abs to get the absolute value of an integer
+int absolute_value_int(int n)
+{
+    return abs(n);
+}
+
+// Function using sin to calculate the sine of an angle
+float sine_value(float angle)
+{
+    return sin(angle);
+}
+
+// Function using cos to calculate the cosine of an angle
+float cosine_value(float angle)
+{
+    return cos(angle);
+}
+
+// Function using tan to calculate the tangent of an angle
+float tangent_value(float angle)
+{
+    return tan(angle);
+}
+
+// Function using exp to calculate the exponential of a value
+float exponential_value(float x)
+{
+    return exp(x);
+}
+
+// Function using log to calculate the natural logarithm
+float natural_logarithm(float x)
+{
+    return log(x);
+}
+
+// Function using log10 to calculate the base-10 logarithm
+float base10_logarithm(float x)
+{
+    return log10(x);
+}
+
+// Function using pow to calculate a base raised to a power
+float power_function(float base, float exp)
+{
+    return pow(base, exp);
+}
+
+// Function using sqrt to calculate the square root
+float square_root(float x)
+{
+    return sqrt(x);
+}
+
+// Function using ceil to get the smallest integer not less than a value
+float ceiling_value(float x)
+{
+    return ceil(x);
+}
+
+// Function using floor to get the largest integer not greater than a value
+float floor_value(float x)
+{
+    return floor(x);
+}
+
+// Function using fmod to calculate the floating-point remainder
+float floating_point_remainder(float x, float y)
+{
+    return fmod(x, y);
+}
+
+// Function using round to round a floating-point number to the nearest integer
+float round_value(float x)
+{
+    return round(x);
+}
+
+// Function using fabs to get the absolute value of a floating-point number
+float absolute_value_float(float x)
+{
+    return fabs(x);
+}
+
+// Function using fmax to find the maximum of two floating-point numbers
+float maximum_value(float x, float y)
+{
+    return fmax(x, y);
+}
+
+// Function using fmin to find the minimum of two floating-point numbers
+float minimum_value(float x, float y)
+{
+    return fmin(x, y);
+}
+
+int main()
+{
+    // Variable declarations at the beginning of the scope
+    int num;
+    char *dynamic_string;
+    int *dynamic_array;
+    FILE *outfile;
+    char buffer[100];
+    FILE *infile;
+    int read_num;
+    int read_char;
+    char block_buffer[20];
+    int bytes_read;
+    int file_pos;
+    char *write_block = "More data";
+    FILE *appendfile;
+    char *str1 = "hello";
+    char *str2 = "world";
+    char combined[20];
+    char memory_block[30];
+    char *num_str = "123";
+    char *float_str = "3.14";
+    float angle = 1.0;
+    float val = 2.0;
+    float float_num = 3.7;
+    int i;
+    int x;
+
+    num = read_integer();
+    print_message("You entered", num);
+
+    dynamic_string = allocate_string(50);
+    strcpy(dynamic_string, "This is a dynamically allocated string.");
+    printf("%s\n", dynamic_string);
+
+    dynamic_array = allocate_integer_array(5);
+    for (i = 0; i < 5; i++)
+    {
+        dynamic_array[i] = i * 2;
+    }
+    printf("Dynamically allocated array: ");
+    for (i = 0; i < 5; i++)
+    {
+        printf("%d ", dynamic_array[i]);
+    }
+    printf("\n");
+
+    outfile = open_file_write("example.txt");
+    if (outfile)
+    {
+        write_string_to_file(outfile, "Hello from fputs!\n");
+        write_formatted_to_file(outfile, "The number is: %d\n", num);
+        write_char_to_file(outfile, (int)'A');
+        close_file(outfile);
+    }
+
+    infile = fopen("example.txt", "r");
+    if (infile)
+    {
+        printf("Reading from example.txt:\n");
+        printf("fgets: %s", buffer);
+
+        if (fscanf(infile, "The number is: %d", &read_num) == 1)
+        {
+            printf("fscanf: The number is: %d\n", read_num);
+        }
+        read_char = fgetc(infile);
+        printf("fgetc: %c\n", (char)read_char);
+        reset_file_position(infile);
+        bytes_read = read_data_from_file(infile, block_buffer, 1, 15);
+        block_buffer[bytes_read] = '\0';
+        printf("fread (first 15 bytes): %s\n", block_buffer);
+
+        set_file_position(infile, 5, 0);
+        file_pos = get_file_position(infile);
+        printf("ftell after fseek: %ld\n", file_pos);
+
+        appendfile = fopen("example.txt", "a+");
+        if (appendfile)
+        {
+            x = strlen(write_block);
+            write_data_to_file(appendfile, write_block, 1, x);
+            close_file(appendfile);
+        }
+
+        close_file(infile);
+    }
+
+    copy_string(combined, str1);
+    concatenate_strings(combined, " ");
+    concatenate_strings(combined, str2);
+    x = get_string_length(combined);
+    x = compare_strings(str1, str2);
+    printf("strcmp(\"hello\", \"world\"): %d\n", x);
+
+    x = compare_n_strings("hell", "hello", 4);
+
+    x = strlen(combined);
+    copy_memory(memory_block, combined, x + 1);
+    x = '*';
+    fill_memory(memory_block + 5, x, 5);
+
+    string_to_integer(num_str);
+    string_to_float(float_str);
+    absolute_value_int(-5);
+
+    sine_value(angle);
+    cosine_value(angle);
+    tangent_value(angle);
+    exponential_value(val);
+    natural_logarithm(val);
+    base10_logarithm(val);
+    power_function(2.0, 3.0);
+    square_root((float)16);
+    ceiling_value(float_num);
+    floor_value(float_num);
+    round_value(float_num);
+    floating_point_remainder(7.5, 2.0);
+    absolute_value_float(-3.14);
+    maximum_value(5.2, 8.9);
+    minimum_value(5.2, 8.9);
+
+    sum_numbers(3, 1, 2, 3);
+
+    deallocate_memory(dynamic_string);
+    deallocate_memory(dynamic_array);
+
+    return 0;
+}
