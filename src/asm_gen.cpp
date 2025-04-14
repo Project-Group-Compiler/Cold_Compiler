@@ -7,24 +7,29 @@ extern std::string outputDir;
 void print_error(const std::string &message);
 
 template <typename T>
-void __print__(const T& x) {
+void __print__(const T &x)
+{
     std::cerr << x;
 }
 
 template <typename T, typename... Args>
-void __print__(const T& x, const Args&... rest) {
+void __print__(const T &x, const Args &...rest)
+{
     std::cerr << x << ", ";
     __print__(rest...);
 }
-#define _debug_(x...) std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; __print__(x); std::cerr << std::endl;
-
+#define _debug_(x...)                                             \
+    std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; \
+    __print__(x);                                                 \
+    std::cerr << std::endl;
 
 std::ofstream asm_file;
 
 std::map<std::string, int> string_literals;
 bool inside_fn = false;
 
-enum {
+enum
+{
     EAX = 0,
     EBX = 1,
     ECX = 2,
@@ -35,11 +40,9 @@ enum {
     EBP = 7
 };
 
-std::string reg_names[] = {
-    "EAX", "EBX", "ECX", "EDX", "ESI", "EDI", "ESP", "EBP"
-};
+std::string reg_names[] = {"eax", "ebx", "ecx", "edx", "esi", "edi", "esp", "ebp"};
 
-int uRegCnt = 6; //usableRegCnt
+int uRegCnt = 6; // usableRegCnt
 std::vector<std::vector<operand>> regDesc(uRegCnt);
 
 /*
@@ -52,30 +55,38 @@ Output Returns registers to hold the value of x, y, and z
 Assumption There is no global register allocation
 */
 
-std::string getMem(operand& op){
-    return "EBP - 4";
+std::string getMem(operand &op)
+{
+    return "ebp - 4";
 }
 
 // Stop after removing one, since all elements are unique
 template <typename T>
-void eraseFromVector(std::vector<T>& vec, const T& value) {
-    for (size_t i = 0; i < vec.size(); ++i) {
-        if (vec[i] == value) {
+void eraseFromVector(std::vector<T> &vec, const T &value)
+{
+    for (size_t i = 0; i < vec.size(); ++i)
+    {
+        if (vec[i] == value)
+        {
             vec.erase(vec.begin() + i);
             break;
         }
     }
 }
 
-//Make sure to use op.isLive not op->entry.isLive
-//Store only that op that islive and not present other than this reg
-//Check: op.entry null ho skti hai kya at this point
+// Make sure to use op.isLive not op->entry.isLive
+// Store only that op that islive and not present other than this reg
+// Check: op.entry null ho skti hai kya at this point
 
-void spillReg(int reg){
-    for(auto& op: regDesc[reg]){
-        eraseFromVector(op.entry->addrDesc.inRegs,reg);
-        if(op.isLive){
-            if(!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap)){
+void spillReg(int reg)
+{
+    for (auto &op : regDesc[reg])
+    {
+        eraseFromVector(op.entry->addrDesc.inRegs, reg);
+        if (op.isLive)
+        {
+            if (!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap))
+            {
                 std::string memAddr = getMem(op);
                 op.entry->addrDesc.inStack = 1;
                 emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));
@@ -86,23 +97,29 @@ void spillReg(int reg){
     regDesc[reg].clear();
 }
 
-int getBestReg(){
-    for(int reg=0;reg<uRegCnt;reg++){
-        if(regDesc[reg].size() == 0) return reg;
+int getBestReg()
+{
+    for (int reg = 0; reg < uRegCnt; reg++)
+    {
+        if (regDesc[reg].size() == 0)
+            return reg;
     }
 
     int bestReg = 0;
     int minCnt = 100;
-    for(int reg=0;reg<uRegCnt;reg++){
+    for (int reg = 0; reg < uRegCnt; reg++)
+    {
         int cnt = 0;
-        for(auto& op: regDesc[reg]){
-            if(op.isLive){
-                if(op.entry == NULL || !(op.entry->addrDesc.inRegs.size() > 1 || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap)){
-                    cnt ++;
-                }
+        for (auto &op : regDesc[reg])
+        {
+            if (op.isLive)
+            {
+                if (op.entry == NULL || !(op.entry->addrDesc.inRegs.size() > 1 || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap))
+                    cnt++;
             }
         }
-        if(minCnt > cnt){
+        if (minCnt > cnt)
+        {
             minCnt = cnt;
             bestReg = reg;
         }
@@ -112,41 +129,48 @@ int getBestReg(){
     return bestReg;
 }
 
-//Check reference 
-//Warning : make sure that addrDesc and regDesc contain unique entry
-int getReg(operand& op, bool willYouModify){
-    if(!op.entry) return -1; 
-    auto& addrDesc = op.entry->addrDesc;
+// Check reference
+// Warning : make sure that addrDesc and regDesc contain unique entry
+int getReg(operand &op, bool willYouModify)
+{
+    if (!op.entry)
+        return -1;
+    auto &addrDesc = op.entry->addrDesc;
 
-    if(willYouModify == 0){
-        if(addrDesc.inRegs.size()){
+    if (willYouModify == 0)
+    {
+        if (addrDesc.inRegs.size())
             return addrDesc.inRegs[0];
-        }
         return -1;
     }
 
-    if(addrDesc.inRegs.size()){
+    if (addrDesc.inRegs.size())
+    {
         int bestReg = addrDesc.inRegs[0];
         int minCnt = 100;
-        for(auto reg : addrDesc.inRegs){
+        for (auto reg : addrDesc.inRegs)
+        {
             int cnt = 0;
-            for(auto tempOp: regDesc[reg]){
-                if(tempOp.isLive){
-                    if(tempOp.entry == NULL || !((tempOp.entry->addrDesc.inRegs.size() > 1) || 
-                        tempOp.entry->addrDesc.inStack || tempOp.entry->addrDesc.inHeap)){
-                            cnt++;
-                    }
+            for (auto tempOp : regDesc[reg])
+            {
+                if (tempOp.isLive)
+                {
+                    if (tempOp.entry == NULL || !((tempOp.entry->addrDesc.inRegs.size() > 1) || tempOp.entry->addrDesc.inStack || tempOp.entry->addrDesc.inHeap))
+                        cnt++;
                 }
             }
-            if(minCnt > cnt){
+            if (minCnt > cnt)
+            {
                 minCnt = cnt;
                 bestReg = reg;
             }
         }
-        
+
         spillReg(bestReg);
         return bestReg;
-    }else{
+    }
+    else
+    {
         int bestReg = getBestReg();
         std::string memAddr = getMem(op);
         emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
@@ -154,20 +178,19 @@ int getReg(operand& op, bool willYouModify){
         regDesc[bestReg].push_back(op);
         op.entry->addrDesc.inRegs.push_back(bestReg);
 
-        //TODO: Handle __str__
+        // TODO: Handle __str_
 
         return bestReg;
     }
 }
 
-void updateRegDesc(int reg, operand &op){
-    for(auto &top:regDesc[reg]){
-        eraseFromVector(top.entry->addrDesc.inRegs,reg);
-    }
+void updateRegDesc(int reg, operand &op)
+{
+    for (auto &top : regDesc[reg])
+        eraseFromVector(top.entry->addrDesc.inRegs, reg);
 
-    for(int i=0;i<uRegCnt;i++){
-        eraseFromVector(regDesc[i],op);
-    }
+    for (int i = 0; i < uRegCnt; i++)
+        eraseFromVector(regDesc[i], op);
 
     regDesc[reg].clear();
     regDesc[reg].push_back(op);
@@ -194,7 +217,7 @@ void emit_asm(const std::string &inputFile)
     get_string_literals();
     global_init_pass();
     compute_basic_blocks();
-    print_basic_blocks();
+    // print_basic_blocks();
     // Calculate proper alignment for all structs and classes
     // calculate_all_alignments();
 
@@ -213,11 +236,7 @@ void emit_asm(const std::string &inputFile)
                 if (curr_op.substr(curr_op.length() - 7) == "start :")
                 {
                     inside_fn = true; // TODO : comment if useless
-                    if (curr_op.substr(5, 5) == "4main")
-                        emit_label("\nmain ");
-                    else
-                        emit_label("\n" + curr_op.substr(0, curr_op.length() - 7));
-                    // TODO : add function prologue
+                    emit_fn_defn(instr);
                 }
                 else
                     inside_fn = false; // TODO : comment if useless
@@ -226,28 +245,53 @@ void emit_asm(const std::string &inputFile)
                 emit_label(curr_op.substr(0, curr_op.length() - 1));
             else if (curr_op == "=" || curr_op == "(f)=")
                 emit_assign(instr);
-            else if(curr_op == "+"){// x = y + z
-                //TODO: Handle constant ...
-                int reg1 = getReg(instr.arg1, 1);
-                int reg2 = getReg(instr.arg2, 0);
-                // _debug_(stringify(instr));
-                // _debug_(reg1,reg2);
-                if(reg2 != -1){//emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
-                    emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
-                }else{
-                    std::string mem = getMem(instr.arg2);
-                    emit_instr(x86_lib::add_reg_mem(reg_names[reg1], mem));
-                }
-                updateRegDesc(reg1,instr.result);
-            }
+            else if (curr_op == "+")
+                emit_add(instr);
         }
     }
 
     emit_section(".data");
-    print_data_section(); // add initialized data
+    emit_data_section(); // add initialized data
     emit_section(".bss");
-    print_bss_section(); // add uninitialized data
-    // print_next_use(); 
+    emit_bss_section(); // add uninitialized data
+    // print_next_use();
+}
+
+void emit_fn_defn(quad &instr)
+{
+    if (instr.op.substr(5, 5) == "4main")
+        emit_label("\nmain ");
+    else
+        emit_label("\n" + instr.op.substr(0, instr.op.length() - 7));
+
+    // TODO : add function prologue
+}
+
+void emit_assign(quad &instr)
+{
+    if (!inside_fn) // TODO : comment if better way found
+        return;
+    // TODO complete the function
+}
+
+void emit_add(quad &instr)
+{
+    // x = y + z
+    // TODO: Handle constant ...
+    int reg1 = getReg(instr.arg1, 1);
+    int reg2 = getReg(instr.arg2, 0);
+    // _debug_(stringify(instr));
+    // _debug_(reg1,reg2);
+    if (reg2 != -1)
+    { // emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
+        emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
+    }
+    else
+    {
+        std::string mem = getMem(instr.arg2);
+        emit_instr(x86_lib::add_reg_mem(reg_names[reg1], mem));
+    }
+    updateRegDesc(reg1, instr.result);
 }
 
 void get_string_literals()
@@ -313,7 +357,7 @@ void global_init_pass()
     }
 }
 
-void print_data_section()
+void emit_data_section()
 {
     for (auto &[name, entry] : gst)
     {
@@ -360,7 +404,7 @@ void print_data_section()
     }
 }
 
-void print_bss_section()
+void emit_bss_section()
 {
     for (auto &[name, entry] : gst)
     {
@@ -406,59 +450,71 @@ void print_bss_section()
 void next_use_analysis(std::vector<quad> &block)
 {
     // Assume symbol table shows all non-temporary and temporaries variables in B as live on exit
-    for(int j=0;j<block.size();j++){
-        quad& I = block[j];
-        if(I.arg1.entry != NULL){
+    for (int j = 0; j < block.size(); j++)
+    {
+        quad &I = block[j];
+        if (I.arg1.entry != NULL)
+        {
             I.arg1.entry->isLive = 1;
             I.arg1.entry->nextUse = -1;
         }
-        
-        if(I.arg2.entry != NULL){
+
+        if (I.arg2.entry != NULL)
+        {
             I.arg2.entry->isLive = 1;
             I.arg2.entry->nextUse = -1;
         }
-    
-        if(I.result.entry != NULL){
+
+        if (I.result.entry != NULL)
+        {
             I.result.entry->isLive = 1;
             I.result.entry->nextUse = -1;
         }
     }
 
-    for(int j=(int)block.size()-1;j>=0;j--){
-        quad& I = block[j];
-        if(I.arg1.entry != NULL){
+    for (int j = (int)block.size() - 1; j >= 0; j--)
+    {
+        quad &I = block[j];
+        if (I.arg1.entry != NULL)
+        {
             I.arg1.isLive = I.arg1.entry->isLive;
             I.arg1.nextUse = I.arg1.entry->nextUse;
         }
-        
-        if(I.arg2.entry != NULL){
+
+        if (I.arg2.entry != NULL)
+        {
             I.arg2.isLive = I.arg2.entry->isLive;
             I.arg2.nextUse = I.arg2.entry->nextUse;
         }
 
-        if(I.result.entry != NULL){
+        if (I.result.entry != NULL)
+        {
             I.result.isLive = I.result.entry->isLive;
             I.result.nextUse = I.result.entry->nextUse;
         }
 
-        if(I.arg1.entry != NULL){
+        if (I.arg1.entry != NULL)
+        {
             I.arg1.entry->isLive = 1;
             I.arg1.entry->nextUse = I.Label;
         }
-        
-        if(I.arg2.entry != NULL){
+
+        if (I.arg2.entry != NULL)
+        {
             I.arg2.entry->isLive = 1;
             I.arg2.entry->nextUse = I.Label;
         }
 
-        if(I.result.entry != NULL){
+        if (I.result.entry != NULL)
+        {
             I.result.entry->isLive = 0;
             I.result.entry->nextUse = -1;
         }
     }
 }
 
-void print_next_use(){
+void print_next_use()
+{
     std::cout << "NEXT USE INFO\n";
     int block_no = 0;
     for (auto &block : basic_blocks)
@@ -467,26 +523,16 @@ void print_next_use(){
         for (auto &instr : block)
         {
             std::cout << stringify(instr) << std::endl;
-            if(instr.result.entry){
+            if (instr.result.entry)
                 std::cout << '\t' << instr.result.value << ": " << instr.result.isLive << ' ' << instr.result.nextUse << '\n';
-            }
-            if(instr.arg1.entry){
+            if (instr.arg1.entry)
                 std::cout << '\t' << instr.arg1.value << ": " << instr.arg1.isLive << ' ' << instr.arg1.nextUse << '\n';
-            }
-            if(instr.arg2.entry){
+            if (instr.arg2.entry)
                 std::cout << '\t' << instr.arg2.value << ": " << instr.arg2.isLive << ' ' << instr.arg2.nextUse << '\n';
-            }
             // std::cout << '(' << (instr.arg1.entry != NULL) << ' ' << instr.arg1.isLive << ' ' << instr.arg1.nextUse << ')';
             // std::cout << '(' << (instr.arg2.entry != NULL) << ' ' << instr.arg2.isLive << ' ' << instr.arg2.nextUse << ')';
             // std::cout << '(' << (instr.result.entry != NULL) << ' ' << instr.result.isLive << ' ' << instr.result.nextUse << ")\n";
         }
         std::cout << "\n";
     }
-}
-
-void emit_assign(quad &instr)
-{
-    if (!inside_fn) // TODO : comment if better way found
-        return;
-    // TODO complete the function
 }
