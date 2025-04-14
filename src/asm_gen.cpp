@@ -6,16 +6,24 @@
 extern std::string outputDir;
 void print_error(const std::string &message);
 
+template <typename T>
+void __print__(const T& x) {
+    std::cerr << x;
+}
+
+template <typename T, typename... Args>
+void __print__(const T& x, const Args&... rest) {
+    std::cerr << x << ", ";
+    __print__(rest...);
+}
+#define _debug_(x...) std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; __print__(x); std::cerr << std::endl;
+
+
 std::ofstream asm_file;
 
 std::map<std::string, int> string_literals;
 bool inside_fn = false;
 
-/*
-curr handle
-x = y op z
-x = y
-*/
 enum {
     EAX = 0,
     EBX = 1,
@@ -35,6 +43,10 @@ int uRegCnt = 6; //usableRegCnt
 std::vector<std::vector<operand>> regDesc(uRegCnt);
 
 /*
+curr handle
+x = y op z
+x = y
+
 Input 3AC I:x = yopz
 Output Returns registers to hold the value of x, y, and z
 Assumption There is no global register allocation
@@ -218,6 +230,8 @@ void emit_asm(const std::string &inputFile)
                 //TODO: Handle constant ...
                 int reg1 = getReg(instr.arg1, 1);
                 int reg2 = getReg(instr.arg2, 0);
+                // _debug_(stringify(instr));
+                // _debug_(reg1,reg2);
                 if(reg2 != -1){//emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
                     emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
                 }else{
@@ -233,7 +247,7 @@ void emit_asm(const std::string &inputFile)
     print_data_section(); // add initialized data
     emit_section(".bss");
     print_bss_section(); // add uninitialized data
-    print_next_use(); 
+    // print_next_use(); 
 }
 
 void get_string_literals()

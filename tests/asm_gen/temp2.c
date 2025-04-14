@@ -3,12 +3,12 @@ int main(){
     int y = 5;
     int z = 10;
     y = z + x;
-    x = y + z;
+    x = z + y;
     z = y + x;
+    x = y + x;
+    y = y + z;
     z = y + x;
-    z = y + x;
-    z = y + x;
-    z = y + x;
+    y = y + z;
 }
 
 // void foo(int x){
