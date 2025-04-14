@@ -30,7 +30,8 @@ extern std::string outputDir;
 extern bool has_error;
 
 //Semantics
-bool isStaticDecl = false;
+int isStaticDecl = 0;
+int staticCount = 1;
 bool isConstDecl = false;
 bool array_decl = 0;
 bool enum_decl = 0;

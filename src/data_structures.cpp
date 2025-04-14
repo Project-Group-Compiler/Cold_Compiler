@@ -142,25 +142,25 @@ void symTable_init()
     insertKeywords();
 }
 
-sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray, bool isEnum)
+sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum)
 {
-    sym_entry* new_sym = new (std::nothrow) sym_entry;
+    sym_entry *new_sym = new (std::nothrow) sym_entry;
 
     if (!new_sym)
     {
         std::cerr << "Error: Memory allocation failed in createEntry.\n";
         exit(EXIT_FAILURE);
     }
-    new_sym->type     = type;
-    new_sym->size     = size;
-    new_sym->init     = init;
-    new_sym->offset   = offset;
-    new_sym->entry    = ptr;
-    new_sym->access   = access;
+    new_sym->type = type;
+    new_sym->size = size;
+    new_sym->init = init;
+    new_sym->offset = offset;
+    new_sym->entry = ptr;
+    new_sym->access = access;
     new_sym->isStatic = isStatic;
-    new_sym->isConst  = isConst;
-    new_sym->isArray  = isArray;
-    new_sym->isEnum   = isEnum;
+    new_sym->isConst = isConst;
+    new_sym->isArray = isArray;
+    new_sym->isEnum = isEnum;
     return new_sym;
 }
 
@@ -408,6 +408,18 @@ int insertStructAttr(std::string attr, std::string type, ull size, bool init)
             blockSz.top() += size;
         if (!Goffset.empty())
             Goffset.top() += size;
+        if (type != "char")
+        {
+            if (struct_offset % 4 != 0)
+            {
+                int padding = (4 - (struct_offset % 4));
+                struct_offset += padding;
+                if (!blockSz.empty())
+                    blockSz.top() += padding;
+                if (!Goffset.empty())
+                    Goffset.top() += padding;
+            }
+        }
         (*curr_structure).insert(std::make_pair(attr, createEntry(type, size, init, struct_offset, nullptr)));
         struct_offset += size;
         return 1;
@@ -424,6 +436,8 @@ int printStructTable(std::string struct_name)
     }
     if ((*curr_struct_table).find(struct_name) == (*curr_struct_table).end())
     {
+        if (struct_offset % 4 != 0)
+            struct_offset += 4 - (struct_offset % 4); // padding
         (*curr_struct_table).insert(std::make_pair(struct_name, std::make_pair(struct_offset, curr_structure)));
         printSymbolTable(curr_structure, struct_name + "_" + std::to_string(struct_count) + ".csv"); // prints structure symbol table
         struct_count++;
@@ -532,6 +546,18 @@ int insertClassAttr(std::string attr, std::string type, ull size, bool init, std
             blockSz.top() += size;
         if (!Goffset.empty())
             Goffset.top() += size;
+        if (type != "char")
+        {
+            if (class_offset % 4 != 0)
+            {
+                int padding = (4 - (class_offset % 4));
+                class_offset += padding;
+                if (!blockSz.empty())
+                    blockSz.top() += padding;
+                if (!Goffset.empty())
+                    Goffset.top() += padding;
+            }
+        }
         (*curr_class_structure).insert(std::make_pair(attr, createEntry(type, size, init, class_offset, nullptr, access)));
         class_offset += size;
         return 1;
@@ -547,6 +573,8 @@ int printClassTable(std::string class_name)
     }
     if ((*curr_class_table).find(class_name) == (*curr_class_table).end())
     {
+        if (class_offset % 4 != 0)
+            class_offset += 4 - (class_offset % 4); // padding
         (*curr_class_table).insert(std::make_pair(class_name, std::make_pair(class_offset, curr_class_structure)));
         printSymbolTable(curr_class_structure, class_name + "_" + std::to_string(class_count) + ".csv"); // prints class symbol table
         class_count++;
@@ -761,7 +789,7 @@ void createParamList()
     avl = 1;
 }
 
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access, bool isStatic, bool isConst, bool isArray, bool isEnum)
+void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum)
 {
     table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr, access, isStatic, isConst, isArray, isEnum)));
     if (!blockSz.empty())
@@ -939,7 +967,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
                     << it.second->init << ", "
                     << it.second->offset << ", "
                     << (it.second->isGlobal ? "global" : "") << ", "
-                    << (it.second->isStatic ? "static" : "") << ", "
+                    << (it.second->isStatic > 0 ? "static" : "") << ", "
                     << (it.second->isConst ? "const" : "") << ", "
                     << (it.second->isArray ? "array" : "") << ", "
                     << (it.second->isEnum ? "enum const" : "") << "\n";

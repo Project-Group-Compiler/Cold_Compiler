@@ -5,30 +5,63 @@ struct node{
 };
 
 struct node head;
-struct n{
+class n{
+    public{
     int x;
     char ch;
     char ch2;
+    };
 };
 
-struct n n1;
+class n n1;
 
+struct ch{
+    char c;
+};
 
+struct ch2{
+    char c;
+    struct ch ch1;
+};
+
+struct ch3{
+    struct ch2 ch1;
+    char c;
+};
+
+struct ch3 ch4;
+
+class p{
+    private{
+    char ch3;
+    int x;
+    };
+    public{
+        class n o1;
+    };
+};
+
+class q{
+    private{
+    char ch3;
+    char r4;
+    int x;
+    };
+    public{
+        class n o1;
+    };
+};
+
+class p p1;
+class q q1;
 
 struct o{
     char ch3;
     int x;
     char ch;
+    class p p2;
 };
 
 struct o o1;
-struct o o2 = o1;
 
-
-struct p{
-    char ch3;
-    int x;
-};
-
-
-struct p p1;
+int x = 6;

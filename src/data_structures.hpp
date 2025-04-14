@@ -41,7 +41,7 @@ typedef struct sym_entry
 	ull offset;
 	std::map<std::string, sym_entry *> *entry;
 	std::string access; //  field: "public", "private", "protected", etc.
-	bool isStatic = false;
+	int isStatic = 0;
 	bool isConst = false;
 	bool isArray = false;
 	bool isEnum = false;
@@ -92,7 +92,7 @@ bool searchIdConst(std::string id);
 std::string getSizeOfType(const std::string &typeStr);
 
 void symTable_init();
-sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access = "", bool isStatic = false, bool isConst = false, bool isArray = false, bool isEnum = false);
+sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
 void makeSymbolTable(std::string name, std::string f_type);
 void removeFuncProto();
 int updSymbolTable(std::string id);
@@ -118,7 +118,7 @@ int findClass(std::string class_name);
 int lookupClass(std::string class_name, std::string id);
 
 void createParamList();
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access = "", bool isStatic = false, bool isConst = false, bool isArray = false, bool isEnum = false);
+void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
 std::vector<std::string> getFuncArgs(std::string id);
 std::string mangleFunctionName(const std::string &name, const std::vector<std::string> &paramTypes);
 std::string getTypeCode(const std::string &type);

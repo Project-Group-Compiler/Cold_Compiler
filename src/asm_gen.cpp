@@ -217,9 +217,8 @@ void emit_asm(const std::string &inputFile)
     get_string_literals();
     global_init_pass();
     compute_basic_blocks();
-    // print_basic_blocks();
-    // Calculate proper alignment for all structs and classes
-    // calculate_all_alignments();
+
+    // print_tac_code(inputFile);
 
     add_extern_funcs();
     emit_section(".text");
@@ -235,11 +234,11 @@ void emit_asm(const std::string &inputFile)
             {
                 if (curr_op.substr(curr_op.length() - 7) == "start :")
                 {
-                    inside_fn = true; // TODO : comment if useless
+                    inside_fn = true;
                     emit_fn_defn(instr);
                 }
                 else
-                    inside_fn = false; // TODO : comment if useless
+                    inside_fn = false;
             }
             else if (curr_op.back() == ':')
                 emit_label(curr_op.substr(0, curr_op.length() - 1));
@@ -254,7 +253,6 @@ void emit_asm(const std::string &inputFile)
     emit_data_section(); // add initialized data
     emit_section(".bss");
     emit_bss_section(); // add uninitialized data
-    // print_next_use();
 }
 
 void emit_fn_defn(quad &instr)
@@ -278,6 +276,8 @@ void emit_add(quad &instr)
 {
     // x = y + z
     // TODO: Handle constant ...
+    //  check constant before checking global (if going via regex option)
+    // if(x is global)  [x]
     int reg1 = getReg(instr.arg1, 1);
     int reg2 = getReg(instr.arg2, 0);
     // _debug_(stringify(instr));
@@ -322,19 +322,54 @@ void get_string_literals()
 
 void global_init_pass()
 {
+    bool in_fn = false;
+    // replace static variables with modified names
+    for (auto &instr : tac_code)
+    {
+        const std::string curr_op = instr.op;
+        if (curr_op.substr(0, 5) == "FUNC_")
+        {
+            if (curr_op.substr(curr_op.length() - 7) == "start :")
+                in_fn = true;
+            else
+                in_fn = false;
+        }
+        else if (in_fn)
+        {
+            if (instr.result.entry && instr.result.entry->isStatic > 0)
+            {
+                instr.result.value = "_s_" + instr.result.value;
+                if (!instr.result.entry->isGlobal)
+                    instr.result.value += "_" + std::to_string(instr.result.entry->isStatic);
+            }
+            if (instr.arg1.entry && instr.arg1.entry->isStatic > 0)
+            {
+                instr.arg1.value = "_s_" + instr.arg1.value;
+                if (!instr.arg1.entry->isGlobal)
+                    instr.arg1.value += "_" + std::to_string(instr.arg1.entry->isStatic);
+            }
+            if (instr.arg2.entry && instr.arg2.entry->isStatic > 0)
+            {
+                instr.arg2.value = "_s_" + instr.arg2.value;
+                if (!instr.arg2.entry->isGlobal)
+                    instr.arg2.value += "_" + std::to_string(instr.arg2.entry->isStatic);
+            }
+        }
+    }
+    in_fn = false;
     for (const auto &instr : tac_code)
     {
         const std::string curr_op = instr.op;
         if (curr_op.substr(0, 5) == "FUNC_")
         {
             if (curr_op.substr(curr_op.length() - 7) == "start :")
-                inside_fn = true;
+                in_fn = true;
             else
-                inside_fn = false;
+                in_fn = false;
         }
         else if (curr_op == "=" || curr_op == "(f)=")
         {
-            if (!inside_fn)
+            if (!in_fn)
                 global_init[instr.result.value] = instr.arg1.value;
         }
     }
@@ -343,17 +378,9 @@ void global_init_pass()
     for (auto &instr : tac_code)
     {
         if (instr.arg1.entry && instr.arg1.entry->isEnum)
-        {
             instr.arg1.value = global_init[instr.arg1.value];
-            instr.arg1.entry->isEnum = false;
-            instr.arg1.entry->isGlobal = false;
-        }
         if (instr.arg2.entry && instr.arg2.entry->isEnum)
-        {
             instr.arg2.value = global_init[instr.arg2.value];
-            instr.arg2.entry->isEnum = false;
-            instr.arg2.entry->isGlobal = false;
-        }
     }
 }
 
@@ -361,12 +388,16 @@ void emit_data_section()
 {
     for (auto &[name, entry] : gst)
     {
+        std::string act_name = name;
+        if (entry->isStatic > 0)
+            act_name = "_s_" + act_name;
+
         if (entry->isGlobal && !entry->isEnum && entry->init)
         {
             if (entry->type == "char")
-                emit_data(name + ": db " + global_init[name]);
+                emit_data(act_name + ": db " + global_init[act_name]);
             else if (entry->type == "int" || entry->type == "float")
-                emit_data(name + ": dd " + global_init[name]);
+                emit_data(act_name + ": dd " + global_init[act_name]);
             else if (entry->type == "char*")
             {
                 if (entry->isArray)
@@ -375,8 +406,8 @@ void emit_data_section()
                 }
                 else
                 {
-                    std::string init_val = global_init[name];
-                    emit_data(name + ": dd " + init_val);
+                    std::string init_val = global_init[act_name];
+                    emit_data(act_name + ": dd " + init_val);
                 }
             }
             else if (entry->type == "int*" || entry->type == "float*")
@@ -387,8 +418,8 @@ void emit_data_section()
                 }
                 else
                 {
-                    std::string init_val = global_init[name];
-                    emit_data(name + ": dd " + init_val);
+                    std::string init_val = global_init[act_name];
+                    emit_data(act_name + ": dd " + init_val);
                 }
             }
             // Initialized structs, unions and classes pending as of now
@@ -408,41 +439,39 @@ void emit_bss_section()
 {
     for (auto &[name, entry] : gst)
     {
+        std::string act_name = name;
+        if (entry->isStatic > 0)
+            act_name = "_s_" + act_name;
+
         if (entry->isGlobal && !entry->isEnum && !entry->init)
         {
             if (entry->type == "char")
-                emit_data(name + ": resb 1");
+                emit_data(act_name + ": resb 1");
             else if (entry->type == "int" || entry->type == "float")
-                emit_data(name + ": resd 1");
+                emit_data(act_name + ": resd 1");
             else if (entry->type == "char*")
             {
                 if (entry->isArray)
-                    emit_data(name + ": resb " + std::to_string(entry->size));
+                    emit_data(act_name + ": resb " + std::to_string(entry->size));
                 else
-                    emit_data(name + ": resd 1");
+                    emit_data(act_name + ": resd 1");
             }
             else if (entry->type == "int*" || entry->type == "float*")
             {
                 if (entry->isArray)
-                    emit_data(name + ": resd " + std::to_string(entry->size / 4));
+                    emit_data(act_name + ": resd " + std::to_string(entry->size / 4));
                 else
-                    emit_data(name + ": resd 1");
+                    emit_data(act_name + ": resd 1");
             }
-            // TODO : padding??
-            // else if (entry->type.substr(0, 7) == "STRUCT_" || entry->type.substr(0, 6) == "CLASS_" || entry->type.substr(0, 6) == "UNION_")
-            // {
-            //     if (entry->size == 1)
-            //         emit_data(name + ": resb 1");
-            //     else
-            //         emit_data(name + ": resd " + std::to_string(entry->size / 4));
-            // }
-            // else if (entry->type.substr(0, 6) == "UNION_")
-            // {
-            //     if (entry->size == 1)
-            //         emit_data(name + ": resb 1");
-            //     else
-            //         emit_data(name + ": resd " + std::to_string(entry->size / 4));
-            // }
+            else if (entry->type.substr(0, 6) == "UNION_")
+            {
+                if (entry->size == 1)
+                    emit_data(act_name + ": resb 1");
+                else
+                    emit_data(act_name + ": resd " + std::to_string(entry->size / 4));
+            }
+            else if (entry->type.substr(0, 7) == "STRUCT_" || entry->type.substr(0, 6) == "CLASS_")
+                emit_data(act_name + ": resd " + std::to_string(entry->size / 4));
         }
     }
 }

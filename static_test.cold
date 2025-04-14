@@ -1,0 +1,18 @@
+static int b = 9;
+void foo()
+{
+  static int b = 6;
+  b++;
+}
+
+void g()
+{
+  b = 5;
+}
+int main()
+{
+  b = 5;
+  foo();
+  g();
+  return 0;
+}

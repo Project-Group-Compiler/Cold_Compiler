@@ -11,7 +11,7 @@ struct operand
     std::string value;
     sym_entry *entry;
     int nextUse = -1; // TODO
-	int isLive = 0;
+    int isLive = 0;
 
     operand()
     {
@@ -28,7 +28,8 @@ struct operand
         this->value = value;
         this->entry = entry;
     }
-    bool operator==(const operand& other) const {
+    bool operator==(const operand &other) const
+    {
         return value == other.value && entry == other.entry;
     }
 };
@@ -60,7 +61,7 @@ void remainingBackpatch();
 
 void setArg1(int ind, operand value);
 void setResult(int ind, operand value);
-int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, bool isLocalStaticInit = false);
+int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, int isLocalStaticInit = 0);
 
 extern std::vector<quad> tac_code;
 extern std::vector<std::vector<quad>> basic_blocks;
@@ -101,22 +102,12 @@ inline std::string stringify(const quad &instr)
     else if (curr_op.substr(0, 3) == "(f)")
     {
         if (curr_op.back() == '=')
-        {
-            if (instr.result.value.substr(0, 3) == "_s_")
-                s += instr.result.value.substr(3) + " = " + instr.arg1.value + "\t(float - static)";
-            else
-                s += instr.result.value + " = " + instr.arg1.value + "\t\t(float)";
-        }
+            s += instr.result.value + " = " + instr.arg1.value + "\t\t(float)";
         else
             s += instr.result.value + " = " + instr.arg1.value + " " + curr_op.back() + " " + instr.arg2.value + "\t\t(float)";
     }
     else if (curr_op == "=")
-    {
-        if (instr.result.value.substr(0, 3) == "_s_")
-            s += instr.result.value.substr(3) + " = " + instr.arg1.value + "\t(static)";
-        else
-            s += instr.result.value + " = " + instr.arg1.value;
-    }
+        s += instr.result.value + " = " + instr.arg1.value;
     else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
         s += instr.result.value + " = " + instr.arg1.value + " " + curr_op + " " + instr.arg2.value;
     else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+")

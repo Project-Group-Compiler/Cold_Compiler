@@ -68,9 +68,11 @@ operand getTempVariable(std::string type)
 }
 
 // Emit for assignment expressions
-int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, bool isLocalStaticInit)
+int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, int isLocalStaticInit)
 {
     // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1 << "#" << arg2 << std::endl;
+    if(isLocalStaticInit > 0)
+        arg1.value += "_" + std::to_string(isLocalStaticInit);
     std::string temp_op = "";
     std::string str = op;
     operand q;
@@ -118,14 +120,14 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
     int x;
     if (isFloat(type))
     {
-        if (isLocalStaticInit)
+        if (isLocalStaticInit > 0)
             staticAddLater.push_back(quad(staticAddLater.size(), "(f)=", q, operand(), arg1, -1));
         else
             x = emit("(f)=", q, operand(), arg1, -1);
     }
     else
     {
-        if (isLocalStaticInit)
+        if (isLocalStaticInit > 0)
             staticAddLater.push_back(quad(staticAddLater.size(), "=", q, operand(), arg1, -1));
         else
             x = emit("=", q, operand(), arg1, -1);

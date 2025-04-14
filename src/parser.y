@@ -2044,7 +2044,7 @@ init_declarator
 				is_arr = false;
 				DBG("Array dec 0");
 			}else{
-				if(!isStaticDecl){
+				if(isStaticDecl == 0){
 					std::string type1 = $1->type;
 					debug(type1);
 					assign_exp("=", type1,type1, $5->type, $1->place, $5->place);
@@ -2054,7 +2054,7 @@ init_declarator
 					if(*curr_table == gst)	
 						assign_exp("=", $1->type,$1->type, $5->type, {"_s_" + $1->place.value, $1->place.entry}, $5->place);//TODO
 					else
-						assign_exp("=", $1->type,$1->type, $5->type, {"_s_(" + funcName + ") " + $1->place.value, $1->place.entry}, $5->place, isStaticDecl);//TODO
+						assign_exp("=", $1->type,$1->type, $5->type, {"_s_" + $1->place.value, $1->place.entry}, $5->place, isStaticDecl);//TODO
 				}
 			}
 			
@@ -2093,7 +2093,7 @@ storage_class_specifier
 		DBG("storage_class_specifier -> STATIC");
 		$$ = getNode($1);
 		currentDataType = "static ";
-		isStaticDecl = true; 
+		isStaticDecl = staticCount++; 
 		flag2 = 1;
 	}
 	| AUTO {
