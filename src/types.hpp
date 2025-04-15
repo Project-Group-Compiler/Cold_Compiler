@@ -139,6 +139,48 @@ inline std::string checkType(std::string a, std::string b)
     return "";
 }
 
+inline std::string checkExplicitType(std::string a, std::string b)
+{
+    setVar(a, b);
+    if (a.empty() || b.empty())
+        return "";
+
+    if (a == b)
+        return "ok";
+
+    if ((isAInt && isBBool) || (isABool && isBInt))
+        return "ok";
+
+    if (isBChar || isAInt)
+        return "ok";
+
+    if (isAChar || isBInt)
+        return "ok";
+    
+    if (isAInt || isBFloat)
+        return "ok";
+
+    if (isBInt || isAFloat)
+        return "ok";
+    
+    if (isAChar || isBFloat)
+        return "ok";
+
+    if (isBFloat || isAChar)
+        return "ok";
+
+    bool isAVoidPtr = (a == "void*");
+    bool isBVoidPtr = (b == "void*");
+
+    if ((isAVoidPtr && isBAnyPtr) || (isAAnyPtr && isBVoidPtr))
+        return "ok";
+
+    if (b == "void")
+        return "";
+
+    return "";
+}
+
 inline std::string unaryExp(std::string op, std::string type)
 {
     if (op == "*")

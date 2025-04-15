@@ -1198,13 +1198,17 @@ cast_expression
 		// Semantic
 		$$->type = $2->type;
 		$$->isInit = $4->isInit;
+		std::string temp = checkExplicitType($2->type, $4->type);
+		if(temp.empty()){
+			semantic_error(("Incompatible explicit conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
+		}
 		//3AC
 		//TODO: Try to do CAST_typename
 		DBG("DEBUG:type = " + $2->type);
 		DBG("DEBUG:place = " + $4->type);
-		if(checkType($2->type, $4->type) == ""){
-			semantic_error(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
-		}
+		// if(checkType($2->type, $4->type) == ""){
+		// 	semantic_error(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
+		// }
 		operand q = getTempVariable($2->type);
         $$->place = q;
 		$4->nextlist.clear();
