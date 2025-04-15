@@ -74,3 +74,5 @@ and
         return 0;
     }
     ```
+
+11. Like C, we don't check if what fn actually returns matches with its return type or whether a non-void function returns something at all. However if return value is assigned to a variable then the type to which it is assigned should match with return type of function. `char`, `int`, `float` can be interconverted implicitly, however a pointer can't be converted implicitly (nor explicitly) to other types. (Again, reiterating we don't care if there's a `return` in the function or not.) Go through `tests/asm_gen/types_test.cold`.
