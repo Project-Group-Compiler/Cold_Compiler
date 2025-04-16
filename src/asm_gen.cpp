@@ -328,6 +328,9 @@ void emit_asm(const std::string &inputFile)
                 emit_assign(instr);
             else if (curr_op == "+")
                 emit_add(instr);
+            else if (curr_op == "-")
+                emit_sub(instr);
+            else if(curr_op=="*")
 
             printReg_addr_Desc(instr.Label);
         }
@@ -393,6 +396,32 @@ void emit_assign(quad &instr)
 
 }
 
+void emit_sub(quad &instr)
+{
+    // x = y - z
+    int reg1 = getReg(instr.arg1, 1);
+    if(is_int_constant(instr.arg2.value))
+    {
+        emit_instr(x86_lib::sub_reg_imm(reg_names[reg1], instr.arg2.value));
+    }
+    else if(instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
+    {
+        emit_instr(x86_lib::sub_reg_mem(reg_names[reg1], instr.arg2.value));
+    }
+    else{
+        int reg2 = getReg(instr.arg2, 0);
+        if (reg2 != -1)
+        {
+            emit_instr(x86_lib::sub(reg_names[reg1], reg_names[reg2]));
+        }
+        else
+        {
+            std::string mem = getMem(instr.arg2);
+            emit_instr(x86_lib::sub_reg_mem(reg_names[reg1], mem));
+        }
+    }
+    updateRegDesc(reg1, instr.result);
+}
 void emit_add(quad &instr)
 {
     // x = y + z
