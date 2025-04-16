@@ -115,8 +115,7 @@ std::string ClassAttrType(std::string class_name, std::string id);
 std::string ClassAttrAccess(std::string className, std::string attr);
 int inheritFromClass(std::string childClass, std::string parentClass);
 int findClass(std::string class_name);
-int lookupClass(std::string class_name, std::string id);
-
+int lookupClass(std::string class_name, std::string &id);
 void createParamList();
 void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
 std::vector<std::string> getFuncArgs(std::string id);

@@ -443,7 +443,28 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				manglemethod=mangleFunctionName(methodName,currArgs);
+				manglemethod=manglemethod.substr(5);
+				DBG("manglemethod = " + manglemethod);
+				bool found = false;
+				if (curr_class_structure) { //added this search for finding parent methods
+				    for (auto& entry : *curr_class_structure) {
+				        std::string key = entry.first;
+				        // Check if key ends with the method name we're looking for
+				        if (key.length() >= manglemethod.length() && 
+				            key.substr(key.length() - manglemethod.length()) == manglemethod) {
+				            DBG("here - found method: " + key);
+				            found = true;
+				            manglemethod = key; // Use the full key for further processing
+				            break;
+				        }
+				    }
+				}
+
+				if (!found) {
+					semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				}
+    	        
     	    }
     	}
 	    // First check if it's a class
@@ -452,7 +473,8 @@ postfix_expression
 			manglemethod=mangleFunctionName(methodName,currArgs);
 			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
 	        int ret = lookupClass(classType, manglemethod);
-
+			DBG("ret = " + std::to_string(ret));
+			DBG("manglemethod = " + manglemethod);
 	        if (ret == 1) {
 				string memberAccess = ClassAttrAccess(classType, manglemethod);
 				
@@ -557,7 +579,27 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature ").c_str(), "scope error");
+				manglemethod=mangleFunctionName(methodName,currArgs);
+				manglemethod=manglemethod.substr(5);
+				DBG("manglemethod = " + manglemethod);
+				bool found = false;
+				if (curr_class_structure) { //added this search for finding parent methods
+				    for (auto& entry : *curr_class_structure) {
+				        std::string key = entry.first;
+				        // Check if key ends with the method name we're looking for
+				        if (key.length() >= manglemethod.length() && 
+				            key.substr(key.length() - manglemethod.length()) == manglemethod) {
+				            DBG("here - found method: " + key);
+				            found = true;
+				            manglemethod = key; // Use the full key for further processing
+				            break;
+				        }
+				    }
+				}
+
+				if (!found) {
+					semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				}
     	    }
     	}
 	    // First check if it's a class
@@ -748,7 +790,27 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				manglemethod=mangleFunctionName(methodName,currArgs);
+				manglemethod=manglemethod.substr(5);
+				DBG("manglemethod = " + manglemethod);
+				bool found = false;
+				if (curr_class_structure) { //added this search for finding parent methods
+				    for (auto& entry : *curr_class_structure) {
+				        std::string key = entry.first;
+				        // Check if key ends with the method name we're looking for
+				        if (key.length() >= manglemethod.length() && 
+				            key.substr(key.length() - manglemethod.length()) == manglemethod) {
+				            DBG("here - found method: " + key);
+				            found = true;
+				            manglemethod = key; // Use the full key for further processing
+				            break;
+				        }
+				    }
+				}
+
+				if (!found) {
+					semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				}
     	    }
     	}
 	    // First check if it's a class
@@ -865,7 +927,27 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature ").c_str(), "scope error");
+				manglemethod=mangleFunctionName(methodName,currArgs);
+				manglemethod=manglemethod.substr(5);
+				DBG("manglemethod = " + manglemethod);
+				bool found = false;
+				if (curr_class_structure) { //added this search for finding parent methods
+				    for (auto& entry : *curr_class_structure) {
+				        std::string key = entry.first;
+				        // Check if key ends with the method name we're looking for
+				        if (key.length() >= manglemethod.length() && 
+				            key.substr(key.length() - manglemethod.length()) == manglemethod) {
+				            DBG("here - found method: " + key);
+				            found = true;
+				            manglemethod = key; // Use the full key for further processing
+				            break;
+				        }
+				    }
+				}
+
+				if (!found) {
+					semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				}
     	    }
     	}
 	    // First check if it's a class
