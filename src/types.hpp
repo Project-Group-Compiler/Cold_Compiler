@@ -151,22 +151,22 @@ inline std::string checkExplicitType(std::string a, std::string b)
     if ((isAInt && isBBool) || (isABool && isBInt))
         return "ok";
 
-    if (isBChar || isAInt)
+    if (isBChar && isAInt)
         return "ok";
 
-    if (isAChar || isBInt)
+    if (isAChar && isBInt)
         return "ok";
     
-    if (isAInt || isBFloat)
+    if (isAInt && isBFloat)
         return "ok";
 
-    if (isBInt || isAFloat)
+    if (isBInt && isAFloat)
         return "ok";
     
-    if (isAChar || isBFloat)
+    if (isAChar && isBFloat)
         return "ok";
 
-    if (isBFloat || isAChar)
+    if (isBFloat && isAChar)
         return "ok";
 
     bool isAVoidPtr = (a == "void*");
