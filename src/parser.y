@@ -167,14 +167,16 @@ postfix_expression
 		if(!temp.empty()){	
 			$$->type = temp;
 			//3AC
-			if($$->type == "int"){
-				operand q = getTempVariable("int*");
-				emit("=", $1->place,{}, q, -1); // TODO : check
-				operand q2 = getTempVariable("int");
-				emit("*", $3->place, {getSizeOfType("int")}, q2, -1); // TODO : check
-				operand q3 = getTempVariable("int*");
+			if($$->type == "int" || $$->type == "char"  || $$->type == "float" || ($$->type.substr(0,7) == "STRUCT_" && $$->type.back() != '*') || ($$->type.substr(0,6) == "CLASS_" && $$->type.back() != '*')){
+				operand q = getTempVariable($$->type + "*");
+				emit("=", $1->place,{}, q, -1); 
+				operand q2 = getTempVariable($$->type);
+				emit("*", $3->place, {std::to_string(q2.entry->size)}, q2, -1); // TODO : check
+				operand q3 = getTempVariable($$->type + "*");
 				emit("ptr+", q, q2, q3, -1);
-				$$->place = {"*" + q3.value,NULL}; //TODO: entry
+				std::string tempValue = "*" + q3.value;
+				insertSymbol(*curr_table, tempValue, $$->type, getSize($$->type), 0, NULL); // TODO: Check
+				$$->place = {tempValue,lookup(tempValue)}; //TODO: check entry
 			}else{
 				operand q = getTempVariable($$->type);
 				$$->place = q;
@@ -441,7 +443,28 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				manglemethod=mangleFunctionName(methodName,currArgs);
+				manglemethod=manglemethod.substr(5);
+				DBG("manglemethod = " + manglemethod);
+				bool found = false;
+				if (curr_class_structure) { //added this search for finding parent methods
+				    for (auto& entry : *curr_class_structure) {
+				        std::string key = entry.first;
+				        // Check if key ends with the method name we're looking for
+				        if (key.length() >= manglemethod.length() && 
+				            key.substr(key.length() - manglemethod.length()) == manglemethod) {
+				            DBG("here - found method: " + key);
+				            found = true;
+				            manglemethod = key; // Use the full key for further processing
+				            break;
+				        }
+				    }
+				}
+
+				if (!found) {
+					semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				}
+    	        
     	    }
     	}
 	    // First check if it's a class
@@ -450,7 +473,8 @@ postfix_expression
 			manglemethod=mangleFunctionName(methodName,currArgs);
 			manglemethod="FUNC_" + std::to_string((classType.substr(6)).size()) + classType.substr(6) + "_" + manglemethod.substr(5);
 	        int ret = lookupClass(classType, manglemethod);
-
+			DBG("ret = " + std::to_string(ret));
+			DBG("manglemethod = " + manglemethod);
 	        if (ret == 1) {
 				string memberAccess = ClassAttrAccess(classType, manglemethod);
 				
@@ -555,7 +579,27 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature ").c_str(), "scope error");
+				manglemethod=mangleFunctionName(methodName,currArgs);
+				manglemethod=manglemethod.substr(5);
+				DBG("manglemethod = " + manglemethod);
+				bool found = false;
+				if (curr_class_structure) { //added this search for finding parent methods
+				    for (auto& entry : *curr_class_structure) {
+				        std::string key = entry.first;
+				        // Check if key ends with the method name we're looking for
+				        if (key.length() >= manglemethod.length() && 
+				            key.substr(key.length() - manglemethod.length()) == manglemethod) {
+				            DBG("here - found method: " + key);
+				            found = true;
+				            manglemethod = key; // Use the full key for further processing
+				            break;
+				        }
+				    }
+				}
+
+				if (!found) {
+					semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				}
     	    }
     	}
 	    // First check if it's a class
@@ -746,7 +790,27 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				manglemethod=mangleFunctionName(methodName,currArgs);
+				manglemethod=manglemethod.substr(5);
+				DBG("manglemethod = " + manglemethod);
+				bool found = false;
+				if (curr_class_structure) { //added this search for finding parent methods
+				    for (auto& entry : *curr_class_structure) {
+				        std::string key = entry.first;
+				        // Check if key ends with the method name we're looking for
+				        if (key.length() >= manglemethod.length() && 
+				            key.substr(key.length() - manglemethod.length()) == manglemethod) {
+				            DBG("here - found method: " + key);
+				            found = true;
+				            manglemethod = key; // Use the full key for further processing
+				            break;
+				        }
+				    }
+				}
+
+				if (!found) {
+					semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				}
     	    }
     	}
 	    // First check if it's a class
@@ -863,7 +927,27 @@ postfix_expression
     	            semantic_error(("Member '" + methodName + "' is not a method").c_str(), "semantic error");
     	        }
     	    } else {
-    	        semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature ").c_str(), "scope error");
+				manglemethod=mangleFunctionName(methodName,currArgs);
+				manglemethod=manglemethod.substr(5);
+				DBG("manglemethod = " + manglemethod);
+				bool found = false;
+				if (curr_class_structure) { //added this search for finding parent methods
+				    for (auto& entry : *curr_class_structure) {
+				        std::string key = entry.first;
+				        // Check if key ends with the method name we're looking for
+				        if (key.length() >= manglemethod.length() && 
+				            key.substr(key.length() - manglemethod.length()) == manglemethod) {
+				            DBG("here - found method: " + key);
+				            found = true;
+				            manglemethod = key; // Use the full key for further processing
+				            break;
+				        }
+				    }
+				}
+
+				if (!found) {
+					semantic_error(("Method '" + methodName + "' not found in class '" + className + "' with this signature").c_str(), "scope error");
+				}
     	    }
     	}
 	    // First check if it's a class
@@ -1380,7 +1464,7 @@ additive_expression
 			$$->tempName = q.value;
 			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
 				operand q2 = getTempVariable($3->type);
-				emit("*", $3->place, {getSizeOfType($1->type.substr(0, $1->type.size()-1))}, q2, -1); //TODO
+				emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1); 
 				emit("ptr+", $1->place, q2, q, -1);
 			}else{
 				//TODO : Handle float pointer 
@@ -1423,20 +1507,27 @@ additive_expression
 			operand q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
 			$$->tempName = q.value;
-			if(isFloat(temp)){
-				if(checkInt($1->type)){
-					operand q1 = getTempVariable($$->type);
-					emit("intToFloat",$1->place,{},q1,-1);					
-					emit("(f)-", q1, $3->place, q, -1);
-				}else if(checkInt($3->type)){
-					operand q1 = getTempVariable($$->type);
-					emit("intToFloat",$3->place,{},q1,-1);
-					emit("(f)-", $1->place, q1, q, -1);
-				}else{
-					emit("(f)-", $1->place, $3->place, q, -1);
+
+			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
+				operand q2 = getTempVariable($3->type);
+				emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1); 
+				emit("ptr-", $1->place, q2, q, -1);
+			}else{
+				if(isFloat(temp)){
+					if(checkInt($1->type)){
+						operand q1 = getTempVariable($$->type);
+						emit("intToFloat",$1->place,{},q1,-1);					
+						emit("(f)-", q1, $3->place, q, -1);
+					}else if(checkInt($3->type)){
+						operand q1 = getTempVariable($$->type);
+						emit("intToFloat",$3->place,{},q1,-1);
+						emit("(f)-", $1->place, q1, q, -1);
+					}else{
+						emit("(f)-", $1->place, $3->place, q, -1);
+					}
+				}else{ 
+					emit("-", $1->place, $3->place, q, -1);
 				}
-			}else{ 
-				emit("-", $1->place, $3->place, q, -1);
 			}
 			$$->nextlist.clear();
         } else {
@@ -2000,7 +2091,7 @@ init_declarator
 					insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 0, NULL,"",isStaticDecl, false, is_arr);
 			}
 		}
-		if(flag3){
+		if(flag3 && className.empty()){
 			typedefTable.push_back(make_pair(tdstring2,tdstring));
 			flag3 = 0;
 		}
@@ -2041,8 +2132,11 @@ init_declarator
 			debug(rValue,array_decl);
 			if(array_decl){
 				DBG("Array declaration  ");
+				std::string baseType = $1->type;
+				while(baseType.size() && baseType.back() == '*') baseType.pop_back();
 				for(int i = 0; i<list_values.size();i++){
-					emit("CopyToOffset", list_values[i], {std::to_string(i*4)}, {$1->tempName}, -1);//TODO $1->place 
+					// std::cerr << $$->ty
+					emit("CopyToOffset", list_values[i], {std::to_string(i*getSize(baseType))}, {$1->tempName}, -1);//TODO $1->place 
 				}
 				array_decl = 0;
 				is_arr = false;
@@ -2062,12 +2156,6 @@ init_declarator
 				}
 			}
 			
-			// $$->place = {$1->tempName,lookup($1->tempName)};//TODO $$->place = $1->place
-			// std::cerr << $1->tempName << '\n';
-			// if($$->place.entry){
-			// 	std::cerr << $$->place.value << ' ';
-			// 	std::cerr << "NOT NULL\n";
-			// }
 			$$->nextlist = $5->nextlist;
 			debug($4);
 			backpatch($1->nextlist, $4);
@@ -2242,10 +2330,17 @@ type_specifier
 		| struct_or_union_specifier {
 			DBG("type_specifier -> struct_or_union_specifier");
 			$$ = $1;
+			if(type.find("UNION_") != std::string::npos){
+				$$->type="UNION_"+$$->tempName;
+			}
+			else {
+				$$->type="STRUCT_"+$$->tempName;
+			}
 		}	
 		| class_definition {
 			DBG("type_specifier -> class_definition");
 			$$ = $1;
+			$$->type = "CLASS_" + $$->tempName;
 		}
 		| enum_specifier {
 			DBG("type_specifier -> enum_specifier");
@@ -2303,6 +2398,10 @@ access_specifier
 class
 	: CLASS {
 		DBG("class -> CLASS");
+		if(flag==1){
+ 			flag3 = 1;
+ 			flag = 0;
+ 		}
 		$$ = getNode($1);
 	}
 	;
@@ -2321,6 +2420,13 @@ class_definition_head
 		$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2)));
         currentDataType = "Class " + std::string($2);
 		$$->tempName = std::string($2); 
+		if(flag==1){
+ 			tdstring= std::string($2);
+ 			flag++;
+ 		}
+ 		if(flag3){
+ 			tdstring= std::string($2);
+ 		}
         // Semantics: Save the class name for later symbol table insertion.
     }
 	| class ID_CLASS TABLE_CLASS INHERITANCE_OP inheritance_specifier_list {
@@ -2340,6 +2446,13 @@ class_definition_head
                         parentClassName.substr(6)).c_str(), "scope error");
             }
         }
+		if(flag==1){
+ 			tdstring= std::string($2);
+ 			flag++;
+ 		}
+ 		if(flag3){
+ 			tdstring= std::string($2);
+ 		}
     }
 	;
 
@@ -2367,6 +2480,7 @@ class_definition
         DBG("class_definition -> class IDENTIFIER");
 		$$ = $1;
 
+		$$->tempName = std::string($2);
 		// Semantics
 		if(findClass("CLASS_" + string($2)) == 1){
 			if(type == "") type = "CLASS_" + string($2);
@@ -2451,6 +2565,14 @@ ID_CLASS
         $$ = $1;
         className = $1;
 		inClassContext = true;
+		if (flag==1){
+ 			tdstring = std::string($1);
+ 			//flag++;
+ 		}
+ 		else if (flag==2) {
+ 			//typedefTable.push_back(make_pair(check, tdstring));
+ 			flag = 0;
+ 		}
     }
     ;
 
@@ -2527,6 +2649,7 @@ struct_or_union_specifier
         $$ = getNode($1, mergeAttrs(getNode($2), nullptr));
 		currentDataType += " " + string($2);
 		
+		$$->tempName = std::string($2);
 		// Clear type before processing struct members
         type = "";
 		// Semantics

@@ -680,7 +680,7 @@ int findClass(std::string class_name)
     }
     return 0;
 }
-int lookupClass(std::string class_name, std::string id)
+int lookupClass(std::string class_name, std::string &id)
 {
     class_sym_table *temp = curr_class_table;
     while (temp)
@@ -690,8 +690,31 @@ int lookupClass(std::string class_name, std::string id)
             sym_table *table = (*temp)[class_name].second;
             if (table && (*table).find(id) != (*table).end())
                 return 1; // found
-            else
-                return 0; // class doesn't contain id
+            else{
+                //check if id is in parent class
+                if(id.find("FUNC_") == 0)
+                {
+                    //for example FUNC_6Person_6getAge_v change this to 6getAge_v
+                    id=id.substr(5);
+                    id=id.substr(id.find("_")+1);
+                    //check if id is in this class as suffix of entry
+                    for(auto it : (*table))
+                    {
+                        std::string key = it.first;
+                        if(key.length() >= id.length() && 
+                        key.substr(key.length() - id.length()) == id)
+                        {
+                            id=it.first;//to pass parent class name function to parser.y
+                            return 1;
+                        }
+                    }
+                    return 0;
+                }
+                else{
+                    return 0;
+                }
+            }
+                
         }
         if (class_parent_table.find(temp) == class_parent_table.end())
             break;
@@ -751,57 +774,10 @@ int inheritFromClass(std::string childClassName, std::string parentClassName)
         // Only inherit public and protected members
         if (member->access == "public" || member->access == "protected")
         {
-            // Check if it's a method (starts with FUNC_)
-            if (memberName.find("FUNC_") == 0)
+            
+            if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end())
             {
-                // This is a method - needs special handling
-
-                // Parse the original method name to extract components
-                size_t firstUnderPos = memberName.find('_', 5); // Skip "FUNC_"
-                if (firstUnderPos != std::string::npos)
-                {
-                    // Extract parent class name length and name
-                    std::string parentLenStr = memberName.substr(5, firstUnderPos - 5);
-                    int parentNameLen = std::stoi(parentLenStr); // this has length of <class Name len>+ <class Name>
-                    // Extract method name and signature (everything after parent class name)
-                    std::string methodSuffix = memberName.substr(5 + parentNameLen + 1 + 1);
-                    // Create new mangled name with child class
-                    std::string childClassNameBase = childClassName.substr(6); // Remove "CLASS_" prefix
-                    std::string newMangledName = "FUNC_" + std::to_string(childClassNameBase.length()) +
-                                                 childClassNameBase + "_" + methodSuffix;
-
-                    // Create a copy of the method's symbol entry
-                    insertClassAttr(newMangledName, member->type, member->size,
-                                    member->init, member->access);
-
-                    // If the method has a symbol table (for function body), copy it
-                    if (member->entry)
-                    {
-                        // Create a new symbol table for the inherited method
-                        sym_table *newMethodTable = new sym_table(*(member->entry));
-
-                        // Update the entry pointer in the new method
-                        (*curr_class_structure)[newMangledName]->entry = newMethodTable;
-
-                        // Register this in the parent_table map
-                        parent_table[newMethodTable] = curr_table;
-
-                        // Copy function arguments if this method has parameters
-                        if (func_arg.find(memberName) != func_arg.end())
-                        {
-                            func_arg[newMangledName] = func_arg[memberName];
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Regular member (non-method) - copy as is
-                if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end())
-                {
-                    insertClassAttr(memberName, member->type, member->size,
-                                    member->init, member->access);
-                }
+                insertClassAttr(memberName, member->type, member->size,member->init, member->access);
             }
         }
     }
