@@ -96,7 +96,7 @@ inline std::string stringify(const quad &instr)
 
     if (curr_op.back() == ':' || curr_op.substr(0, 5) == "FUNC_")
         s += curr_op;
-    else if (curr_op.substr(0, 2) == "++" || curr_op.substr(1, 2) == "++" || curr_op.substr(0, 2) == "--" || curr_op.substr(1, 2) == "--" || curr_op == "!" || curr_op == "~")
+    else if (curr_op == "!" || curr_op == "~")
         s += instr.result.value + " = " + curr_op + " " + instr.arg1.value;
     else if (curr_op.substr(0, 5) == "unary")
     {

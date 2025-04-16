@@ -1048,7 +1048,8 @@ postfix_expression
 				operand q = getTempVariable($$->type);
 				$$->place = q;
 				$$->nextlist.clear();
-				emit("S++", $1->place, {}, q, -1);
+				emit("=", $1->place, {}, q, -1);
+				emit("+", $1->place, {"1"}, $1->place, -1);
 			}
 			else{
 				semantic_error("Increment not defined for this type", "type error");
@@ -1080,7 +1081,8 @@ postfix_expression
 				operand q = getTempVariable($$->type);
 				$$->place = q;
 				$$->nextlist.clear();
-				emit("S--", $1->place, {}, q, -1);
+				emit("=", $1->place, {}, q, -1);
+				emit("-", $1->place, {"1"}, $1->place, -1);
 			}
 			else{
 				semantic_error("Decrement not defined for this type", "type error");
@@ -1141,7 +1143,8 @@ unary_expression
 			operand q = getTempVariable($$->type);
 			$$->place = q;
 			$$->nextlist.clear();
-			emit("++P", $2->place, {}, q, -1);
+			emit("+", $2->place, {"1"}, $2->place, -1);
+			emit("=", $2->place, {}, q, -1);
 		}
 		else{
 			semantic_error("Increment not defined for this type", "type error");
@@ -1164,7 +1167,8 @@ unary_expression
 			operand q = getTempVariable($$->type);
 			$$->place = q;
 			$$->nextlist.clear();
-			emit("--P", $2->place, {}, q, -1);
+			emit("-", $2->place, {"1"}, $2->place, -1);
+			emit("=", $2->place, {}, q, -1);
 		}
 		else{
 			semantic_error("Decrement not defined for this type", "type error");
