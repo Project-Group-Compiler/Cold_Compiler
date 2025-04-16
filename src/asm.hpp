@@ -42,8 +42,7 @@ void emit_add(quad &instr);
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();
 
-void get_string_literals();
-void global_init_pass();
+void update_ir();
 void emit_data_section();
 void emit_bss_section();
 

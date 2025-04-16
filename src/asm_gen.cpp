@@ -211,11 +211,7 @@ void emit_asm(const std::string &inputFile)
 
     if (tac_code.empty())
         return;
-    if (!optimize_ir)
-        addgotoLabels();
 
-    get_string_literals();
-    global_init_pass();
     compute_basic_blocks();
 
     // print_tac_code(inputFile);
@@ -276,7 +272,7 @@ void emit_add(quad &instr)
 {
     // x = y + z
     int reg1 = getReg(instr.arg1, 1);
-    if(is_int_constant(instr.arg2.value))
+    if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
     }
@@ -294,7 +290,7 @@ void emit_add(quad &instr)
     // }
     // else
     //     emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
-    else if(instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
+    else if (instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
     {
         emit_instr(x86_lib::add_reg_mem(reg_names[reg1], instr.arg2.value));
     }
@@ -401,6 +397,13 @@ void global_init_pass()
         if (instr.arg2.entry && instr.arg2.entry->isEnum)
             instr.arg2.value = global_init[instr.arg2.value];
     }
+}
+
+void update_ir()
+{
+    addgotoLabels();
+    get_string_literals();
+    global_init_pass();
 }
 
 void emit_data_section()
