@@ -140,12 +140,12 @@ inline std::string stringify(const quad &instr)
     return s;
 }
 
- inline std::regex hex_integer("0[xX][0-9a-fA-F]+");
- inline std::regex octal_integer("0[0-9]+");
- inline std::regex decimal_integer("[0-9]+");
- inline std::regex scientific_float("[0-9]+[Ee][+-]?[0-9]+");
- inline std::regex float_leading_decimal("[0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?");
- inline std::regex float_trailing_decimal("[0-9]*\\.[0-9]+([Ee][+-]?[0-9]+)?");
+inline std::regex hex_integer("0[xX][0-9a-fA-F]+");
+inline std::regex octal_integer("0[0-9]+");
+inline std::regex decimal_integer("[0-9]+");
+inline std::regex scientific_float("[0-9]+[Ee][+-]?[0-9]+");
+inline std::regex float_leading_decimal("[0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?");
+inline std::regex float_trailing_decimal("[0-9]*\\.[0-9]+([Ee][+-]?[0-9]+)?");
 
 inline bool is_int_constant(const std::string &s)
 {

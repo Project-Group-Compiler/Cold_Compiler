@@ -18,7 +18,6 @@ class cold_vector
         {
             if (this->data)
                 free(this->data);
-            this->data = (int *)0;
             this->length = 0;
             this->capacity = 0;
         }
