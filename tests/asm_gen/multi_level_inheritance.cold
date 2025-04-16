@@ -17,8 +17,13 @@ class Faculty <- Person
         int employeeID;
     };  
     public{
+        char ok(int x){
+            return 'a';
+        }
         int getEmployeeID()
         { 
+        // (*this).sadf();
+        // this->dsfa();
           return this->employeeID; 
         }
     }; 
@@ -33,6 +38,9 @@ class Instructor <- Faculty
     public{
         int getCourses()
         { 
+            this->getEmployeeID();
+            (*this).ok(1);
+            this->ok(2);
             return this->numCourses; 
         }
     };
@@ -41,8 +49,15 @@ class Instructor <- Faculty
 int main()  
 { 
     class Instructor inst1;
+    class Instructor *inst2;
     int age = inst1.getAge();
     int empID = inst1.getEmployeeID();
     int numCourses = inst1.getCourses();
+    // inst1.basldfsa();
+    inst1.getCourses();
+    inst2->ok(1);
+    // inst2->getAge(2,3,4);
+    inst2->getEmployeeID();
+
 } 
  
