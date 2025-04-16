@@ -1,4 +1,5 @@
-void arith_log()
+int d;
+int main()
 {
     int a = 6;
     int b = 3;
@@ -7,10 +8,13 @@ void arith_log()
 
     ++a;
     c += 7;
-    
+    res1=a+b;
     res1 = a * b + c;
+    res1=a+b;
     res2 = a / b;
     res3 = (a << 1) & (b | c) ^ (a >> 1);
+    res3=b+a;
+    res3+=d;
 }
 
 void ifElse(){

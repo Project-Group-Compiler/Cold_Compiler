@@ -5,7 +5,7 @@
 #include <vector>
 #include <iomanip>
 #include "data_structures.hpp"
-
+#include <regex>
 struct operand
 {
     std::string value;
@@ -137,6 +137,28 @@ inline std::string stringify(const quad &instr)
     else if (curr_op.substr(0, 5) == "CAST_")
         s += instr.result.value + " = CAST " + instr.arg1.value + " to " + curr_op.substr(5);
     return s;
+}
+
+ inline std::regex hex_integer("0[xX][0-9a-fA-F]+");
+ inline std::regex octal_integer("0[0-9]+");
+ inline std::regex decimal_integer("[0-9]+");
+ inline std::regex scientific_float("[0-9]+[Ee][+-]?[0-9]+");
+ inline std::regex float_leading_decimal("[0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?");
+ inline std::regex float_trailing_decimal("[0-9]*\\.[0-9]+([Ee][+-]?[0-9]+)?");
+
+inline bool is_int_constant(const std::string &s)
+{
+    return std::regex_match(s, hex_integer) || std::regex_match(s, octal_integer) || std::regex_match(s, decimal_integer);
+}
+
+inline bool is_float_constant(const std::string &s)
+{
+    return std::regex_match(s, scientific_float) || std::regex_match(s, float_leading_decimal) || std::regex_match(s, float_trailing_decimal);
+}
+
+inline bool is_num_constant(const std::string &s)
+{
+    return is_int_constant(s) || is_float_constant(s);
 }
 
 #endif
