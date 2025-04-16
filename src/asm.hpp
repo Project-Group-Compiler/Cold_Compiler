@@ -38,6 +38,7 @@ void emit_asm(const std::string &);
 void emit_fn_defn(quad &instr);
 void emit_assign(quad &instr);
 void emit_add(quad &instr);
+void emit_sub(quad &instr);
 
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();
