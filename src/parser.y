@@ -2009,7 +2009,7 @@ init_declarator
 					insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 0, NULL,"",isStaticDecl, false, is_arr);
 			}
 		}
-		if(flag3){
+		if(flag3 && className.empty()){
 			typedefTable.push_back(make_pair(tdstring2,tdstring));
 			flag3 = 0;
 		}
@@ -2248,10 +2248,17 @@ type_specifier
 		| struct_or_union_specifier {
 			DBG("type_specifier -> struct_or_union_specifier");
 			$$ = $1;
+			if(type.find("UNION_") != std::string::npos){
+				$$->type="UNION_"+$$->tempName;
+			}
+			else {
+				$$->type="STRUCT_"+$$->tempName;
+			}
 		}	
 		| class_definition {
 			DBG("type_specifier -> class_definition");
 			$$ = $1;
+			$$->type = "CLASS_" + $$->tempName;
 		}
 		| enum_specifier {
 			DBG("type_specifier -> enum_specifier");
@@ -2309,6 +2316,10 @@ access_specifier
 class
 	: CLASS {
 		DBG("class -> CLASS");
+		if(flag==1){
+ 			flag3 = 1;
+ 			flag = 0;
+ 		}
 		$$ = getNode($1);
 	}
 	;
@@ -2327,6 +2338,13 @@ class_definition_head
 		$$ = getNode("class_definition_head", mergeAttrs($1, getNode($2)));
         currentDataType = "Class " + std::string($2);
 		$$->tempName = std::string($2); 
+		if(flag==1){
+ 			tdstring= std::string($2);
+ 			flag++;
+ 		}
+ 		if(flag3){
+ 			tdstring= std::string($2);
+ 		}
         // Semantics: Save the class name for later symbol table insertion.
     }
 	| class ID_CLASS TABLE_CLASS INHERITANCE_OP inheritance_specifier_list {
@@ -2346,6 +2364,13 @@ class_definition_head
                         parentClassName.substr(6)).c_str(), "scope error");
             }
         }
+		if(flag==1){
+ 			tdstring= std::string($2);
+ 			flag++;
+ 		}
+ 		if(flag3){
+ 			tdstring= std::string($2);
+ 		}
     }
 	;
 
@@ -2373,6 +2398,7 @@ class_definition
         DBG("class_definition -> class IDENTIFIER");
 		$$ = $1;
 
+		$$->tempName = std::string($2);
 		// Semantics
 		if(findClass("CLASS_" + string($2)) == 1){
 			if(type == "") type = "CLASS_" + string($2);
@@ -2457,6 +2483,14 @@ ID_CLASS
         $$ = $1;
         className = $1;
 		inClassContext = true;
+		if (flag==1){
+ 			tdstring = std::string($1);
+ 			//flag++;
+ 		}
+ 		else if (flag==2) {
+ 			//typedefTable.push_back(make_pair(check, tdstring));
+ 			flag = 0;
+ 		}
     }
     ;
 
@@ -2533,6 +2567,7 @@ struct_or_union_specifier
         $$ = getNode($1, mergeAttrs(getNode($2), nullptr));
 		currentDataType += " " + string($2);
 		
+		$$->tempName = std::string($2);
 		// Clear type before processing struct members
         type = "";
 		// Semantics
