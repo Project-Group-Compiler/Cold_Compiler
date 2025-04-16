@@ -10,6 +10,7 @@ std::vector<quad> tac_code;
 long long counter = 0;
 void print_error(const std::string &message);
 std::vector<quad> staticAddLater;
+std::vector<operand> static_vars;
 
 int getCurrentSize()
 {
@@ -71,7 +72,7 @@ operand getTempVariable(std::string type)
 int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, int isLocalStaticInit)
 {
     // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1 << "#" << arg2 << std::endl;
-    if(isLocalStaticInit > 0)
+    if (isLocalStaticInit > 0)
         arg1.value += "_" + std::to_string(isLocalStaticInit);
     std::string temp_op = "";
     std::string str = op;
@@ -80,23 +81,25 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
     str.pop_back();
     /*
     if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
-				operand q2 = getTempVariable($3->type);
-				emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1); 
-				emit("ptr-", $1->place, q2, q, -1);
-			}else{
+                operand q2 = getTempVariable($3->type);
+                emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
+                emit("ptr-", $1->place, q2, q, -1);
+            }else{
     */
     if (op != "=")
     {
         temp_op = str;
         if (op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
         {
-            if((op == "+=" || op == "-=" ) && (type1.back() == '*' && (type2 == "int" || type2 == "Integer Constant")))
+            if ((op == "+=" || op == "-=") && (type1.back() == '*' && (type2 == "int" || type2 == "Integer Constant")))
             {
                 operand q1 = getTempVariable(type2);
-				emit("*", arg2, {std::to_string(getSize(type1.substr(0, type1.size()-1)))}, q1, -1); 
+                emit("*", arg2, {std::to_string(getSize(type1.substr(0, type1.size() - 1)))}, q1, -1);
                 q = getTempVariable(type);
-				emit("ptr"+temp_op, arg1, q1, q, -1);   
-            }else{
+                emit("ptr" + temp_op, arg1, q1, q, -1);
+            }
+            else
+            {
                 if (isFloat(type1) && checkInt(type2))
                 {
                     operand q1 = getTempVariable(type1);
@@ -246,7 +249,4 @@ void print_tac_code(const std::string &inputFile)
 void generate_ir()
 {
     addStaticInit();
-    // for (auto &instr : tac_code)
-    //     std::cout << stringify(instr) << "\n";
-    // std::cout << "\n-------------------------\n\n";
 }

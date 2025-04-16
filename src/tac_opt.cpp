@@ -463,10 +463,6 @@ void run_optimisations()
 {
     if (tac_code.empty())
         return;
-    addgotoLabels();
     constant_folding();
     dead_code_elimination();
-    // for (auto &instr : tac_code)
-    //     std::cout << stringify(instr) << "\n";
-    // std::cout << "\n-------------------------\n\n";
 }

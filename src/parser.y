@@ -2100,6 +2100,9 @@ init_declarator
 		}
 		//3AC
 		$$->place = {$1->tempName,lookup($1->tempName)};
+		if(isStaticDecl>0){
+			static_vars.push_back($$->place);
+		}
 		isStaticDecl=0;
 	}
 	| declarator '=' {rValue = 1;} NEXT_INSTR initializer {
@@ -2136,7 +2139,7 @@ init_declarator
 				while(baseType.size() && baseType.back() == '*') baseType.pop_back();
 				for(int i = 0; i<list_values.size();i++){
 					// std::cerr << $$->ty
-					emit("CopyToOffset", list_values[i], {std::to_string(i*getSize(baseType))}, {$1->tempName}, -1);//TODO $1->place 
+					emit("CopyToOffset", list_values[i], {std::to_string(i*getSize(baseType))}, $$->place, -1);//TODO $1->place 
 				}
 				array_decl = 0;
 				is_arr = false;
@@ -2149,6 +2152,7 @@ init_declarator
 				}
 				else
 				{
+					static_vars.push_back($1->place);
 					if(*curr_table == gst)	
 						assign_exp("=", $1->type,$1->type, $5->type, {"_s_" + $1->place.value, $1->place.entry}, $5->place);//TODO
 					else

@@ -1,6 +1,3 @@
-// IR generated except 2 issues
-// memcpy
-
 class cold_vector
 {
     private{
@@ -36,7 +33,7 @@ class cold_vector
                 new_data = (int *)malloc(sizeof(int) * this->capacity);
 
                 // Copy existing data
-                // memcpy(new_data, data, sizeof(int) * length);
+                memcpy(new_data, this->data, sizeof(int) * this->length);
 
                 // Free old data and update pointer
                 free(this->data);

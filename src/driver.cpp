@@ -116,10 +116,15 @@ int main(int argc, char *argv[])
         {
             generate_ir();
 
+            if (print_ir && !optimize_ir)
+                print_tac_code(inputFileString);
+
+            update_ir();
+            
             if (optimize_ir)
                 run_optimisations();
 
-            if (print_ir)
+            if (print_ir && optimize_ir)
                 print_tac_code(inputFileString);
 
             emit_asm(inputFileString);

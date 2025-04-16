@@ -291,11 +291,7 @@ void emit_asm(const std::string &inputFile)
 
     if (tac_code.empty())
         return;
-    if (!optimize_ir)
-        addgotoLabels();
 
-    get_string_literals();
-    global_init_pass();
     compute_basic_blocks();
     // print_basic_blocks();
     // print_tac_code(inputFile);
@@ -426,7 +422,7 @@ void emit_add(quad &instr)
 {
     // x = y + z
     int reg1 = getReg(instr.arg1, 1);
-    if(is_int_constant(instr.arg2.value))
+    if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
     }
@@ -491,13 +487,16 @@ void global_init_pass()
             else
                 in_fn = false;
         }
-        else if (in_fn)
+        else
         {
-            if (instr.result.entry && instr.result.entry->isStatic > 0)
+            if (in_fn)
             {
-                instr.result.value = "_s_" + instr.result.value;
-                if (!instr.result.entry->isGlobal)
-                    instr.result.value += "_" + std::to_string(instr.result.entry->isStatic);
+                if (instr.result.entry && instr.result.entry->isStatic > 0)
+                {
+                    instr.result.value = "_s_" + instr.result.value;
+                    if (!instr.result.entry->isGlobal)
+                        instr.result.value += "_" + std::to_string(instr.result.entry->isStatic);
+                }
             }
             if (instr.arg1.entry && instr.arg1.entry->isStatic > 0)
             {
@@ -541,15 +540,59 @@ void global_init_pass()
     }
 }
 
+void update_ir()
+{
+    addgotoLabels();
+    get_string_literals();
+    global_init_pass();
+}
+
 void emit_data_section()
 {
     for (auto &[name, entry] : gst)
     {
-        std::string act_name = name;
-        if (entry->isStatic > 0)
-            act_name = "_s_" + act_name;
+        if (entry->isGlobal && !entry->isStatic && !entry->isEnum && entry->init)
+        {
+            if (entry->type == "char")
+                emit_data(name + ": db " + global_init[name]);
+            else if (entry->type == "int" || entry->type == "float")
+                emit_data(name + ": dd " + global_init[name]);
+            else if (entry->type == "char*")
+            {
+                if (entry->isArray)
+                {
+                    // Initialized array pending as of now
+                }
+                else
+                {
+                    std::string init_val = global_init[name];
+                    emit_data(name + ": dd " + init_val);
+                }
+            }
+            else if (entry->type.back() == '*')
+            {
+                if (entry->isArray)
+                {
+                    // Initialized array pending as of now
+                }
+                else
+                {
+                    std::string init_val = global_init[name];
+                    emit_data(name + ": dd " + init_val);
+                }
+            }
+            // Initialized structs, unions and classes pending as of now
+        }
+    }
 
-        if (entry->isGlobal && !entry->isEnum && entry->init)
+    for (const auto &op : static_vars)
+    {
+        auto entry = op.entry;
+        std::string act_name = "_s_" + op.value;
+        if (!entry->isGlobal)
+            act_name += "_" + std::to_string(entry->isStatic);
+
+        if (entry->init && !entry->isEnum)
         {
             if (entry->type == "char")
                 emit_data(act_name + ": db " + global_init[act_name]);
@@ -567,7 +610,7 @@ void emit_data_section()
                     emit_data(act_name + ": dd " + init_val);
                 }
             }
-            else if (entry->type == "int*" || entry->type == "float*")
+            else if (entry->type.back() == '*')
             {
                 if (entry->isArray)
                 {
@@ -596,11 +639,46 @@ void emit_bss_section()
 {
     for (auto &[name, entry] : gst)
     {
-        std::string act_name = name;
-        if (entry->isStatic > 0)
-            act_name = "_s_" + act_name;
+        if (entry->isGlobal && !entry->isStatic && !entry->isEnum && !entry->init)
+        {
+            if (entry->type == "char")
+                emit_data(name + ": resb 1");
+            else if (entry->type == "int" || entry->type == "float")
+                emit_data(name + ": resd 1");
+            else if (entry->type == "char*")
+            {
+                if (entry->isArray)
+                    emit_data(name + ": resb " + std::to_string(entry->size));
+                else
+                    emit_data(name + ": resd 1");
+            }
+            else if (entry->type.back() == '*')
+            {
+                if (entry->isArray)
+                    emit_data(name + ": resd " + std::to_string(entry->size / 4));
+                else
+                    emit_data(name + ": resd 1");
+            }
+            else if (entry->type.substr(0, 6) == "UNION_")
+            {
+                if (entry->size == 1)
+                    emit_data(name + ": resb 1");
+                else
+                    emit_data(name + ": resd " + std::to_string(entry->size / 4));
+            }
+            else if (entry->type.substr(0, 7) == "STRUCT_" || entry->type.substr(0, 6) == "CLASS_")
+                emit_data(name + ": resd " + std::to_string(entry->size / 4));
+        }
+    }
 
-        if (entry->isGlobal && !entry->isEnum && !entry->init)
+    for (const auto &op : static_vars)
+    {
+        auto entry = op.entry;
+        std::string act_name = "_s_" + op.value;
+        if (!entry->isGlobal)
+            act_name += "_" + std::to_string(entry->isStatic);
+
+        if (!entry->init && !entry->isEnum)
         {
             if (entry->type == "char")
                 emit_data(act_name + ": resb 1");
@@ -613,7 +691,7 @@ void emit_bss_section()
                 else
                     emit_data(act_name + ": resd 1");
             }
-            else if (entry->type == "int*" || entry->type == "float*")
+            else if (entry->type.back() == '*')
             {
                 if (entry->isArray)
                     emit_data(act_name + ": resd " + std::to_string(entry->size / 4));
