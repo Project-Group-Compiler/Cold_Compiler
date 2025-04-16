@@ -109,6 +109,7 @@ inline void setVar(std::string a, std::string b)
 inline std::string checkType(std::string a, std::string b)
 {
     setVar(a, b);
+    
     if (a.empty() || b.empty())
         return "";
 
@@ -146,34 +147,34 @@ inline std::string checkExplicitType(std::string a, std::string b)
         return "";
 
     if (a == b)
-        return "ok";
+        return "ok1";
 
     if ((isAInt && isBBool) || (isABool && isBInt))
-        return "ok";
+        return "ok2";
 
-    if (isBChar || isAInt)
-        return "ok";
+    if (isBChar && isAInt)
+        return "ok3";
 
-    if (isAChar || isBInt)
-        return "ok";
+    if (isAChar && isBInt)
+        return "ok4";
     
-    if (isAInt || isBFloat)
-        return "ok";
+    if (isAInt && isBFloat)
+        return "ok5";
 
-    if (isBInt || isAFloat)
-        return "ok";
+    if (isBInt && isAFloat)
+        return "ok6";
     
-    if (isAChar || isBFloat)
-        return "ok";
+    if (isAChar && isBFloat)
+        return "ok7";
 
-    if (isBFloat || isAChar)
-        return "ok";
+    if (isBFloat && isAChar)
+        return "ok8";
 
     bool isAVoidPtr = (a == "void*");
     bool isBVoidPtr = (b == "void*");
 
     if ((isAVoidPtr && isBAnyPtr) || (isAAnyPtr && isBVoidPtr))
-        return "ok";
+        return "ok9";
 
     if (b == "void")
         return "";

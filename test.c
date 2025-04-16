@@ -39,6 +39,9 @@ int boo(int, int)
 
 int main()
 {
+    char* b;
+    int a=(int)b;
+
     // int a;
     // int *y;
     // float i = h((char)foo(g()));
