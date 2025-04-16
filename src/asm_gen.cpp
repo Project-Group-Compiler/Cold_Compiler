@@ -275,10 +275,29 @@ void emit_assign(quad &instr)
 void emit_add(quad &instr)
 {
     // x = y + z
-    // TODO: Handle constant ...
-    //  check constant before checking global (if going via regex option)
-    // if(x is global)  [x]
     int reg1 = getReg(instr.arg1, 1);
+    if(is_int_constant(instr.arg2.value))
+    {
+        emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
+    }
+    // else if(is_float_constant(instr.arg2.value))
+    // {
+    //     emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
+    // }
+    // else if(is_char_constant(instr.arg2.value))
+    // {
+    //     emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
+    // }
+    // else if(is_string_constant(instr.arg2.value))
+    // {
+    //     emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
+    // }
+    // else
+    //     emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
+    else if(instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
+    {
+        emit_instr(x86_lib::add_reg_mem(reg_names[reg1], instr.arg2.value));
+    }
     int reg2 = getReg(instr.arg2, 0);
     // _debug_(stringify(instr));
     // _debug_(reg1,reg2);

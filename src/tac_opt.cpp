@@ -2,7 +2,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <stack>
-#include <regex>
 #include <cmath>
 
 bool optimize_ir = true;
@@ -177,28 +176,6 @@ void print_cfg()
     }
 }
 
-std::regex hex_integer("0[xX][0-9a-fA-F]+");
-std::regex octal_integer("0[0-9]+");
-std::regex decimal_integer("[0-9]+");
-std::regex scientific_float("[0-9]+[Ee][+-]?[0-9]+");
-std::regex float_leading_decimal("[0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?");
-std::regex float_trailing_decimal("[0-9]*\\.[0-9]+([Ee][+-]?[0-9]+)?");
-
-inline bool is_int_constant(const std::string &s)
-{
-    return std::regex_match(s, hex_integer) || std::regex_match(s, octal_integer) || std::regex_match(s, decimal_integer);
-}
-
-inline bool is_float_constant(const std::string &s)
-{
-    return std::regex_match(s, scientific_float) || std::regex_match(s, float_leading_decimal) || std::regex_match(s, float_trailing_decimal);
-}
-
-inline bool is_num_constant(const std::string &s)
-{
-    return is_int_constant(s) || is_float_constant(s);
-}
-
 void constant_folding()
 {
     std::vector<int> id_map(tac_code.size(), -1);
@@ -233,8 +210,8 @@ void constant_folding()
                 if (modify_instr)
                 {
                     curr_op = "=";
-                    instr.arg1.value = std::to_string(arg1);  // TODO : check
-                    instr.arg2 = operand();  // TODO : check
+                    instr.arg1.value = std::to_string(arg1); // TODO : check
+                    instr.arg2 = operand();                  // TODO : check
                 }
             }
         }
@@ -272,7 +249,7 @@ void constant_folding()
                 {
                     curr_op = "=";
                     instr.arg1.value = std::to_string(arg1);
-                    instr.arg2 = operand();  // TODO : check
+                    instr.arg2 = operand(); // TODO : check
                 }
             }
         }
@@ -343,8 +320,8 @@ void constant_folding()
                     add_instr = false;
                 else
                 {
-                    instr.arg1 = operand();  // TODO : check
-                    instr.arg2 = operand();  // TODO : check
+                    instr.arg1 = operand(); // TODO : check
+                    instr.arg2 = operand(); // TODO : check
                 }
             }
         }
@@ -484,7 +461,7 @@ void dead_code_elimination()
 
 void run_optimisations()
 {
-    if(tac_code.empty())
+    if (tac_code.empty())
         return;
     addgotoLabels();
     constant_folding();
