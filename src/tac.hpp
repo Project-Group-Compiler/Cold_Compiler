@@ -65,6 +65,7 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
 
 extern std::vector<quad> tac_code;
 extern std::vector<std::vector<quad>> basic_blocks;
+extern std::vector<operand> static_vars;
 
 extern bool optimize_ir;
 

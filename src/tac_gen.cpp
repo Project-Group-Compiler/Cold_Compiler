@@ -10,6 +10,7 @@ std::vector<quad> tac_code;
 long long counter = 0;
 void print_error(const std::string &message);
 std::vector<quad> staticAddLater;
+std::vector<operand> static_vars;
 
 int getCurrentSize()
 {
