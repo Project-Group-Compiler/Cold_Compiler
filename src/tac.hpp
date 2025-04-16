@@ -110,7 +110,7 @@ inline std::string stringify(const quad &instr)
         s += instr.result.value + " = " + instr.arg1.value;
     else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
         s += instr.result.value + " = " + instr.arg1.value + " " + curr_op + " " + instr.arg2.value;
-    else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+")
+    else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+" || curr_op == "ptr-")
         s += instr.result.value + " = " + instr.arg1.value + " " + curr_op + " " + instr.arg2.value;
     else if (curr_op == "RETURN" || curr_op == "param")
         s += curr_op + " " + instr.arg1.value;
