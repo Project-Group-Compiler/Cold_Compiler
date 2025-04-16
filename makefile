@@ -40,7 +40,8 @@ OBJS = \
 # Compiler and tools
 FLEX = flex
 BISON = bison
-CXX = g++
+CXX = g++ 
+# CXX = g++ -g -O0 # For debug
 CXXFLAGS = -I$(SRC_DIR)
 
 # Default target
