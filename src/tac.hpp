@@ -32,6 +32,16 @@ struct operand
     {
         return value == other.value && entry == other.entry;
     }
+    bool operator<(const operand& other) const {
+        if (value != other.value)
+            return value < other.value;
+        return entry < other.entry;  // pointer comparison
+    }
+    bool operator>(const operand& other) const {
+        if (value != other.value)
+            return value > other.value;
+        return entry > other.entry;  // pointer comparison
+    }
 };
 
 class quad

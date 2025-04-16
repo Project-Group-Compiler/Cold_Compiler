@@ -16,3 +16,4 @@ ast/
 *_IR.txt
 *.asm
 *.s
+Descriptor.txt
