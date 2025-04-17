@@ -11,10 +11,32 @@ int f(int z){
 
     // a = -b;
     // a = +b + b;
-    b = ~b + +c; //bitwise
-
-
+    // b = ~b + +c; //bitwise
+    // a = b >> 1;
+    // b = b << b;
     // a = !a + c;  //logical
+
+
+    // a = (a==b);
+    // a = (a != b);   
+    // c = (a<b);
+    // a = (a>b);
+    // a = (a<=b);
+    // a = (a>=b);
+    // if(a < b){
+        
+    // }
+
+    //EBX <- b => 
+    //load 1/0 in EBX if b is (not 0)/0
+    //load 1/0 in ECX if c is (not 0)/0
+    //load EAX = EBX & ECX
+
+    b = a || b;
+    a = !a;
+
+    // a = b && c;
+
 }   
 
 // struct node{
