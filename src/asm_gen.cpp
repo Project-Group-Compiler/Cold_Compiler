@@ -126,8 +126,16 @@ void printReg_addr_Desc(int currInstrLabel)
 std::string getMem(operand &op)
 {
     if (op.entry)
+    {
         op.entry->addrDesc.inStack = 1;
-    return "mem_" + op.value;
+        int offset = op.entry->offset;
+        if (offset < 0)
+            return "ebp+" + std::to_string(-offset);
+
+        return "ebp-" + std::to_string(offset + 4);
+    }
+    std::cerr << "Error: Operand entry is null in getMem\n";
+    exit(1);
 }
 
 // Stop after removing one, since all elements are unique
@@ -406,6 +414,7 @@ void emit_asm(const std::string &inputFile)
     {
         next_use_analysis(block);
         emit_instr("; Block begins");
+        bool regs_spilled = false;
         for (auto &instr : block)
         {
             updateSeenOperand(instr);
@@ -420,6 +429,14 @@ void emit_asm(const std::string &inputFile)
                 else
                 {
                     inside_fn = false;
+                    if (!regs_spilled)
+                    {
+                        emit_instr("; spilling all registers");
+                        for (int reg = 0; reg < uRegCnt; reg++)
+                            spillReg(reg);
+
+                        regs_spilled = true;
+                    }
                     emit_fn_epilogue();
                 }
             }
@@ -468,10 +485,13 @@ void emit_asm(const std::string &inputFile)
 
             printReg_addr_Desc(instr.Label);
         }
-        emit_instr("; spilling all registers");
-        for (int reg = 0; reg < uRegCnt; reg++)
+        if (!regs_spilled)
         {
-            spillReg(reg);
+            emit_instr("; spilling all registers");
+            for (int reg = 0; reg < uRegCnt; reg++)
+                spillReg(reg);
+
+            regs_spilled = true;
         }
     }
 
@@ -1104,8 +1124,9 @@ void emit_data_section()
     {
         for (const auto &[str, cnt] : string_literals)
         {
+            std::string modified_str = "`" + str.substr(1, str.length() - 2) + "`";
             if (cnt == i)
-                emit_data("__str_" + std::to_string(cnt) + ": db " + str + ", 0");
+                emit_data("__str_" + std::to_string(cnt) + ": db " + modified_str + ", 0");
         }
     }
 }

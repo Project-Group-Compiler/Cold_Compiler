@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 extern bool print_symtab;
 extern std::string outputDir;
@@ -15,11 +16,11 @@ std::map<sym_table *, sym_table *> parent_table;
 std::map<struct_sym_table *, struct_sym_table *> struct_parent_table;
 
 std::map<std::string, std::vector<std::string>> func_arg;
-ull struct_offset;
+int struct_offset;
 sym_table *curr_table; // store pointer of the current symbol table
 sym_table *curr_structure;
 struct_sym_table *curr_struct_table;
-std::stack<ull> Goffset, Loffset, blockSz;
+std::stack<int> Goffset, Loffset, blockSz;
 
 bool inClassContext = false; // Default: not in a class definition
 typ_table typ_gst;
@@ -28,7 +29,7 @@ typ_table *curr_typ;
 
 class_sym_table class_gst;
 std::map<class_sym_table *, class_sym_table *> class_parent_table;
-ull class_offset;
+int class_offset;
 sym_table *curr_class_structure;
 class_sym_table *curr_class_table;
 int class_count = 1;
@@ -37,13 +38,13 @@ int struct_count = 1;
 int avl = 0;
 int blockCnt = 1;
 
-#define LIB_FUNC_LIST "scanf", "printf", "malloc", "calloc", "free",            \
-                      "fopen", "fputs", "fgets", "fclose", "fprintf",           \
-                      "fscanf", "fgetc", "fputc", "strlen", "strcmp",           \
-                      "strncmp", "strcpy", "strcat", "va_start", "va_arg",      \
-                      "va_end", "fread", "fwrite", "fseek", "ftell", "rewind",  \
-                      "memcpy", "memset", "atoi", "atof", "abs", "sin", "cos",  \
-                      "tan", "exp", "log", "log10", "pow", "sqrt", "ceil",      \
+#define LIB_FUNC_LIST "scanf", "printf", "malloc", "calloc", "free",           \
+                      "fopen", "fputs", "fgets", "fclose", "fprintf",          \
+                      "fscanf", "fgetc", "fputc", "strlen", "strcmp",          \
+                      "strncmp", "strcpy", "strcat", "va_start", "va_arg",     \
+                      "va_end", "fread", "fwrite", "fseek", "ftell", "rewind", \
+                      "memcpy", "memset", "atoi", "atof", "abs", "sin", "cos", \
+                      "tan", "exp", "log", "log10", "pow", "sqrt", "ceil",     \
                       "floor", "fmod", "round", "fabs", "fmax", "fmin"
 
 const char *func_array[] = {LIB_FUNC_LIST};
@@ -145,7 +146,7 @@ void symTable_init()
     insertKeywords();
 }
 
-sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum)
+sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum)
 {
     sym_entry *new_sym = new (std::nothrow) sym_entry;
 
@@ -249,7 +250,7 @@ int updSymbolTable(std::string id)
         std::cerr << "Error: Goffset or blockSz stack is empty in updSymbolTable.\n";
         return 0;
     }
-    ull temp = Goffset.top();
+    int temp = Goffset.top();
     Goffset.pop();
     if (!Goffset.empty())
         Goffset.top() += temp;
@@ -427,7 +428,7 @@ void createStructTable()
 }
 
 // insert struct attributes in struct symbol table
-int insertStructAttr(std::string attr, std::string type, ull size, bool init)
+int insertStructAttr(std::string attr, std::string type, int size, bool init)
 {
     if (!curr_structure)
     {
@@ -504,6 +505,32 @@ std::string StructAttrType(std::string struct_name, std::string id)
     return ((*table)[id]->type);
 }
 
+int StructAttrOffset(std::string struct_name, std::string id)
+{
+    struct_sym_table *temp = curr_struct_table;
+    while (temp && ((*temp).find(struct_name) == (*temp).end()))
+    {
+        if (struct_parent_table.find(temp) == struct_parent_table.end())
+        {
+            std::cerr << "Error: struct_name " << struct_name << " not found in StructAttrOffset.\n";
+            return -1;
+        }
+        temp = struct_parent_table[temp];
+    }
+    if (!temp)
+    {
+        std::cerr << "Error: No valid struct_sym_table found in StructAttrOffset.\n";
+        return -1;
+    }
+    sym_table *table = (*temp)[struct_name].second;
+    if (!table || (*table).find(id) == (*table).end())
+    {
+        std::cerr << "Error: Identifier " << id << " not found in struct " << struct_name << ".\n";
+        return -1;
+    }
+    return ((*table)[id]->offset);
+}
+
 int findStruct(std::string struct_name)
 {
     struct_sym_table *temp = curr_struct_table;
@@ -538,7 +565,7 @@ int lookupStruct(std::string struct_name, std::string id)
     return -1; // struct table not found
 }
 
-ull getStructsize(std::string struct_name)
+int getStructsize(std::string struct_name)
 {
     struct_sym_table *temp = curr_struct_table;
     while (temp)
@@ -565,7 +592,7 @@ void createClassTable()
     curr_class_structure = new_table;
     class_offset = 0;
 }
-int insertClassAttr(std::string attr, std::string type, ull size, bool init, std::string access)
+int insertClassAttr(std::string attr, std::string type, int size, bool init, std::string access)
 {
     if (!curr_class_structure)
     {
@@ -639,6 +666,33 @@ std::string ClassAttrType(std::string class_name, std::string id)
     }
     return ((*table)[id]->type);
 }
+
+int ClassAttrOffset(std::string class_name, std::string id)
+{
+    class_sym_table *temp = curr_class_table;
+    while (temp && ((*temp).find(class_name) == (*temp).end()))
+    {
+        if (class_parent_table.find(temp) == class_parent_table.end())
+        {
+            std::cerr << "Error: class_name " << class_name << " not found in ClassAttrOffset.\n";
+            return -1;
+        }
+        temp = class_parent_table[temp];
+    }
+    if (!temp)
+    {
+        std::cerr << "Error: No valid class_sym_table found in ClassAttrOffset.\n";
+        return -1;
+    }
+    sym_table *table = (*temp)[class_name].second;
+    if (!table || (*table).find(id) == (*table).end())
+    {
+        std::cerr << "Error: Identifier " << id << " not found in class " << class_name << ".\n";
+        return -1;
+    }
+    return ((*table)[id]->offset);
+}
+
 std::string ClassAttrAccess(std::string className, std::string attr)
 {
     // Search through class table hierarchy
@@ -690,31 +744,32 @@ int lookupClass(std::string class_name, std::string &id)
             sym_table *table = (*temp)[class_name].second;
             if (table && (*table).find(id) != (*table).end())
                 return 1; // found
-            else{
-                //check if id is in parent class
-                if(id.find("FUNC_") == 0)
+            else
+            {
+                // check if id is in parent class
+                if (id.find("FUNC_") == 0)
                 {
-                    //for example FUNC_6Person_6getAge_v change this to 6getAge_v
-                    id=id.substr(5);
-                    id=id.substr(id.find("_")+1);
-                    //check if id is in this class as suffix of entry
-                    for(auto it : (*table))
+                    // for example FUNC_6Person_6getAge_v change this to 6getAge_v
+                    id = id.substr(5);
+                    id = id.substr(id.find("_") + 1);
+                    // check if id is in this class as suffix of entry
+                    for (auto it : (*table))
                     {
                         std::string key = it.first;
-                        if(key.length() >= id.length() && 
-                        key.substr(key.length() - id.length()) == id)
+                        if (key.length() >= id.length() &&
+                            key.substr(key.length() - id.length()) == id)
                         {
-                            id=it.first;//to pass parent class name function to parser.y
+                            id = it.first; // to pass parent class name function to parser.y
                             return 1;
                         }
                     }
                     return 0;
                 }
-                else{
+                else
+                {
                     return 0;
                 }
             }
-                
         }
         if (class_parent_table.find(temp) == class_parent_table.end())
             break;
@@ -733,31 +788,32 @@ sym_entry *lookupClassEntry(std::string class_name, std::string &id)
             sym_table *table = (*temp)[class_name].second;
             if (table && (*table).find(id) != (*table).end())
                 return (*table)[id]; // found
-            else{
-                //check if id is in parent class
-                if(id.find("FUNC_") == 0)
+            else
+            {
+                // check if id is in parent class
+                if (id.find("FUNC_") == 0)
                 {
-                    //for example FUNC_6Person_6getAge_v change this to 6getAge_v
-                    id=id.substr(5);
-                    id=id.substr(id.find("_")+1);
-                    //check if id is in this class as suffix of entry
-                    for(auto it : (*table))
+                    // for example FUNC_6Person_6getAge_v change this to 6getAge_v
+                    id = id.substr(5);
+                    id = id.substr(id.find("_") + 1);
+                    // check if id is in this class as suffix of entry
+                    for (auto it : (*table))
                     {
                         std::string key = it.first;
-                        if(key.length() >= id.length() && 
-                        key.substr(key.length() - id.length()) == id)
+                        if (key.length() >= id.length() &&
+                            key.substr(key.length() - id.length()) == id)
                         {
-                            id=it.first;//to pass parent class name function to parser.y
+                            id = it.first; // to pass parent class name function to parser.y
                             return (*table)[key];
                         }
                     }
                     return 0;
                 }
-                else{
+                else
+                {
                     return 0;
                 }
             }
-                
         }
         if (class_parent_table.find(temp) == class_parent_table.end())
             break;
@@ -766,7 +822,7 @@ sym_entry *lookupClassEntry(std::string class_name, std::string &id)
     return 0; // class table not found
 }
 
-ull getClassSize(std::string class_name)
+int getClassSize(std::string class_name)
 {
     class_sym_table *temp = curr_class_table;
     while (temp)
@@ -818,10 +874,10 @@ int inheritFromClass(std::string childClassName, std::string parentClassName)
         // Only inherit public and protected members
         if (member->access == "public" || member->access == "protected")
         {
-            
+
             if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end())
             {
-                insertClassAttr(memberName, member->type, member->size,member->init, member->access);
+                insertClassAttr(memberName, member->type, member->size, member->init, member->access);
             }
         }
     }
@@ -841,7 +897,7 @@ void createParamList()
     avl = 1;
 }
 
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum)
+void insertSymbol(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum)
 {
     table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr, access, isStatic, isConst, isArray, isEnum)));
     if (!blockSz.empty())
@@ -858,6 +914,34 @@ void insertSymbol(sym_table &table, std::string id, std::string type, ull size, 
         std::cerr << "Error: Goffset stack empty in insertSymbol.\n";
         exit(EXIT_FAILURE);
     }
+}
+
+int param_offset = -4;
+
+// insert function parameters into the symbol table of the function
+void paramInsert(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr)
+{
+    table.insert(make_pair(id, createEntry(type, size, is_init, param_offset - size, ptr)));
+
+    // if(type[type.length()-1] == '*' && !array_dims.empty()){
+    // 	size = 4;
+    // 	std::vector<int> temp;
+    // 	int curr = 1;
+    // 	for(int i = array_dims.size()-1; i>=1; i--){
+    // 		curr*=array_dims[i];
+    // 		temp.push_back(curr);
+    // 	}
+    // 	reverse(temp.begin(), temp.end());
+    // 	table[id]->array_dims = temp;
+    // 	table[id]->offset = param_offset - size;
+    // 	array_dims.clear();
+    // }
+    param_offset -= size;
+}
+
+void clear_paramoffset()
+{
+    param_offset = -4;
 }
 
 std::vector<std::string> getFuncArgs(std::string id)
@@ -1027,7 +1111,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
     }
 }
 
-ull getSize(std::string id)
+int getSize(std::string id)
 {
     if (findStruct(id))
         return getStructsize(id);

@@ -12,8 +12,6 @@
 #include <iomanip>
 #include <iostream>
 
-#define ll long long
-#define ull unsigned long long
 #define sym_file 0
 #define sym_function 1
 #define sym_block 2
@@ -26,8 +24,9 @@ struct TOKEN
 	std::string lexeme;
 };
 
-struct Desc{
-	std::vector<int> inRegs; 
+struct Desc
+{
+	std::vector<int> inRegs;
 	// enum {EAX = 0,EBX = 1,ECX = 2,EDX = 3,ESI = 4,EDI = 5,ESP = 6,EBP = 7 };
 	bool inStack = false;
 	bool inHeap = false;
@@ -36,9 +35,9 @@ struct Desc{
 typedef struct sym_entry
 {
 	std::string type;
-	ull size;
+	int size;
 	bool init;
-	ull offset;
+	int offset;
 	std::map<std::string, sym_entry *> *entry;
 	std::string access; //  field: "public", "private", "protected", etc.
 	int isStatic = 0;
@@ -53,8 +52,8 @@ typedef struct sym_entry
 } sym_entry;
 
 typedef std::map<std::string, sym_entry *> sym_table;
-typedef std::map<std::string, std::pair<ull, sym_table *>> struct_sym_table;
-typedef std::map<std::string, std::pair<ull, sym_table *>> class_sym_table;
+typedef std::map<std::string, std::pair<int, sym_table *>> struct_sym_table;
+typedef std::map<std::string, std::pair<int, sym_table *>> class_sym_table;
 typedef std::map<std::string, std::string> typ_table;
 
 extern sym_table gst;
@@ -64,17 +63,17 @@ extern std::map<sym_table *, sym_table *> parent_table;
 extern std::map<struct_sym_table *, struct_sym_table *> struct_parent_table;
 extern std::map<class_sym_table *, class_sym_table *> class_parent_table;
 extern bool inClassContext; // Flag to indicate if we're in a class definition
-extern std::map<std::string, ull> struct_size;
-extern std::map<std::string, ull> class_size;
+extern std::map<std::string, int> struct_size;
+extern std::map<std::string, int> class_size;
 extern std::map<std::string, std::vector<std::string>> func_arg;
-extern ull struct_offset;
-extern ull class_offset;
+extern int struct_offset;
+extern int class_offset;
 extern sym_table *curr_table; // store pointer of the current symbol table
 extern sym_table *curr_structure;
 extern sym_table *curr_class_structure;
 extern struct_sym_table *curr_struct_table;
 extern class_sym_table *curr_class_table;
-extern std::stack<ull> Goffset, Loffset, blockSz;
+extern std::stack<int> Goffset, Loffset, blockSz;
 extern int avl;
 
 extern typ_table typ_gst;
@@ -92,7 +91,7 @@ bool searchIdConst(std::string id);
 std::string getSizeOfType(const std::string &typeStr);
 
 void symTable_init();
-sym_entry *createEntry(std::string type, ull size, bool init, ull offset, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
+sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
 void makeSymbolTable(std::string name, std::string f_type);
 void removeFuncProto();
 int updSymbolTable(std::string id);
@@ -102,23 +101,25 @@ void insertKeywords();
 void insert_std_func(std::string func_name, std::vector<std::string> type, std::string ret_type);
 std::string getType(std::string id);
 void createStructTable();
-int insertStructAttr(std::string attr, std::string type, ull size, bool init);
+int insertStructAttr(std::string attr, std::string type, int size, bool init);
 int printStructTable(std::string struct_name);
 std::string StructAttrType(std::string struct_name, std::string id);
+int StructAttrOffset(std::string struct_name, std::string id);
 int findStruct(std::string struct_name);
 int lookupStruct(std::string struct_name, std::string id);
 
 void createClassTable();
-int insertClassAttr(std::string attr, std::string type, ull size, bool init, std::string access = "private");
+int insertClassAttr(std::string attr, std::string type, int size, bool init, std::string access = "private");
 int printClassTable(std::string class_name);
 std::string ClassAttrType(std::string class_name, std::string id);
+int ClassAttrOffset(std::string class_name, std::string id);
 std::string ClassAttrAccess(std::string className, std::string attr);
 int inheritFromClass(std::string childClass, std::string parentClass);
 int findClass(std::string class_name);
 int lookupClass(std::string class_name, std::string &id);
 sym_entry *lookupClassEntry(std::string class_name, std::string &id);
 void createParamList();
-void insertSymbol(sym_table &table, std::string id, std::string type, ull size, bool is_init, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
+void insertSymbol(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
 std::vector<std::string> getFuncArgs(std::string id);
 std::string mangleFunctionName(const std::string &name, const std::vector<std::string> &paramTypes);
 std::string getTypeCode(const std::string &type);
@@ -126,7 +127,7 @@ void updInit(std::string id);
 void updTableSize(std::string id);
 void insertFuncArg(std::string &func, std::vector<std::string> &arg);
 void printSymbolTable(sym_table *table, std::string file_name);
-ull getSize(std::string id);
+int getSize(std::string id);
 std::string lookupType(std::string a);
 void insertType(std::string a, std::string b);
 
@@ -136,5 +137,8 @@ extern std::vector<std::string> lib_funcs;
 extern std::set<std::string> called_lib_funcs;
 
 extern std::map<std::string, std::string> global_init;
+
+void paramInsert(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr);
+void clear_paramoffset();
 
 #endif // SYMBOL_TABLE_H

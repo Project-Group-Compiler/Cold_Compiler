@@ -348,6 +348,7 @@ postfix_expression
     	string temp = string($3);
     	string memberName = $1->tempName;
     	string type = $1->type;
+		int member_offset = -1;
 		
 		// Debug the type to see what's reaching this rule
 
@@ -357,6 +358,7 @@ postfix_expression
         	if (curr_class_structure && (*curr_class_structure).find(temp) != (*curr_class_structure).end()) {
         	    $$->type = (*curr_class_structure)[temp]->type;
         	    $$->tempName = $1->tempName + "." + temp;
+				member_offset = (*curr_class_structure)[temp]->offset;						
         	} else {
         	    semantic_error(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
         	}
@@ -376,6 +378,7 @@ postfix_expression
         		    // Member found and accessible
         		    $$->type = ClassAttrType(type, temp);
         		    $$->tempName = $1->tempName + "." + temp;
+					member_offset = ClassAttrOffset(type, temp);
         		}
     	    }
     	    else if (ret == 0) {
@@ -397,13 +400,17 @@ postfix_expression
     	    else {
     	        $$->type = StructAttrType($1->type, temp);
     	        $$->tempName = $1->tempName + "." + temp;
+				member_offset = StructAttrOffset($1->type, temp);
     	    }
     	}
 		//3AC
 		operand q = getTempVariable($1->type+'*'); 
 		emit("unary&", $1->place, {}, q, -1);
 		if(type.substr(0, 6) != "UNION_")
-			emit("ptr+", q, {std::string($3)}, q, -1); //TODO: REPLACE $3 with $3->offset 
+		{
+			sym_entry* newEntry = new sym_entry;
+			emit("ptr+", q, {std::to_string(member_offset), newEntry}, q, -1);
+		}
 		q.value = "*" + q.value;
         $$->place = q;
 		$$->nextlist.clear();
@@ -685,6 +692,7 @@ postfix_expression
     	string temp = string($3);
     	string memberName = $1->tempName;
     	string type = $1->type;
+		int member_offset = -1;
 
 		if(type.back() != '*'){
 			semantic_error(($1->node_name + " is not a pointer, did you mean to use '.' ").c_str(), "type error");
@@ -699,6 +707,7 @@ postfix_expression
         	if (curr_class_structure && (*curr_class_structure).find(temp) != (*curr_class_structure).end()) {
         	    $$->type = (*curr_class_structure)[temp]->type;
         	    $$->tempName = $1->tempName + "->" + temp;
+				member_offset = (*curr_class_structure)[temp]->offset;
         	} else {
         	    semantic_error(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
         	}
@@ -718,6 +727,7 @@ postfix_expression
         		    // Member found and accessible
         		    $$->type = ClassAttrType(type, temp);
         		    $$->tempName = $1->tempName + "->" + temp;
+					member_offset = ClassAttrOffset(type, temp);
         		}
     	    }
     	    else if (ret == 0) {
@@ -739,12 +749,16 @@ postfix_expression
     	    else {
     	        $$->type = StructAttrType(type, temp);
     	        $$->tempName = $1->tempName + "->" + temp;
+				member_offset = StructAttrOffset(type, temp);
     	    }
     	}
 		//3AC
 		operand q = getTempVariable($1->type); 
 		if(type.substr(0, 6) != "UNION_")
-			emit("ptr+", $1->place, {std::string($3)}, q, -1); //TODO: REPLACE $3 with $3->offset 
+		{
+			sym_entry* newEntry = new sym_entry;
+			emit("ptr+", $1->place, {std::to_string(member_offset), newEntry}, q, -1);
+		}
 		q.value = "*" + q.value;
         $$->place = q;
 		$$->nextlist.clear();
@@ -3245,7 +3259,8 @@ parameter_declaration
 				semantic_error(("Redeclaration of Parameter " + $2->tempName).c_str(), "scope error");
 			} else {
 				DBG("Inserting into symbol table: " + $2->tempName);
-				insertSymbol(*curr_table, $2->tempName, $2->type, $2->size, true, NULL);
+				// insertSymbol(*curr_table, $2->tempName, $2->type, $2->size, true, NULL);
+				paramInsert(*curr_table, $2->tempName, $2->type, $2->size, true, NULL);
 			}
 			debug($2->type);
 			funcArgs.push_back($2->type);
@@ -4069,6 +4084,7 @@ F_MANGLE
 		}
 		DBG("Mangled Function name: " + qualifiedFuncName);
 		funcArgs.clear();
+		clear_paramoffset();
 		if (gst.find(qualifiedFuncName) != gst.end()){
 			removeFuncProto();//added for handling func redefinition
 			semantic_error(("Redefinition of function " + funcName).c_str(), "scope error");

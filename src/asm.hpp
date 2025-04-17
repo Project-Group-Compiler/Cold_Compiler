@@ -35,8 +35,11 @@ inline void add_extern_funcs()
 }
 
 void emit_asm(const std::string &);
+
 void emit_fn_defn(quad &instr);
 void emit_fn_epilogue();
+void emit_param(quad &instr);
+void emit_fn_call(quad &instr);
 
 void emit_assign(quad &instr);
 void emit_add(quad &instr);
@@ -57,20 +60,14 @@ void emit_logical_and(quad &instr);
 void emit_logical_or(quad &instr);
 void emit_logical_not(quad &instr);
 
-
-
-
-
-void emit_param(quad &instr);
-void emit_fn_call(quad &instr);
-
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();
+
+int getReg(operand &op, bool willYouModify, std::vector<int> resReg);
+int getBestReg(std::vector<int> resReg);
 
 void update_ir();
 void emit_data_section();
 void emit_bss_section();
-int getReg(operand &op, bool willYouModify, std::vector<int> resReg);
-int getBestReg(std::vector<int>resReg);
 
 #endif

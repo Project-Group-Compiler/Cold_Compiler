@@ -17,3 +17,4 @@ ast/
 *.asm
 *.s
 Descriptor.txt
+exec_*
