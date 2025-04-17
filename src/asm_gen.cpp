@@ -7,8 +7,7 @@ extern std::string outputDir;
 void print_error(const std::string &message);
 
 template <typename T>
-void __print__(const T &x)
-{
+void __print__(const T &x){
     std::cerr << x;
 }
 
@@ -27,7 +26,7 @@ std::ofstream asm_file;
 
 std::map<std::string, int> string_literals;
 bool inside_fn = false;
-
+int labelCnt = 0;
 enum
 {
     EAX = 0,
@@ -174,9 +173,14 @@ void spillReg(int reg)
 
 int getBestReg(std::vector<int>resReg)
 {
+    std::vector<int>isResReg(uRegCnt);
+    for(auto it:resReg){
+        isResReg[it] = 1;
+    }
+
     for (int reg = 0; reg < uRegCnt; reg++)
     {
-        if(resReg[reg]) continue;
+        if(isResReg[reg]) continue;
         if (regDesc[reg].size() == 0)
             return reg;
     }
@@ -185,7 +189,7 @@ int getBestReg(std::vector<int>resReg)
     int minCnt = 100;
     for (int reg = 0; reg < uRegCnt; reg++)
     {   
-        if(resReg[reg]) continue;
+        if(isResReg[reg]) continue;
         int cnt = 0;
         for (auto &op : regDesc[reg])
         {
@@ -211,6 +215,11 @@ int getBestReg(std::vector<int>resReg)
 int getReg(operand &op, bool willYouModify, std::vector<int> resReg) {
     //resReg->don't give this reg 
     //for now if resReg is not empty pass willYouModify as 1
+    std::vector<int>isResReg(uRegCnt);
+    for(auto it:resReg){
+        isResReg[it] = 1;
+    }
+
     if(is_int_constant(op.value)){
         int bestReg = getBestReg(resReg);
         
@@ -222,7 +231,8 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg) {
         return -1;
     auto &addrDesc = op.entry->addrDesc;
 
-    if (willYouModify == 0) { //TODO ; handle resReg
+    if (willYouModify == 0) { //TODO ; remove
+        std::cout << "Warning Don't use willYouModify = 0\n"; 
         if (addrDesc.inRegs.size())
             return addrDesc.inRegs[0];
         return -1;
@@ -232,7 +242,7 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg) {
         int bestReg = -1;
         int minCnt = 100;
         for (auto reg : addrDesc.inRegs) {
-            if(resReg[reg]) continue;
+            if(isResReg[reg]) continue;
             int cnt = 0;
             for (auto tempOp : regDesc[reg]) {
                 if (tempOp.isLive) {
@@ -408,6 +418,19 @@ void emit_asm(const std::string &inputFile){
                 emit_unary_minus(instr);                
             else if (curr_op == "~")
                 emit_not(instr);                
+            else if (curr_op == ">>")
+                emit_right_shift(instr);                
+            else if (curr_op == "<<")
+                emit_left_shift(instr);                
+            else if (curr_op == "==" || curr_op == "!=" || curr_op == ">" || curr_op == "<" || curr_op == "<=" || curr_op == ">=")
+                emit_cmp(instr);              
+            else if (curr_op == "&&")
+                emit_logical_and(instr);
+            else if (curr_op == "||")
+                emit_logical_or(instr);
+            else if (curr_op == "!")
+                emit_logical_not(instr);
+            
 
             printReg_addr_Desc(instr.Label);
         }
@@ -424,11 +447,130 @@ void emit_asm(const std::string &inputFile){
     emit_bss_section(); // add uninitialized data
 }
 
+/* Logical Operator */
+void emit_logical_and(quad &instr){ 
+    int reg1 = getReg(instr.arg1,1,{});
+    int reg2 = getReg(instr.arg2,1,{reg1});
+    std::string label1 = "LBL" + std::to_string(labelCnt++);
+    std::string label2 = "LBL" + std::to_string(labelCnt++);
+    
+    emit_instr(x86_lib::cmp_reg_imm(reg_names[reg1],"0"));
+    emit_instr(x86_lib::je(label1));
+    emit_instr(x86_lib::cmp_reg_imm(reg_names[reg2],"0"));
+    emit_instr(x86_lib::je(label1));
+    emit_instr(x86_lib::mov_reg_imm(reg_names[reg1],"1"));
+    emit_instr(x86_lib::jmp(label2));
+    emit_label(label1);
+    emit_instr(x86_lib::mov_reg_imm(reg_names[reg1],"0"));
+    emit_label(label2);
+
+    updateRegDesc(reg1,instr.result);
+    /* t0 = a && b
+        if reg1 == 0 -> L1
+        if reg2 == 0 -> L1
+        t0 = 1 -> L2
+        L1 -> to = 0
+        L2:
+    */
+}
+
+void emit_logical_or(quad &instr){ 
+    int reg1 = getReg(instr.arg1,1,{});
+    int reg2 = getReg(instr.arg2,1,{reg1});
+    
+    std::string label1 = "LBL" + std::to_string(labelCnt++);
+    std::string label2 = "LBL" + std::to_string(labelCnt++);
+
+    emit_instr(x86_lib::cmp_reg_imm(reg_names[reg1],"1"));
+    emit_instr(x86_lib::je(label1));
+    emit_instr(x86_lib::cmp_reg_imm(reg_names[reg2],"1"));
+    emit_instr(x86_lib::je(label1));
+    emit_instr(x86_lib::mov_reg_imm(reg_names[reg1],"0"));
+    emit_instr(x86_lib::jmp(label2));
+    emit_label(label1);
+    emit_instr(x86_lib::mov_reg_imm(reg_names[reg1],"1"));
+    emit_label(label2);
+
+    updateRegDesc(reg1,instr.result);
+
+    /* t0 = a || b
+        if reg1 == 1 -> L1
+        if reg2 == 1 -> L1
+        t0 = 0 -> L2
+        L1 -> to = 1
+        L2:
+    */
+}
+
+void emit_logical_not(quad &instr){ 
+    int reg1 = getReg(instr.arg1,1,{});
+    
+    std::string label1 = "LBL" + std::to_string(labelCnt++);
+    std::string label2 = "LBL" + std::to_string(labelCnt++);
+
+    emit_instr(x86_lib::cmp_reg_imm(reg_names[reg1],"1"));
+    emit_instr(x86_lib::je(label1));
+    emit_instr(x86_lib::mov_reg_imm(reg_names[reg1],"1"));
+    emit_instr(x86_lib::jmp(label2));
+    emit_label(label1);
+    emit_instr(x86_lib::mov_reg_imm(reg_names[reg1],"0"));
+    emit_label(label2);
+
+    updateRegDesc(reg1,instr.result);
+    /* t0 = !a
+        if reg1 == 1 -> L1
+        t0 = 1 -> L2
+        L1 -> to = 0
+        L2:
+    */
+}
+
+void emit_cmp(quad &instr){
+    int reg1 = getReg(instr.arg1,1,{});
+    int reg2 = getReg(instr.arg2,1,{reg1});
+    emit_instr(x86_lib::cmp(reg_names[reg1],reg_names[reg2]));
+    std::string label1 = "LBL" + std::to_string(labelCnt++);
+    std::string label2 = "LBL" + std::to_string(labelCnt++);
+
+    if(instr.op == "=="){
+        emit_instr(x86_lib::je(label1));
+    }else if(instr.op == "!="){
+        emit_instr(x86_lib::jne(label1));
+    }else if(instr.op == "<"){
+        emit_instr(x86_lib::jl(label1));
+    }else if(instr.op == ">"){
+        emit_instr(x86_lib::jg(label1));
+    }else if(instr.op == "<="){
+        emit_instr(x86_lib::jle(label1));
+    }else if(instr.op == ">="){
+        emit_instr(x86_lib::jge(label1));
+    }
+    emit_instr(x86_lib::mov_reg_imm(reg_names[reg1],"0"));
+    emit_instr(x86_lib::jmp(label2));
+    emit_label(label1);
+    emit_instr(x86_lib::mov_reg_imm(reg_names[reg1],"1"));
+    emit_label(label2);
+    updateRegDesc(reg1,instr.result);
+}
+
 /* Bitwise Operator */
+void emit_right_shift(quad &instr){ //check correct value of cl
+    setParticularReg(ECX,instr.arg2);
+    int reg1= getReg(instr.arg1, 1, {ECX});
+    emit_instr(x86_lib::shr(reg_names[reg1], "cl"));
+    updateRegDesc(reg1, instr.result);
+}
+
+void emit_left_shift(quad &instr){
+    setParticularReg(ECX,instr.arg2);
+    int reg1= getReg(instr.arg1, 1, {ECX});
+    emit_instr(x86_lib::shl(reg_names[reg1], "cl"));
+    updateRegDesc(reg1, instr.result);
+}
 void emit_or(quad &instr)
 {
     // x = y | z
-    int reg1 = getReg(instr.arg1, 1);
+    int reg1 = getReg(instr.arg1, 1,{});
     if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::or_reg_imm(reg_names[reg1], instr.arg2.value));
@@ -438,23 +580,15 @@ void emit_or(quad &instr)
         emit_instr(x86_lib::or_reg_mem(reg_names[reg1], instr.arg2.value));
     }
     else{
-        int reg2 = getReg(instr.arg2, 0);
-        if (reg2 != -1)
-        {
-            emit_instr(x86_lib::or_op(reg_names[reg1], reg_names[reg2]));
-        }
-        else
-        {
-            std::string mem = getMem(instr.arg2);
-            emit_instr(x86_lib::or_reg_mem(reg_names[reg1], mem));
-        }
+        int reg2 = getReg(instr.arg2, 1,{reg1});
+        emit_instr(x86_lib::or_op(reg_names[reg1], reg_names[reg2]));
     }
     updateRegDesc(reg1, instr.result);
 }
 void emit_xor(quad &instr)
 {
     // x = y ^ z
-    int reg1 = getReg(instr.arg1, 1);
+    int reg1 = getReg(instr.arg1, 1,{});
     if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::xor_reg_imm(reg_names[reg1], instr.arg2.value));
@@ -464,23 +598,15 @@ void emit_xor(quad &instr)
         emit_instr(x86_lib::xor_reg_mem(reg_names[reg1], instr.arg2.value));
     }
     else{
-        int reg2 = getReg(instr.arg2, 0);
-        if (reg2 != -1)
-        {
-            emit_instr(x86_lib::xor_op(reg_names[reg1], reg_names[reg2]));
-        }
-        else
-        {
-            std::string mem = getMem(instr.arg2);
-            emit_instr(x86_lib::xor_reg_mem(reg_names[reg1], mem));
-        }
+        int reg2 = getReg(instr.arg2, 1, {reg1});
+        emit_instr(x86_lib::xor_op(reg_names[reg1], reg_names[reg2]));
     }
     updateRegDesc(reg1, instr.result);
 }
 void emit_and(quad &instr)
 {
     // x = y & z
-    int reg1 = getReg(instr.arg1, 1);
+    int reg1 = getReg(instr.arg1, 1,{});
     if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::and_reg_imm(reg_names[reg1], instr.arg2.value));
@@ -490,16 +616,8 @@ void emit_and(quad &instr)
         emit_instr(x86_lib::and_reg_mem(reg_names[reg1], instr.arg2.value));
     }
     else{
-        int reg2 = getReg(instr.arg2, 0);
-        if (reg2 != -1)
-        {
-            emit_instr(x86_lib::and_op(reg_names[reg1], reg_names[reg2]));
-        }
-        else
-        {
-            std::string mem = getMem(instr.arg2);
-            emit_instr(x86_lib::and_reg_mem(reg_names[reg1], mem));
-        }
+        int reg2 = getReg(instr.arg2, 1,{reg1});
+        emit_instr(x86_lib::and_op(reg_names[reg1], reg_names[reg2]));
     }
     updateRegDesc(reg1, instr.result);
 }
@@ -510,13 +628,13 @@ void emit_unary_plus(quad &instr){
 }
 
 void emit_unary_minus(quad &instr){//a = -b;
-    int reg = getReg(instr.arg1,1);
+    int reg = getReg(instr.arg1,1,{});
     emit_instr(x86_lib::neg(reg_names[reg]));
     updateRegDesc(reg,instr.result);
 }
 
 void emit_not(quad &instr){
-    int reg = getReg(instr.arg1,1);
+    int reg = getReg(instr.arg1,1,{});
     emit_instr(x86_lib::not_op(reg_names[reg]));
     updateRegDesc(reg,instr.result);
 }
@@ -527,10 +645,7 @@ void emit_div(quad &instr){ // c = a/b
     spillReg(EDX);
     emit_instr(x86_lib::xor_op(reg_names[EDX], reg_names[EDX]));
 
-    std::vector<int>resReg(uRegCnt,0);
-    resReg[EAX] = resReg[EDX] = 1;
-
-    int reg2= getReg(instr.arg2, 1, resReg);
+    int reg2= getReg(instr.arg2, 1, {EAX,EDX});
     emit_instr(x86_lib::idiv(reg_names[reg2]));
     updateRegDesc(EAX,instr.result);
 }
@@ -541,10 +656,7 @@ void emit_mod(quad &instr){ // c = a/b
     spillReg(EDX);
     emit_instr(x86_lib::xor_op(reg_names[EDX], reg_names[EDX]));
 
-    std::vector<int>resReg(uRegCnt);
-    resReg[EAX] = resReg[EDX] = 1;
-
-    int reg2= getReg(instr.arg2, 1, resReg);
+    int reg2= getReg(instr.arg2, 1, {EAX,EDX});
     emit_instr(x86_lib::idiv(reg_names[reg2]));
     updateRegDesc(EDX,instr.result);
 }
@@ -553,7 +665,7 @@ void emit_mod(quad &instr){ // c = a/b
 void emit_mul(quad &instr)
 {
     // x = y * z
-    int reg1 = getReg(instr.arg1, 1);
+    int reg1 = getReg(instr.arg1, 1,{});
     if(is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::imul_three(reg_names[reg1], reg_names[reg1], instr.arg2.value));
@@ -563,16 +675,8 @@ void emit_mul(quad &instr)
         emit_instr(x86_lib::imul_reg_mem(reg_names[reg1], instr.arg2.value));
     }
     else{
-        int reg2 = getReg(instr.arg2, 0);
-        if (reg2 != -1)
-        {
-            emit_instr(x86_lib::imul(reg_names[reg1], reg_names[reg2]));
-        }
-        else
-        {
-            std::string mem = getMem(instr.arg2);
-            emit_instr(x86_lib::imul_reg_mem(reg_names[reg1], mem));
-        }
+        int reg2 = getReg(instr.arg2, 1,{reg1});
+        emit_instr(x86_lib::imul(reg_names[reg1], reg_names[reg2]));
     }
     updateRegDesc(reg1, instr.result);
 }
@@ -580,7 +684,7 @@ void emit_mul(quad &instr)
 void emit_sub(quad &instr)
 {
     // x = y - z
-    int reg1 = getReg(instr.arg1, 1);
+    int reg1 = getReg(instr.arg1, 1,{});
     if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::sub_reg_imm(reg_names[reg1], instr.arg2.value));
@@ -591,23 +695,15 @@ void emit_sub(quad &instr)
     }
     else
     {
-        int reg2 = getReg(instr.arg2, 0);
-        if (reg2 != -1)
-        {
-            emit_instr(x86_lib::sub(reg_names[reg1], reg_names[reg2]));
-        }
-        else
-        {
-            std::string mem = getMem(instr.arg2);
-            emit_instr(x86_lib::sub_reg_mem(reg_names[reg1], mem));
-        }
+        int reg2 = getReg(instr.arg2, 1,{reg1});
+        emit_instr(x86_lib::sub(reg_names[reg1], reg_names[reg2]));
     }
     updateRegDesc(reg1, instr.result);
 }
 void emit_add(quad &instr)
 {
     // x = y + z
-    int reg1 = getReg(instr.arg1, 1);
+    int reg1 = getReg(instr.arg1, 1,{});
     if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
@@ -618,18 +714,8 @@ void emit_add(quad &instr)
     }
     else
     {
-        int reg2 = getReg(instr.arg2, 0);
-        // _debug_(stringify(instr));
-        // _debug_(reg1,reg2);
-        if (reg2 != -1)
-        { // emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
-            emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
-        }
-        else
-        {
-            std::string mem = getMem(instr.arg2);
-            emit_instr(x86_lib::add_reg_mem(reg_names[reg1], mem));
-        }
+        int reg2 = getReg(instr.arg2, 1,{reg1});
+        emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
     }
     updateRegDesc(reg1, instr.result);
 }
@@ -652,7 +738,7 @@ void emit_assign(quad &instr)
     }
     else
     {
-        int reg2 = getReg(instr.arg1, 1);
+        int reg2 = getReg(instr.arg1, 1,{});
         updateRegDesc_assign(reg2, instr.result);
     }
 }

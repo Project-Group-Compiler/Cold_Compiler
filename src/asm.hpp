@@ -48,6 +48,14 @@ void emit_xor(quad &instr);
 void emit_unary_plus(quad &instr);
 void emit_unary_minus(quad &instr);
 void emit_not(quad &instr);
+void emit_right_shift(quad &instr);
+void emit_left_shift(quad &instr);
+void emit_cmp(quad &instr);
+void emit_logical_and(quad &instr);
+void emit_logical_or(quad &instr);
+void emit_logical_not(quad &instr);
+
+
 
 
 void next_use_analysis(std::vector<quad> &block);
@@ -56,7 +64,7 @@ void print_next_use();
 void update_ir();
 void emit_data_section();
 void emit_bss_section();
-int getReg(operand &op, bool willYouModify, std::vector<int> resReg=std::vector<int>(6, 0));
-int getBestReg(std::vector<int>resReg=std::vector<int>(6, 0));
+int getReg(operand &op, bool willYouModify, std::vector<int> resReg);
+int getBestReg(std::vector<int>resReg);
 
 #endif
