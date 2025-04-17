@@ -36,9 +36,15 @@ inline void add_extern_funcs()
 
 void emit_asm(const std::string &);
 void emit_fn_defn(quad &instr);
+void emit_fn_prologue();
+
 void emit_assign(quad &instr);
 void emit_add(quad &instr);
 void emit_sub(quad &instr);
+
+
+void emit_param(quad &instr);
+void emit_fn_call(quad &instr);
 
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();

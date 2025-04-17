@@ -722,6 +722,50 @@ int lookupClass(std::string class_name, std::string &id)
     }
     return -1; // class table not found
 }
+
+sym_entry *lookupClassEntry(std::string class_name, std::string &id)
+{
+    class_sym_table *temp = curr_class_table;
+    while (temp)
+    {
+        if ((*temp).find(class_name) != (*temp).end())
+        {
+            sym_table *table = (*temp)[class_name].second;
+            if (table && (*table).find(id) != (*table).end())
+                return (*table)[id]; // found
+            else{
+                //check if id is in parent class
+                if(id.find("FUNC_") == 0)
+                {
+                    //for example FUNC_6Person_6getAge_v change this to 6getAge_v
+                    id=id.substr(5);
+                    id=id.substr(id.find("_")+1);
+                    //check if id is in this class as suffix of entry
+                    for(auto it : (*table))
+                    {
+                        std::string key = it.first;
+                        if(key.length() >= id.length() && 
+                        key.substr(key.length() - id.length()) == id)
+                        {
+                            id=it.first;//to pass parent class name function to parser.y
+                            return (*table)[key];
+                        }
+                    }
+                    return 0;
+                }
+                else{
+                    return 0;
+                }
+            }
+                
+        }
+        if (class_parent_table.find(temp) == class_parent_table.end())
+            break;
+        temp = class_parent_table[temp];
+    }
+    return 0; // class table not found
+}
+
 ull getClassSize(std::string class_name)
 {
     class_sym_table *temp = curr_class_table;
