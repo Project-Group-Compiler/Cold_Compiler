@@ -1,18 +1,15 @@
+int a = 10;
 int f(){
-    int a,b;
-    ++a;
-    b = a++;
-    --b;
-    b--;
-    if(--b){
+    int b,c;
+    // a = a + 10;
+    // b = 12 + 11;
+    // a = a / b;
+    // a = a / a;
+    // b = a%b;
+    // a = 5/0;
+    // c %= 10;
+    a=a/b+c+10&11 - c;
 
-    }else if(b--){
-
-    }else if(a++){
-
-    }else if(++a){
-
-    }
 }
 
 // struct node{
