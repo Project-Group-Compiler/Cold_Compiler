@@ -40,6 +40,7 @@ void emit_fn_defn(quad &instr);
 void emit_fn_epilogue();
 void emit_param(quad &instr);
 void emit_fn_call(quad &instr);
+void emit_return(quad &instr);
 
 void emit_assign(quad &instr);
 void emit_add(quad &instr);

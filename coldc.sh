@@ -45,7 +45,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Step 3: Link with gcc
-gcc -m32 -no-pie -z noexecstack "$filename_noext.o" -o "exec_$filename_noext"
+gcc -m32 -no-pie -lm -z noexecstack "$filename_noext.o" -o "exec_$filename_noext"
 
 if [ $? -ne 0 ]; then
     echo "Linking failed. Exiting."

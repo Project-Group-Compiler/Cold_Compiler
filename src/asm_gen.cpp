@@ -27,6 +27,7 @@ std::ofstream asm_file;
 
 std::map<std::string, int> string_literals;
 bool inside_fn = false;
+bool inside_main = false;
 bool fn_prologue_emitted = false;
 int params_size = 0;
 
@@ -182,6 +183,31 @@ void spillReg(int reg)
 
     regDesc[reg].clear();
 }
+
+// void pushRegonStack(int reg)
+// {
+//     for (auto &op : regDesc[reg])
+//     {
+//         if (op.entry)
+//         {
+//             eraseFromVector(op.entry->addrDesc.inRegs, reg);
+//             if (op.isLive)
+//             {
+//                 // if (op.entry->isGlobal || op.entry->isStatic > 0)//check
+//                 // {
+//                 //     emit_instr(x86_lib::mov_mem_reg(op.value, reg_names[reg]));
+//                 // }
+//                 if (!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap || op.entry->isGlobal || op.entry->isStatic > 0))
+//                 {
+//                     std::string memAddr = getMem(op);
+//                     if (op.entry) // Extra check after getMem call
+//                         op.entry->addrDesc.inStack = 1;
+//                     emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));
+//                 }
+//             }
+//         }
+//     }
+// }
 
 int getBestReg(std::vector<int> resReg)
 {
@@ -446,6 +472,8 @@ void emit_asm(const std::string &inputFile)
                 emit_param(instr);
             else if (curr_op == "CALL")
                 emit_fn_call(instr);
+            else if (curr_op == "RETURN")
+                emit_return(instr);
             else if (curr_op == "=" || curr_op == "(f)=")
                 emit_assign(instr);
             else if (curr_op == "+")
@@ -504,7 +532,10 @@ void emit_asm(const std::string &inputFile)
 void emit_fn_defn(quad &instr)
 {
     if (instr.op.substr(5, 5) == "4main")
+    {
         emit_label("\nmain ");
+        inside_main = true;
+    }
     else
         emit_label("\n" + instr.op.substr(0, instr.op.length() - 7));
 
@@ -600,6 +631,18 @@ void emit_fn_call(quad &instr)
         emit_instr(x86_lib::add("esp", std::to_string(params_size)));
     params_size = 0;
 
+    if (instr.result.value != "")
+    {
+        if (instr.result.entry)
+        {
+            std::string mem = getMem(instr.result);
+            emit_instr(x86_lib::mov_mem_reg(mem, "eax"));
+            // any other cases other than getmem??
+        }
+        else
+            std::cout << "Boogey\n"; // any else cases shouldn't be there??
+    }
+
     // emit_instr(x86_lib::pop("edx"));
     // emit_instr(x86_lib::pop("ecx"));
     // emit_instr(x86_lib::pop("eax"));
@@ -609,8 +652,31 @@ void emit_fn_call(quad &instr)
 
 void emit_fn_epilogue()
 {
+    if (inside_main)
+    {
+        emit_instr(x86_lib::xor_op("eax", "eax"));
+        inside_main = false;
+    }
     emit_instr(x86_lib::leave());
     emit_instr(x86_lib::ret());
+}
+
+void emit_return(quad &instr)
+{
+    if (is_num_constant(instr.arg1.value))
+        emit_instr(x86_lib::mov_reg_imm("eax", instr.arg1.value));
+    else if (instr.arg1.entry)
+    {
+        if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0)
+            emit_instr(x86_lib::mov_reg_mem("eax", instr.arg1.value));
+        else if (instr.arg1.entry->addrDesc.inRegs.size())
+            emit_instr(x86_lib::mov("eax", reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
+        else if (instr.arg1.entry->addrDesc.inStack)
+            emit_instr(x86_lib::mov("eax", getMem(instr.arg1)));
+    }
+
+    if (inside_main) // return at end of main -> OK
+        inside_main = false;
 }
 
 /* Logical Operator */
