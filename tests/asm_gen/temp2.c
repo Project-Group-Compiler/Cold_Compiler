@@ -1,19 +1,43 @@
-int f(){
-    int a,b;
-    ++a;
-    b = a++;
-    --b;
-    b--;
-    if(--b){
+int a = 10;
+int f(int z){
+    int b,c;
+    // a = a + 10;
+    // b = 12 + 11;
+    // a = a / b;
+    // a = a / a;
+    // b = a%b;
+    // a = 5/0;
+    // c %= 10;
 
-    }else if(b--){
+    // a = -b;
+    // a = +b + b;
+    // b = ~b + +c; //bitwise
+    // a = b >> 1;
+    // b = b << b;
+    // a = !a + c;  //logical
 
-    }else if(a++){
 
-    }else if(++a){
+    // a = (a==b);
+    // a = (a != b);   
+    // c = (a<b);
+    // a = (a>b);
+    // a = (a<=b);
+    // a = (a>=b);
+    // if(a < b){
+        
+    // }
 
-    }
-}
+    //EBX <- b => 
+    //load 1/0 in EBX if b is (not 0)/0
+    //load 1/0 in ECX if c is (not 0)/0
+    //load EAX = EBX & ECX
+
+    b = a || b;
+    a = !a;
+
+    // a = b && c;
+
+}   
 
 // struct node{
 //     int x;
