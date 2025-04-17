@@ -1,5 +1,5 @@
 int a = 10;
-int f(){
+int f(int z){
     int b,c;
     // a = a + 10;
     // b = 12 + 11;
@@ -8,9 +8,14 @@ int f(){
     // b = a%b;
     // a = 5/0;
     // c %= 10;
-    a=a/b+c+10&11 - c;
 
-}
+    // a = -b;
+    // a = +b + b;
+    b = ~b + +c; //bitwise
+
+
+    // a = !a + c;  //logical
+}   
 
 // struct node{
 //     int x;
