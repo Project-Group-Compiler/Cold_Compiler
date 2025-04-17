@@ -45,6 +45,9 @@ void emit_mod(quad &instr);
 void emit_or(quad &instr);
 void emit_and(quad &instr);
 void emit_xor(quad &instr);
+void emit_unary_plus(quad &instr);
+void emit_unary_minus(quad &instr);
+void emit_not(quad &instr);
 
 
 void next_use_analysis(std::vector<quad> &block);

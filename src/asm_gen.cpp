@@ -402,7 +402,13 @@ void emit_asm(const std::string &inputFile){
                 emit_or(instr);                
             else if (curr_op == "^")
                 emit_xor(instr);                
-            
+            else if (curr_op == "unary+")
+                emit_unary_plus(instr);                
+            else if (curr_op == "unary-")
+                emit_unary_minus(instr);                
+            else if (curr_op == "~")
+                emit_not(instr);                
+
             printReg_addr_Desc(instr.Label);
         }
         emit_instr("; spilling all registers");
@@ -499,6 +505,22 @@ void emit_and(quad &instr)
 }
 
 /* Arithmetic */
+void emit_unary_plus(quad &instr){
+    emit_assign(instr);//a = +b;
+}
+
+void emit_unary_minus(quad &instr){//a = -b;
+    int reg = getReg(instr.arg1,1);
+    emit_instr(x86_lib::neg(reg_names[reg]));
+    updateRegDesc(reg,instr.result);
+}
+
+void emit_not(quad &instr){
+    int reg = getReg(instr.arg1,1);
+    emit_instr(x86_lib::not_op(reg_names[reg]));
+    updateRegDesc(reg,instr.result);
+}
+
 void emit_div(quad &instr){ // c = a/b
     //mov arg1 to eax
     setParticularReg(EAX,instr.arg1);
