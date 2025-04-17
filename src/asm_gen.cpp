@@ -56,19 +56,24 @@ Assumption There is no global register allocation
 */
 std::set<operand> seenOperand;
 
-void updateSeenOperand(quad &instr){
-    if(instr.arg1.entry){
+void updateSeenOperand(quad &instr)
+{
+    if (instr.arg1.entry)
+    {
         seenOperand.insert(instr.arg1);
     }
-    if(instr.arg2.entry){
+    if (instr.arg2.entry)
+    {
         seenOperand.insert(instr.arg2);
     }
-    if(instr.result.entry){
+    if (instr.result.entry)
+    {
         seenOperand.insert(instr.result);
     }
 }
 
-void printReg_addr_Desc(int currInstrLabel) {
+void printReg_addr_Desc(int currInstrLabel)
+{
     std::ofstream out;
     out.open("Descriptor.txt");
     out << "Instruction Label: " << currInstrLabel << "\n\n";
@@ -79,12 +84,15 @@ void printReg_addr_Desc(int currInstrLabel) {
 
     std::map<std::string, std::vector<int>> ops;
     std::map<std::string, bool> opsinmem;
-    for (int reg = 0; reg < uRegCnt; reg++) {
+    for (int reg = 0; reg < uRegCnt; reg++)
+    {
         out << std::left << std::setw(12) << reg_names[reg];
-        for (auto& op : regDesc[reg]) {
+        for (auto &op : regDesc[reg])
+        {
             out << op.value << ' ';
             ops[op.value].push_back(reg);
-            if(op.entry->addrDesc.inStack){
+            if (op.entry && op.entry->addrDesc.inStack)
+            {
                 opsinmem[op.value] = 1;
             }
         }
@@ -95,21 +103,28 @@ void printReg_addr_Desc(int currInstrLabel) {
     out << std::left << std::setw(20) << "Operand" << "Locations\n";
     out << std::string(40, '-') << "\n";
 
-    for(auto& it:seenOperand){
+    for (auto &it : seenOperand)
+    {
         out << std::left << std::setw(20) << it.value;
-        for(auto reg:it.entry->addrDesc.inRegs){
-            out << reg_names[reg] << ' ';
-        }
-        if(it.entry->addrDesc.inStack){
-            out << "| In Memory";
+        if (it.entry)
+        {
+            for (auto reg : it.entry->addrDesc.inRegs)
+            {
+                out << reg_names[reg] << ' ';
+            }
+            if (it.entry->addrDesc.inStack)
+            {
+                out << "| In Memory";
+            }
         }
         out << '\n';
     }
 }
 std::string getMem(operand &op)
 {
-    op.entry->addrDesc.inStack = 1;
-    return "mem_"+op.value;
+    if (op.entry)
+        op.entry->addrDesc.inStack = 1;
+    return "mem_" + op.value;
 }
 
 // Stop after removing one, since all elements are unique
@@ -134,18 +149,22 @@ void spillReg(int reg)
 {
     for (auto &op : regDesc[reg])
     {
-        eraseFromVector(op.entry->addrDesc.inRegs, reg);
-        if (op.isLive)
+        if (op.entry)
         {
-            // if (op.entry->isGlobal || op.entry->isStatic > 0)//check
-            // {
-            //     emit_instr(x86_lib::mov_mem_reg(op.value, reg_names[reg]));
-            // }
-            if (!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap || op.entry->isGlobal || op.entry->isStatic > 0))
+            eraseFromVector(op.entry->addrDesc.inRegs, reg);
+            if (op.isLive)
             {
-                std::string memAddr = getMem(op);
-                op.entry->addrDesc.inStack = 1;//check
-                emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));   
+                // if (op.entry->isGlobal || op.entry->isStatic > 0)//check
+                // {
+                //     emit_instr(x86_lib::mov_mem_reg(op.value, reg_names[reg]));
+                // }
+                if (!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap || op.entry->isGlobal || op.entry->isStatic > 0))
+                {
+                    std::string memAddr = getMem(op);
+                    if (op.entry) // Extra check after getMem call
+                        op.entry->addrDesc.inStack = 1;
+                    emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));
+                }
             }
         }
     }
@@ -229,55 +248,64 @@ int getReg(operand &op, bool willYouModify)
     {
         int bestReg = getBestReg();
         std::string memAddr = getMem(op);
-        if(op.entry->isGlobal || op.entry->isStatic > 0)
+        if (op.entry && (op.entry->isGlobal || op.entry->isStatic > 0))
         {
-            emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], op.value));//[lexeme]
+            emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], op.value)); //[lexeme]
         }
-        else emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
+        else
+            emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], memAddr));
 
         regDesc[bestReg].push_back(op);
-        op.entry->addrDesc.inRegs.push_back(bestReg);
+        if (op.entry)
+            op.entry->addrDesc.inRegs.push_back(bestReg);
 
         // TODO: Handle __str_
 
         return bestReg;
     }
 }
-void updateRegDesc_assign(int reg, operand &op) 
+void updateRegDesc_assign(int reg, operand &op)
 {
-    if(op.entry->isGlobal || op.entry->isStatic > 0)
+    if (op.entry)
     {
-        emit_instr(x86_lib::mov_mem_reg(op.value,reg_names[reg]));
+        if (op.entry->isGlobal || op.entry->isStatic > 0)
+        {
+            emit_instr(x86_lib::mov_mem_reg(op.value, reg_names[reg]));
+        }
+
+        for (int i = 0; i < uRegCnt; i++)
+            eraseFromVector(regDesc[i], op);
+        regDesc[reg].push_back(op);
+        op.entry->addrDesc.inRegs.clear();
+        op.entry->addrDesc.inRegs.push_back(reg);
+        op.entry->addrDesc.inStack = 0;
+        op.entry->addrDesc.inHeap = 0;
     }
-    
-    for (int i = 0; i < uRegCnt; i++)
-    eraseFromVector(regDesc[i], op);
-    regDesc[reg].push_back(op);    
-    op.entry->addrDesc.inRegs.clear();
-    op.entry->addrDesc.inRegs.push_back(reg);
-    op.entry->addrDesc.inStack = 0;
-    op.entry->addrDesc.inHeap = 0;
-    
 }
 void updateRegDesc(int reg, operand &op)
 {
-    if(op.entry->isGlobal || op.entry->isStatic > 0)
+    if (op.entry)
     {
-        emit_instr(x86_lib::mov_mem_reg(op.value,reg_names[reg]));
+        if (op.entry->isGlobal || op.entry->isStatic > 0)
+        {
+            emit_instr(x86_lib::mov_mem_reg(op.value, reg_names[reg]));
+        }
+        for (auto &top : regDesc[reg])
+        {
+            if (top.entry)
+                eraseFromVector(top.entry->addrDesc.inRegs, reg);
+        }
+
+        for (int i = 0; i < uRegCnt; i++)
+            eraseFromVector(regDesc[i], op);
+
+        regDesc[reg].clear();
+        regDesc[reg].push_back(op);
+        op.entry->addrDesc.inRegs.clear();
+        op.entry->addrDesc.inRegs.push_back(reg);
+        op.entry->addrDesc.inStack = 0;
+        op.entry->addrDesc.inHeap = 0;
     }
-    for (auto &top : regDesc[reg])
-        eraseFromVector(top.entry->addrDesc.inRegs, reg);
-
-    for (int i = 0; i < uRegCnt; i++)
-        eraseFromVector(regDesc[i], op);
-
-
-    regDesc[reg].clear();
-    regDesc[reg].push_back(op);
-    op.entry->addrDesc.inRegs.clear();
-    op.entry->addrDesc.inRegs.push_back(reg);
-    op.entry->addrDesc.inStack = 0;
-    op.entry->addrDesc.inHeap = 0;
 }
 
 void emit_asm(const std::string &inputFile)
@@ -326,12 +354,13 @@ void emit_asm(const std::string &inputFile)
                 emit_add(instr);
             else if (curr_op == "-")
                 emit_sub(instr);
-            else if(curr_op=="*")
+            else if (curr_op == "*")
 
-            printReg_addr_Desc(instr.Label);
+                printReg_addr_Desc(instr.Label);
         }
         emit_instr("# spilling all registers");
-        for(int reg=0;reg<uRegCnt;reg++){
+        for (int reg = 0; reg < uRegCnt; reg++)
+        {
             spillReg(reg);
         }
     }
@@ -356,22 +385,22 @@ void emit_assign(quad &instr)
 {
     if (!inside_fn) // global
         return;
-    if(is_int_constant(instr.arg1.value))
-    {  //can use mov_mem_imm for more optimal code
-        if(instr.result.entry->isGlobal || instr.result.entry->isStatic > 0)
+    if (is_int_constant(instr.arg1.value))
+    { // can use mov_mem_imm for more optimal code
+        if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
         {
-            emit_instr(x86_lib::mov_mem_imm("dword",instr.result.value, instr.arg1.value));
+            emit_instr(x86_lib::mov_mem_imm("dword", instr.result.value, instr.arg1.value));
         }
         else
         {
             std::string mem = getMem(instr.result);
-            emit_instr(x86_lib::mov_mem_imm("dword",mem, instr.arg1.value));
+            emit_instr(x86_lib::mov_mem_imm("dword", mem, instr.arg1.value));
         }
     }
-    else{
-        int reg2= getReg(instr.arg1, 1);
+    else
+    {
+        int reg2 = getReg(instr.arg1, 1);
         updateRegDesc_assign(reg2, instr.result);
-        
 
         // std::cout<<"here"<<std::endl;
         // int reg2= getReg(instr.arg1, 0);
@@ -389,22 +418,22 @@ void emit_assign(quad &instr)
         //     updateRegDesc(reg1, instr.result);
         // }
     }
-
 }
 
 void emit_sub(quad &instr)
 {
     // x = y - z
     int reg1 = getReg(instr.arg1, 1);
-    if(is_int_constant(instr.arg2.value))
+    if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::sub_reg_imm(reg_names[reg1], instr.arg2.value));
     }
-    else if(instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
+    else if (instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
     {
         emit_instr(x86_lib::sub_reg_mem(reg_names[reg1], instr.arg2.value));
     }
-    else{
+    else
+    {
         int reg2 = getReg(instr.arg2, 0);
         if (reg2 != -1)
         {
@@ -426,11 +455,12 @@ void emit_add(quad &instr)
     {
         emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
     }
-    else if(instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
+    else if (instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
     {
         emit_instr(x86_lib::add_reg_mem(reg_names[reg1], instr.arg2.value));
     }
-    else{
+    else
+    {
         int reg2 = getReg(instr.arg2, 0);
         // _debug_(stringify(instr));
         // _debug_(reg1,reg2);

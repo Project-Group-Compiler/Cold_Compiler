@@ -41,8 +41,8 @@ OBJS = \
 FLEX = flex
 BISON = bison
 CXX = g++ 
-# CXX = g++ -g -O0 # For debug
 CXXFLAGS = -I$(SRC_DIR)
+# CXXFLAGS = -I$(SRC_DIR) -g -O0 # For debug
 
 # Default target
 all: $(OUTPUT)
