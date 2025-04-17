@@ -39,6 +39,13 @@ void emit_fn_defn(quad &instr);
 void emit_assign(quad &instr);
 void emit_add(quad &instr);
 void emit_sub(quad &instr);
+void emit_mul(quad &instr);
+void emit_div(quad &instr);
+void emit_mod(quad &instr);
+void emit_or(quad &instr);
+void emit_and(quad &instr);
+void emit_xor(quad &instr);
+
 
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();
@@ -46,5 +53,7 @@ void print_next_use();
 void update_ir();
 void emit_data_section();
 void emit_bss_section();
+int getReg(operand &op, bool willYouModify, std::vector<int> resReg=std::vector<int>(6, 0));
+int getBestReg(std::vector<int>resReg=std::vector<int>(6, 0));
 
 #endif
