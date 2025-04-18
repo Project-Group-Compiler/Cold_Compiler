@@ -86,6 +86,8 @@ Alternatively, generate assembly for a single input file using:
 bin/compiler <input_file> [options]
 ```
 
+**Specify input file as the first argument.**
+
 ```markdown
 Extra Options:
     -h, --help       Show this help message and exit
@@ -116,17 +118,11 @@ run using ./some_name.
 **Shortcut** : 
 
 ```bash
-
 chmod +x coldc.sh
-
 ./coldc.sh <input_file> <any_other_cold_compiler_flags>
 ```
 
-Two important things to note : 
-
-1. Specify input file as the first argument
-2. Don't specify -h here
-
+**Specify input file as the first argument.**
 
 Optionally, convert AST DOT file into image using:
 

@@ -23,6 +23,11 @@ filename_noext="${filename%.*}"
 # Step 1: Run the Cold compiler to generate assembly
 bin/compiler $@
 
+# Exit after printing the help message
+if [ $? -eq 42 ]; then
+    exit 0
+fi
+
 # Check if compiler was successful
 if [ $? -ne 0 ]; then
     echo "Compilation failed. Exiting."

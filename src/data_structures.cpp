@@ -168,7 +168,7 @@ sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_ta
     return new_sym;
 }
 
-void makeSymbolTable(std::string name, std::string f_type)
+void makeSymbolTable(std::string name, std::string f_type, bool offset_flag)
 {
     if (!avl)
     {
@@ -193,7 +193,8 @@ void makeSymbolTable(std::string name, std::string f_type)
         }
 
         Goffset.push(0);
-        blockSz.push(0);
+        if (offset_flag)
+            blockSz.push(0);
         parent_table.insert(std::make_pair(new_table, curr_table));
         struct_parent_table.insert(std::make_pair(new_struct_table, curr_struct_table)); // is this needed?
         class_parent_table.insert(std::make_pair(new_class_table, curr_class_table));    // is this needed?
@@ -226,7 +227,7 @@ void makeSymbolTable(std::string name, std::string f_type)
 void removeFuncProto()
 {
     avl = 0;
-    updSymbolTable("dummyF_name");
+    updSymbolTable("dummyF_name", true);
     // Check for valid pointer before erasing
     if (curr_table && (*curr_table).find("dummyF_name") != (*curr_table).end())
     {
@@ -243,7 +244,7 @@ void removeFuncProto()
         Loffset.pop();
 }
 
-int updSymbolTable(std::string id)
+int updSymbolTable(std::string id, bool offset_flag)
 {
     if (Goffset.empty() || blockSz.empty())
     {
@@ -284,14 +285,17 @@ int updSymbolTable(std::string id)
     {
         return blockSz.top(); // sending the size of class method
     }
-    temp = blockSz.top();
-    blockSz.pop();
-    if (!blockSz.empty())
-        blockSz.top() += temp;
-    else
+    if (offset_flag)
     {
-        std::cerr << "Error: blockSz stack became empty in updSymbolTable.\n";
-        exit(EXIT_FAILURE);
+        temp = blockSz.top();
+        blockSz.pop();
+        if (!blockSz.empty())
+            blockSz.top() += temp;
+        else
+        {
+            std::cerr << "Error: blockSz stack became empty in updSymbolTable.\n";
+            exit(EXIT_FAILURE);
+        }
     }
     return 0;
 }
@@ -893,13 +897,13 @@ void createParamList()
         std::cerr << "Error: Goffset stack empty in createParamList.\n";
         exit(EXIT_FAILURE);
     }
-    makeSymbolTable("dummyF_name", "");
+    makeSymbolTable("dummyF_name", "", true);
     avl = 1;
 }
 
 void insertSymbol(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum)
 {
-    table.insert(std::make_pair(id, createEntry(type, size, is_init, Goffset.top(), ptr, access, isStatic, isConst, isArray, isEnum)));
+    table.insert(std::make_pair(id, createEntry(type, size, is_init, blockSz.top(), ptr, access, isStatic, isConst, isArray, isEnum)));
     if (!blockSz.empty())
         blockSz.top() += size;
     else

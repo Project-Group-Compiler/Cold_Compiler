@@ -92,9 +92,9 @@ std::string getSizeOfType(const std::string &typeStr);
 
 void symTable_init();
 sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
-void makeSymbolTable(std::string name, std::string f_type);
+void makeSymbolTable(std::string name, std::string f_type, bool offset_flag);
 void removeFuncProto();
-int updSymbolTable(std::string id);
+int updSymbolTable(std::string id, bool offset_flag);
 sym_entry *lookup(std::string id);
 sym_entry *currLookup(std::string id);
 void insertKeywords();

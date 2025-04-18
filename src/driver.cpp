@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
         std::string arg = argv[i];
         if (arg == "-h" || arg == "--help")
         {
-            std::cout << "Usage: driver <input_file> [options]\n"
+            std::cout << "Usage: <compiler> <input_file> [options]\n"
                       << "Options:\n"
                       << "  -h, --help       Show this help message and exit\n"
                       << "  -O0              Generate unoptimized IR\n"
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
                       << "  -d, --debug      Print debug trace\n"
                       << "  -t, --tac        Print three address code\n"
                       << "  -f, --force      Forcefully continue even if errors are present\n";
-            return 0;
+            return 42;
         }
     }
 

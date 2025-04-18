@@ -3560,7 +3560,7 @@ compound_statement
 			string name = funcName + str + ".csv";
 			debug(name);
 			printSymbolTable(curr_table, name);
-			updSymbolTable(str);
+			updSymbolTable(str, false);
 			func_flag--;
 		}
 	}
@@ -3577,7 +3577,7 @@ compound_statement
 			string name = funcName + str + ".csv";
 			debug(name);
 			printSymbolTable(curr_table, name);
-			updSymbolTable(str);
+			updSymbolTable(str, false);
 			func_flag--;
 		}
 	}
@@ -3594,7 +3594,7 @@ compound_statement
 			string name = funcName + str + ".csv";
 			debug(name);
 			printSymbolTable(curr_table, name);
-			updSymbolTable(str);
+			updSymbolTable(str, false);
 			func_flag--;
 		}
 
@@ -3616,7 +3616,7 @@ SCOPE_CHANGE
 			string str = "Block" + to_string(block_count);
 			block_stack.push(block_count);
 			block_count++;
-			makeSymbolTable(str, "");
+			makeSymbolTable(str, "", false);
 		}
 		else {
 			if (!className.empty() && funcName != "") {
@@ -3981,7 +3981,7 @@ function_definition
 		string fName = string($3);
 		if(fName!="("){//in case of error it gives "(" as fName
 			printSymbolTable(curr_table, fName + ".csv");
-			classMethodSize=updSymbolTable(fName);
+			classMethodSize=updSymbolTable(fName, true);
 			inMethodBody = false;
 			//3AC
 			for(auto i: gotolablelist){
@@ -4013,7 +4013,7 @@ function_definition
 		string fName = string($3);
 		if(fName!="("){//in case of error it gives this as fName  ->this check works perfectly for this case need to review for others
 			printSymbolTable(curr_table, fName + ".csv");
-			classMethodSize=updSymbolTable(fName);
+			classMethodSize=updSymbolTable(fName, true);
 			inMethodBody = false;
 			//3AC
 			for(auto i: gotolablelist){
@@ -4033,7 +4033,7 @@ function_definition
 		DBG("Function name: " + fName);
 		if(fName!="("){//in case of error it gives this as fName
 			printSymbolTable(curr_table, fName + ".csv");
-			classMethodSize=updSymbolTable(fName);
+			classMethodSize=updSymbolTable(fName, true);
 			inMethodBody = false;
 			//3AC
 			for(auto i: gotolablelist){
@@ -4052,7 +4052,7 @@ function_definition
 		DBG("Function name: " + fName);
 		if(fName!="("){//in case of error it gives this as fName
 			printSymbolTable(curr_table, fName + ".csv");
-			classMethodSize=updSymbolTable(fName);
+			classMethodSize=updSymbolTable(fName, true);
 			inMethodBody = false;
 			//3AC
 			for (auto &i : gotolablelist) {
@@ -4093,7 +4093,7 @@ F_MANGLE
 			if (type.find("*") != string::npos) {//pointers prolly can handle struct ,classes return type here too
             	funcType = type;
         	}
-			makeSymbolTable(qualifiedFuncName, funcType);
+			makeSymbolTable(qualifiedFuncName, funcType, true);
 			$$ = strdup(qualifiedFuncName.c_str());
 			block_count = 1;
 			type = "";
