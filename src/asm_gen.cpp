@@ -26,6 +26,7 @@ void __print__(const T &x, const Args &...rest)
 std::ofstream asm_file;
 
 std::map<std::string, int> string_literals;
+std::map<std::string, int> float_constants;
 bool inside_fn = false;
 bool inside_main = false;
 bool fn_prologue_emitted = false;
@@ -417,12 +418,12 @@ void emit_asm(const std::string &inputFile)
     {
         next_use_analysis(block);
         if (print_comments)
-            emit_instr("\t; Block begins");
+            emit_instr("\t\t; Block begins");
         bool regs_spilled = false;
         for (auto &instr : block)
         {
             if (print_comments)
-                emit_instr("\t; " + stringify(instr, true));
+                emit_instr("\t\t; " + stringify(instr, true));
             updateSeenOperand(instr);
             const std::string curr_op = instr.op;
             if (curr_op.substr(0, 5) == "FUNC_")
@@ -438,7 +439,7 @@ void emit_asm(const std::string &inputFile)
                     if (!regs_spilled)
                     {
                         if (print_comments)
-                            emit_instr("\t; (spilling all registers)");
+                            emit_instr("\t\t; (spilling all registers)");
                         for (int reg = 0; reg < uRegCnt; reg++)
                             spillReg(reg);
 
@@ -496,7 +497,7 @@ void emit_asm(const std::string &inputFile)
                 if (!regs_spilled)
                 {
                     if (print_comments)
-                        emit_instr("\t; (spilling all registers)");
+                        emit_instr("\t\t; (spilling all registers)");
                     for (int reg = 0; reg < uRegCnt; reg++)
                         spillReg(reg);
                     regs_spilled = true;
@@ -509,7 +510,7 @@ void emit_asm(const std::string &inputFile)
         if (!regs_spilled)
         {
             if (print_comments)
-                emit_instr("\t; (spilling all registers)");
+                emit_instr("\t\t; (spilling all registers)");
             for (int reg = 0; reg < uRegCnt; reg++)
                 spillReg(reg);
 
@@ -590,7 +591,7 @@ void emit_param(quad &instr)
 
     if (instr.arg1.entry)
     {
-        if (instr.arg1.value.substr(0, 6) == "__str_")
+        if (instr.arg1.value.substr(0, 6) == "__str_" || instr.arg1.value.substr(0, 4) == "__f_")
             emit_instr(x86_lib::push(instr.arg1.value));
         else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0)
             emit_instr(x86_lib::push_mem("dword", instr.arg1.value)); // TODO : Check
@@ -998,9 +999,9 @@ void emit_assign(quad &instr)
     }
 }
 
-void get_string_literals()
+void get_constants()
 {
-    int str_cnt = 0;
+    int str_cnt = 0, float_cnt = 0;
     for (auto &instr : tac_code)
     {
         if (instr.arg1.value.length() > 0 && instr.arg1.value[0] == '\"')
@@ -1022,6 +1023,28 @@ void get_string_literals()
             if (string_literals.find(instr.result.value) == string_literals.end())
                 string_literals[instr.result.value] = str_cnt++;
             instr.result.value = "__str_" + std::to_string(string_literals[instr.result.value]);
+            instr.result.entry->size = 4;
+        }
+
+        if (is_float_constant(instr.arg1.value))
+        {
+            if (float_constants.find(instr.arg1.value) == float_constants.end())
+                float_constants[instr.arg1.value] = float_cnt++;
+            instr.arg1.value = "__f_" + std::to_string(float_constants[instr.arg1.value]);
+            instr.arg1.entry->size = 4;
+        }
+        if (is_float_constant(instr.arg2.value))
+        {
+            if (float_constants.find(instr.arg2.value) == float_constants.end())
+                float_constants[instr.arg2.value] = float_cnt++;
+            instr.arg2.value = "__f_" + std::to_string(float_constants[instr.arg2.value]);
+            instr.arg2.entry->size = 4;
+        }
+        if (is_float_constant(instr.result.value))
+        {
+            if (float_constants.find(instr.result.value) == float_constants.end())
+                float_constants[instr.result.value] = float_cnt++;
+            instr.result.value = "__f_" + std::to_string(float_constants[instr.result.value]);
             instr.result.entry->size = 4;
         }
     }
@@ -1115,7 +1138,7 @@ void global_init_pass()
 void update_ir()
 {
     addgotoLabels();
-    get_string_literals();
+    get_constants();
     global_init_pass();
 }
 
@@ -1204,6 +1227,14 @@ void emit_data_section()
             std::string modified_str = "`" + str.substr(1, str.length() - 2) + "`";
             if (cnt == i)
                 emit_data("__str_" + std::to_string(cnt) + ": db " + modified_str + ", 0");
+        }
+    }
+    for (auto i = 0; i < float_constants.size(); i++)
+    {
+        for (const auto &[str, cnt] : float_constants)
+        {
+            if (cnt == i)
+                emit_data("__f_" + std::to_string(cnt) + ": dd " + str);
         }
     }
 }

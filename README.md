@@ -97,6 +97,7 @@ Extra Options:
     -s, --symtab     Print symbol tables
     -d, --debug      Print debug trace
     -t, --tac        Print three address code
+    -c, --comments   Print comments in the generated asm
     -f, --force      Forcefully continue even if errors are present
 ```
 
