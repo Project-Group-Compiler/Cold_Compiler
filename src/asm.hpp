@@ -37,6 +37,9 @@ inline void add_extern_funcs()
 
 void emit_asm(const std::string &);
 
+void emit_fload(operand &op);
+void emit_fstore(operand &op);
+
 void emit_fn_defn(quad &instr);
 void emit_fn_epilogue();
 void emit_param(quad &instr);
@@ -46,9 +49,13 @@ void emit_goto(quad &instr);
 void emit_assign(quad &instr);
 void emit_fassign(quad &instr);
 void emit_add(quad &instr);
+void emit_fadd(quad &instr);
 void emit_sub(quad &instr);
+void emit_fsub(quad &instr);
 void emit_mul(quad &instr);
+void emit_fmul(quad &instr);
 void emit_div(quad &instr);
+void emit_fdiv(quad &instr);
 void emit_mod(quad &instr);
 void emit_or(quad &instr);
 void emit_and(quad &instr);

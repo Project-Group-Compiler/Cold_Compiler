@@ -460,12 +460,20 @@ void emit_asm(const std::string &inputFile)
                 emit_assign(instr);
             else if (curr_op == "+")
                 emit_add(instr);
+            else if (curr_op == "(f)+")
+                emit_fadd(instr);
             else if (curr_op == "-")
                 emit_sub(instr);
+            else if (curr_op == "(f)-")
+                emit_fsub(instr);
             else if (curr_op == "*")
                 emit_mul(instr);
+            else if (curr_op == "(f)*")
+                emit_fmul(instr);
             else if (curr_op == "/")
                 emit_div(instr);
+            else if (curr_op == "(f)/")
+                emit_fdiv(instr);
             else if (curr_op == "%")
                 emit_mod(instr);
             else if (curr_op == "&")
@@ -908,6 +916,14 @@ void emit_div(quad &instr)
     updateRegDesc(EAX, instr.result);
 }
 
+void emit_fdiv(quad &instr)
+{
+    emit_fload(instr.arg1);
+    emit_fload(instr.arg2);
+    emit_instr(x86_lib::fdivp());
+    emit_fstore(instr.result);
+}
+
 void emit_mod(quad &instr)
 { // c = a/b
     // mov arg1 to eax
@@ -940,6 +956,13 @@ void emit_mul(quad &instr)
     updateRegDesc(reg1, instr.result);
 }
 
+void emit_fmul(quad &instr){
+    emit_fload(instr.arg1);
+    emit_fload(instr.arg2);
+    emit_instr(x86_lib::fmulp());
+    emit_fstore(instr.result);
+}
+
 void emit_sub(quad &instr)
 {
     // x = y - z
@@ -959,6 +982,15 @@ void emit_sub(quad &instr)
     }
     updateRegDesc(reg1, instr.result);
 }
+
+void emit_fsub(quad &instr)
+{
+    emit_fload(instr.arg1);
+    emit_fload(instr.arg2);
+    emit_instr(x86_lib::fsubp());
+    emit_fstore(instr.result);
+}
+
 void emit_add(quad &instr)
 {
     // x = y + z
@@ -977,6 +1009,13 @@ void emit_add(quad &instr)
         emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
     }
     updateRegDesc(reg1, instr.result);
+}
+
+void emit_fadd(quad &instr){
+    emit_fload(instr.arg1);
+    emit_fload(instr.arg2);
+    emit_instr(x86_lib::faddp());
+    emit_fstore(instr.result);
 }
 
 void emit_assign(quad &instr)
@@ -1002,29 +1041,35 @@ void emit_assign(quad &instr)
     }
 }
 
+void emit_fload(operand &arg){
+    if((arg.value).substr(0, 4) == "__f_"){
+        emit_instr(x86_lib::fld_mem("dword", arg.value));
+    }
+    else if (arg.entry && (arg.entry->isGlobal || arg.entry->isStatic > 0))
+    {
+        emit_instr(x86_lib::fld_mem("dword", arg.value)); //TODO : Check... not working
+    }
+    else{
+        emit_instr(x86_lib::fld_mem("dword", getMem(arg)));
+    }
+}
+
+void emit_fstore(operand &arg){
+    if (arg.entry && (arg.entry->isGlobal || arg.entry->isStatic > 0))
+    {
+        emit_instr(x86_lib::fstp_mem("dword", arg.value));
+    }
+    else{
+        emit_instr(x86_lib::fstp_mem("dword", getMem(arg)));
+    }
+}
+
 
 void emit_fassign(quad &instr){
-    if (!inside_fn) // global
+    if (!inside_fn) // global, TODO: check
         return;
-    
-    if((instr.arg1.value).substr(0, 4) == "__f_"){
-        emit_instr(x86_lib::fld_mem("dword", instr.arg1.value));
-    }
-    else if (instr.arg1.entry && (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0))
-    {
-        emit_instr(x86_lib::fld_mem("dword", instr.arg1.value)); //TODO : Check... not working
-    }
-    else{
-        emit_instr(x86_lib::fld_mem("dword", getMem(instr.arg1)));
-    }
-
-    if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
-    {
-        emit_instr(x86_lib::fstp_mem("dword", instr.result.value));
-    }
-    else{
-        emit_instr(x86_lib::fstp_mem("dword", getMem(instr.result)));
-    }
+    emit_fload(instr.arg1);
+    emit_fstore(instr.result);
 }
 
 void get_constants()

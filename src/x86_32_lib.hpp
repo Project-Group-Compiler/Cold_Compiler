@@ -448,9 +448,9 @@ namespace x86_lib
         return "fadd " + size + " " + mem(addr);
     }
 
-    inline std::string faddp(const std::string &dest = "st1")
+    inline std::string faddp()
     {
-        return "faddp " + dest;
+        return "faddp";
     }
 
     inline std::string fsub(const std::string &src = "")
@@ -463,9 +463,9 @@ namespace x86_lib
         return "fsub " + size + " " + mem(addr);
     }
 
-    inline std::string fsubp(const std::string &dest = "st1")
+    inline std::string fsubp()
     {
-        return "fsubp " + dest;
+        return "fsubp";
     }
 
     inline std::string fsubr(const std::string &src = "")
@@ -493,9 +493,9 @@ namespace x86_lib
         return "fmul " + size + " " + mem(addr);
     }
 
-    inline std::string fmulp(const std::string &dest = "st1")
+    inline std::string fmulp()
     {
-        return "fmulp " + dest;
+        return "fmulp";
     }
 
     inline std::string fdiv(const std::string &src = "")
@@ -508,9 +508,9 @@ namespace x86_lib
         return "fdiv " + size + " " + mem(addr);
     }
 
-    inline std::string fdivp(const std::string &dest = "st1")
+    inline std::string fdivp()
     {
-        return "fdivp " + dest;
+        return "fdivp";
     }
 
     inline std::string fdivr(const std::string &src = "")

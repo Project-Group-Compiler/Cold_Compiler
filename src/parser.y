@@ -1428,27 +1428,10 @@ multiplicative_expression
 		if(temp == "int"){
 			$$->type = "int";
 			//3AC
-			if(isFloat(temp)){
-				operand q = getTempVariable($$->type);
-				if(checkInt($1->type)){
-					operand q1 = getTempVariable($$->type);
-					emit("intToFloat",$1->place,{},q1,-1);					
-					emit("(f)%", q1, $3->place, q, -1);
-				}else if(checkInt($3->type)){
-					operand q1 = getTempVariable($$->type);
-					emit("intToFloat",$3->place,{},q1,-1);
-					emit("(f)%", $1->place, q1, q, -1);
-				}else{
-					emit("(f)%", $1->place, $3->place, q, -1);
-				}
-				$$->place = q;
-				$$->tempName = q.value;
-			}else{ 
-				operand q = getTempVariable($$->type); //TODO not always int
-				$$->place = q;
-				$$->tempName = q.value;
-				emit("%", $1->place, $3->place, q, -1);
-			}
+			operand q = getTempVariable($$->type);
+			$$->place = q;
+			$$->tempName = q.value;
+			emit("%", $1->place, $3->place, q, -1);
 			$$->nextlist.clear();
 		}
 		else{
