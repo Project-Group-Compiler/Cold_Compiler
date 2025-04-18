@@ -128,8 +128,10 @@ std::string getMem(operand &op)
 {
     if (op.entry)
     {
+        asm_file << "; getMem called for " << op.value << "\n";
         op.entry->addrDesc.inStack = 1;
         int offset = op.entry->offset;
+        asm_file << "; offset: " << offset << "\n";
         if (offset < 0)
             return "ebp+" + std::to_string(-offset);
 
@@ -487,7 +489,16 @@ void emit_asm(const std::string &inputFile)
             else if (curr_op == "!")
                 emit_logical_not(instr);
             else if (curr_op == "GOTO")
+            {
+                if (!regs_spilled)
+                {
+                    emit_instr("; spilling all registers");
+                    for (int reg = 0; reg < uRegCnt; reg++)
+                        spillReg(reg);
+                    regs_spilled = true;
+                }
                 emit_goto(instr);
+            }
 
             printReg_addr_Desc(instr.Label);
         }
@@ -661,7 +672,14 @@ void emit_return(quad &instr)
 
 void emit_goto(quad &instr)
 {
-    emit_instr(x86_lib::jmp("L" + std::to_string(instr.gotoLabel)));
+    if (instr.arg1.value == "IF")
+    {
+        int reg2 = getReg(instr.arg2, 1, {});
+        emit_instr(x86_lib::cmp_reg_imm(reg_names[reg2], "1"));
+        emit_instr(x86_lib::je("L" + std::to_string(instr.gotoLabel)));
+    }
+    else
+        emit_instr(x86_lib::jmp("L" + std::to_string(instr.gotoLabel)));
 }
 /* Logical Operator */
 void emit_logical_and(quad &instr)
