@@ -477,6 +477,10 @@ void emit_asm(const std::string &inputFile)
                 emit_unary_plus(instr);
             else if (curr_op == "unary-")
                 emit_unary_minus(instr);
+            else if (curr_op == "unary&")
+                emit_unary_and(instr);
+            else if (curr_op == "unary*")
+                emit_unary_star(instr);
             else if (curr_op == "~")
                 emit_not(instr);
             else if (curr_op == ">>")
@@ -521,6 +525,19 @@ void emit_asm(const std::string &inputFile)
     emit_data_section(); // add initialized data
     emit_section(".bss");
     emit_bss_section(); // add uninitialized data
+}
+
+void emit_unary_star(quad &instr){
+    int reg1 = getReg(instr.arg1, 1, {});
+    emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+    updateRegDesc(reg1, instr.result);
+}
+
+void emit_unary_and(quad &instr){
+    std::string mem = getMem(instr.arg1);
+    int reg1 = getReg(instr.result,1,{});
+    emit_instr(x86_lib::lea(reg_names[reg1], mem));
+    updateRegDesc(reg1,instr.result);
 }
 
 void emit_fn_defn(quad &instr)
@@ -979,22 +996,41 @@ void emit_assign(quad &instr)
 {
     if (!inside_fn) // global
         return;
-    if (is_int_constant(instr.arg1.value))
-    { // can use mov_mem_imm for more optimal code
-        if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
-        {
-            emit_instr(x86_lib::mov_mem_imm("dword", instr.result.value, instr.arg1.value));
+    // Pointer ->
+    // TODO : is there any case of *ptr1 = *ptr2
+
+    if(instr.result.value[0] == '*'){// *ptr = x,  
+        std::string ptr = instr.result.value.substr(1);
+        operand op = {ptr,instr.result.entry};
+        int reg1 = getReg(op,1,{});
+        int reg2 = getReg(instr.arg1,1,{reg1});
+        emit_instr(x86_lib::mov_mem_reg(reg_names[reg1],reg_names[reg2]));
+        // updateRegDesc();
+    }else if(instr.arg1.value[0] == '*'){//x = *ptr 
+        std::string ptr = instr.arg1.value.substr(1);
+        operand op = {ptr,instr.arg1.entry};
+        int reg1 = getReg(op,1,{});
+        int reg2 = getReg(instr.result,1,{reg1});
+        emit_instr(x86_lib::mov_reg_mem(reg_names[reg2],reg_names[reg1]));
+        updateRegDesc(reg2,instr.result);
+    }else{
+        if (is_int_constant(instr.arg1.value))
+        { // can use mov_mem_imm for more optimal code
+            if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
+            {
+                emit_instr(x86_lib::mov_mem_imm("dword", instr.result.value, instr.arg1.value));
+            }
+            else
+            {
+                std::string mem = getMem(instr.result);
+                emit_instr(x86_lib::mov_mem_imm("dword", mem, instr.arg1.value));
+            }
         }
         else
         {
-            std::string mem = getMem(instr.result);
-            emit_instr(x86_lib::mov_mem_imm("dword", mem, instr.arg1.value));
+            int reg2 = getReg(instr.arg1, 1, {});
+            updateRegDesc_assign(reg2, instr.result);
         }
-    }
-    else
-    {
-        int reg2 = getReg(instr.arg1, 1, {});
-        updateRegDesc_assign(reg2, instr.result);
     }
 }
 

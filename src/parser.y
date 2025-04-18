@@ -175,8 +175,8 @@ postfix_expression
 				operand q3 = getTempVariable($$->type + "*");
 				emit("ptr+", q, q2, q3, -1);
 				std::string tempValue = "*" + q3.value;
-				insertSymbol(*curr_table, tempValue, $$->type, getSize($$->type), 0, NULL); // TODO: Check
-				$$->place = {tempValue,lookup(tempValue)}; //TODO: check entry
+				// insertSymbol(*curr_table, tempValue, $$->type, getSize($$->type), 0, NULL); // TODO: Check
+				$$->place = {tempValue,$1->place.entry}; //TODO: check entry
 			}else{
 				operand q = getTempVariable($$->type);
 				$$->place = q;
@@ -1205,6 +1205,7 @@ unary_expression
 			if(rValue == 0 && $1->place.value == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
 				$$->tempName = $2->tempName;
 				$$->place.value = "*" + $2->place.value;
+				$$->place.entry = $2->place.entry;
 				$$->nextlist.clear();
 			}
 			else{

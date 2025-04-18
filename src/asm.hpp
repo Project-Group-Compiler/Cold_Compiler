@@ -35,8 +35,10 @@ inline void add_extern_funcs()
         asm_file << "extern " << func << "\n";
 }
 
-void emit_asm(const std::string &);
 
+void emit_asm(const std::string &);
+void emit_unary_star(quad &instr);
+void emit_unary_and(quad &instr);
 void emit_fn_defn(quad &instr);
 void emit_fn_epilogue();
 void emit_param(quad &instr);
