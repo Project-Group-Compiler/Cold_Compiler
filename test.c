@@ -1,65 +1,39 @@
-int x = 9;
-void doWhile()
+void multiLvlPtr()
 {
-    int i = 5;
-    do
-    {
-        i--;
-        printf("%d\n", i);
-    } while (i >= 0);
-}
-void whileLoop()
-{
-    int i = 10;
-    printf("here\n");
-    while (i >= 0)
-    {
-        printf("1:%d\n", i);
-        if (i == 5)
-            break;
-        printf("2:%d\n", i);
-        i--;
-        printf("3:%d\n", i);
-    }
-}
-void ifElse()
-{
-    if (x > 10)
-        x = x + 1;
-    else if (x == 10)
-    {
-        x = x + 2;
-    }
-    else
-    {
-        x--;
-    }
-    printf("%d\n", x);
-}
+    int val = 10;
+    int *ptr = &val;
+    int **ptr2 = &ptr;
+    int ***ptr3 = &ptr2;
 
-void forLoop(int j)
-{
-    int i=0;
-    for (i = 0; i < 5; i++)
-    {
-        j += j;
-    }
-    printf("%d\n", j);
+    ***ptr3 = 20;
+    // val = ***ptr2;
+    printf("val = %d\n", val);
 }
-int main()
-{
-    int a=1;
-    goto Label;
-    a=2;
-    Label:
-    printf("%d\n", a);
-    printf("DO WHILE\n");
-    doWhile();
-    printf("WHILE\n");
-    whileLoop();
-    printf("IF ELSE\n");
-    ifElse();
-    printf("FOR LOOP\n");
-    forLoop(3);
-    return 0;
+int main(){
+
+    int val = 10,x;
+    int *ptr = &val;
+    int **ptr2 = &ptr;
+    printf("ptr2 = %p\n", ptr2);
+    printf("ptr = %p\n", &ptr);
+    printf("ptr = %p\n", ptr);
+    x=*ptr;
+    printf("x = %d\n", x);
+    printf("*ptr2 = %p\n", *ptr2);
+    ptr = *ptr2;
+    printf("*ptr2 = %p\n", *ptr2);
+    printf("ptr = %p\n", ptr);
+    printf("val = %p\n", &val);
+    if(ptr == &val) {
+        printf("ptr contains the correct address: %p\n", ptr);
+    } else {
+        printf("Error: ptr contains incorrect address: %p, expected: %p\n", ptr, &val);
+    }
+    printf("val = %d\n", val);
+    val = *ptr; 
+    printf("val = %d\n", val);
+    if (val == 10) {
+        printf("Test passed\n");
+    }
+    multiLvlPtr();
 }

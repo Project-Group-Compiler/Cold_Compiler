@@ -127,10 +127,12 @@ std::string getMem(operand &op)
 {
     if (op.entry)
     {
+        
         // asm_file << "; getMem called for " << op.value << "\n";
         op.entry->addrDesc.inStack = 1;
         int offset = op.entry->offset;
-        // asm_file << "; offset: " << offset << "\n";
+        emit_instr(";" + op.value + " = " + std::to_string(offset));
+        // asm_file << "; op.value " << op.value << "\n";
         if (offset < 0)
             return reg_names[EBP] + "+" + std::to_string(-offset);
 
@@ -296,6 +298,7 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
 
     int bestReg = getBestReg(resReg);
     std::string memAddr = getMem(op);
+    emit_instr(";" + op.value + "_" + memAddr);
     if (op.entry && (op.entry->isGlobal || op.entry->isStatic > 0))
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], op.value)); //[lexeme]
@@ -387,7 +390,9 @@ void updateRegDesc(int reg, operand &op)
         regDesc[reg].push_back(op);
         op.entry->addrDesc.inRegs.clear();
         op.entry->addrDesc.inRegs.push_back(reg);
-        op.entry->addrDesc.inStack = 0;
+        std::string memAddr = getMem(op);
+        emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));
+        op.entry->addrDesc.inStack = 1;
         op.entry->addrDesc.inHeap = 0;
     }
 }
@@ -535,6 +540,7 @@ void emit_unary_star(quad &instr){
 
 void emit_unary_and(quad &instr){
     std::string mem = getMem(instr.arg1);
+    // emit_instr(";instr " + instr.result.value + " = " + std::to_string(instr.result.entry->offset));
     int reg1 = getReg(instr.result,1,{});
     emit_instr(x86_lib::lea(reg_names[reg1], mem));
     updateRegDesc(reg1,instr.result);
@@ -1028,8 +1034,10 @@ void emit_assign(quad &instr)
         }
         else
         {
-            int reg2 = getReg(instr.arg1, 1, {});
-            updateRegDesc_assign(reg2, instr.result);
+            int reg1 = getReg(instr.arg1, 1, {});
+            int reg2 = getReg(instr.result, 1, {reg1});
+            emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
+            updateRegDesc(reg2, instr.result);
         }
     }
 }

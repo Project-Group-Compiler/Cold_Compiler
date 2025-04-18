@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Specify input file as the first argument
-# Don't specify -h here
+
+make files_clean
 
 # Check if the compiler exists
 if [ ! -f "bin/compiler" ]; then
