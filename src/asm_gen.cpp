@@ -456,7 +456,7 @@ void emit_asm(const std::string &inputFile)
                 emit_fn_call(instr);
             else if (curr_op == "RETURN")
                 emit_return(instr);
-            else if (curr_op == "=" || curr_op == "(f)=")
+            else if (curr_op == "=")
                 emit_assign(instr);
             else if (curr_op == "+")
                 emit_add(instr);
@@ -503,6 +503,9 @@ void emit_asm(const std::string &inputFile)
                     regs_spilled = true;
                 }
                 emit_goto(instr);
+            }
+            else if(curr_op == "(f)="){
+                emit_fassign(instr);
             }
 
             printReg_addr_Desc(instr.Label);
@@ -999,11 +1002,45 @@ void emit_assign(quad &instr)
     }
 }
 
+
+void emit_fassign(quad &instr){
+    if (!inside_fn) // global
+        return;
+    
+    if((instr.arg1.value).substr(0, 4) == "__f_"){
+        emit_instr(x86_lib::fld_mem("dword", instr.arg1.value));
+    }
+    else if (instr.arg1.entry && (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0))
+    {
+        emit_instr(x86_lib::fld_mem("dword", instr.arg1.value)); //TODO : Check... not working
+    }
+    else{
+        emit_instr(x86_lib::fld_mem("dword", getMem(instr.arg1)));
+    }
+
+    if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
+    {
+        emit_instr(x86_lib::fstp_mem("dword", instr.result.value));
+    }
+    else{
+        emit_instr(x86_lib::fstp_mem("dword", getMem(instr.result)));
+    }
+}
+
 void get_constants()
 {
+    bool in_fn = false;
     int str_cnt = 0, float_cnt = 0;
     for (auto &instr : tac_code)
     {
+        const std::string curr_op = instr.op;
+        if (curr_op.substr(0, 5) == "FUNC_")
+        {
+            if (curr_op.substr(curr_op.length() - 7) == "start :")
+                in_fn = true;
+            else
+                in_fn = false;
+        }
         if (instr.arg1.value.length() > 0 && instr.arg1.value[0] == '\"')
         {
             if (string_literals.find(instr.arg1.value) == string_literals.end())
@@ -1025,27 +1062,29 @@ void get_constants()
             instr.result.value = "__str_" + std::to_string(string_literals[instr.result.value]);
             instr.result.entry->size = 4;
         }
-
-        if (is_float_constant(instr.arg1.value))
+        if (in_fn)
         {
-            if (float_constants.find(instr.arg1.value) == float_constants.end())
-                float_constants[instr.arg1.value] = float_cnt++;
-            instr.arg1.value = "__f_" + std::to_string(float_constants[instr.arg1.value]);
-            instr.arg1.entry->size = 4;
-        }
-        if (is_float_constant(instr.arg2.value))
-        {
-            if (float_constants.find(instr.arg2.value) == float_constants.end())
-                float_constants[instr.arg2.value] = float_cnt++;
-            instr.arg2.value = "__f_" + std::to_string(float_constants[instr.arg2.value]);
-            instr.arg2.entry->size = 4;
-        }
-        if (is_float_constant(instr.result.value))
-        {
-            if (float_constants.find(instr.result.value) == float_constants.end())
-                float_constants[instr.result.value] = float_cnt++;
-            instr.result.value = "__f_" + std::to_string(float_constants[instr.result.value]);
-            instr.result.entry->size = 4;
+            if (is_float_constant(instr.arg1.value))
+            {
+                if (float_constants.find(instr.arg1.value) == float_constants.end())
+                    float_constants[instr.arg1.value] = float_cnt++;
+                instr.arg1.value = "__f_" + std::to_string(float_constants[instr.arg1.value]);
+                instr.arg1.entry->size = 4;
+            }
+            if (is_float_constant(instr.arg2.value))
+            {
+                if (float_constants.find(instr.arg2.value) == float_constants.end())
+                    float_constants[instr.arg2.value] = float_cnt++;
+                instr.arg2.value = "__f_" + std::to_string(float_constants[instr.arg2.value]);
+                instr.arg2.entry->size = 4;
+            }
+            if (is_float_constant(instr.result.value))
+            {
+                if (float_constants.find(instr.result.value) == float_constants.end())
+                    float_constants[instr.result.value] = float_cnt++;
+                instr.result.value = "__f_" + std::to_string(float_constants[instr.result.value]);
+                instr.result.entry->size = 4;
+            }
         }
     }
 }

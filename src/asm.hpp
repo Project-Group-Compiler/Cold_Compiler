@@ -44,6 +44,7 @@ void emit_fn_call(quad &instr);
 void emit_return(quad &instr);
 void emit_goto(quad &instr);
 void emit_assign(quad &instr);
+void emit_fassign(quad &instr);
 void emit_add(quad &instr);
 void emit_sub(quad &instr);
 void emit_mul(quad &instr);
