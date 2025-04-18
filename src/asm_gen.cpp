@@ -75,67 +75,66 @@ void updateSeenOperand(quad &instr)
         seenOperand.insert(instr.result);
     }
 }
+std::ofstream des_out("Descriptor.txt");
 
 void printReg_addr_Desc(int currInstrLabel)
 {
-    std::ofstream out;
-    out.open("Descriptor.txt");
-    out << "Instruction Label: " << currInstrLabel << "\n\n";
+    des_out << "Instruction Label: " << currInstrLabel << "\n\n";
 
-    out << "REGISTER DESCRIPTOR\n";
-    out << std::left << std::setw(12) << "Register" << "Operands\n";
-    out << std::string(40, '-') << "\n";
+    des_out << "REGISTER DESCRIPTOR\n";
+    des_out << std::left << std::setw(12) << "Register" << "Operands\n";
+    des_out << std::string(40, '-') << "\n";
 
     std::map<std::string, std::vector<int>> ops;
     std::map<std::string, bool> opsinmem;
     for (int reg = 0; reg < uRegCnt; reg++)
     {
-        out << std::left << std::setw(12) << reg_names[reg];
+        des_out << std::left << std::setw(12) << reg_names[reg];
         for (auto &op : regDesc[reg])
         {
-            out << op.value << ' ';
+            des_out << op.value << ' ';
             ops[op.value].push_back(reg);
             if (op.entry && op.entry->addrDesc.inStack)
             {
                 opsinmem[op.value] = 1;
             }
         }
-        out << '\n';
+        des_out << '\n';
     }
 
-    out << "\nADDRESS DESCRIPTOR\n";
-    out << std::left << std::setw(20) << "Operand" << "Locations\n";
-    out << std::string(40, '-') << "\n";
+    des_out << "\nADDRESS DESCRIPTOR\n";
+    des_out << std::left << std::setw(20) << "Operand" << "Locations\n";
+    des_out << std::string(40, '-') << "\n";
 
     for (auto &it : seenOperand)
     {
-        out << std::left << std::setw(20) << it.value;
+        des_out << std::left << std::setw(20) << it.value;
         if (it.entry)
         {
             for (auto reg : it.entry->addrDesc.inRegs)
             {
-                out << reg_names[reg] << ' ';
+                des_out << reg_names[reg] << ' ';
             }
             if (it.entry->addrDesc.inStack)
             {
-                out << "| In Memory";
+                des_out << "| In Memory";
             }
         }
-        out << '\n';
+        des_out << '\n';
     }
 }
 std::string getMem(operand &op)
 {
     if (op.entry)
     {
-        asm_file << "; getMem called for " << op.value << "\n";
+        // asm_file << "; getMem called for " << op.value << "\n";
         op.entry->addrDesc.inStack = 1;
         int offset = op.entry->offset;
-        asm_file << "; offset: " << offset << "\n";
+        // asm_file << "; offset: " << offset << "\n";
         if (offset < 0)
-            return "ebp+" + std::to_string(-offset);
+            return reg_names[EBP] + "+" + std::to_string(-offset);
 
-        return "ebp-" + std::to_string(offset + 4);
+        return reg_names[EBP] + "-" + std::to_string(offset + 4);
     }
     std::cerr << "Error: Operand entry is null in getMem\n";
     exit(1);
@@ -332,13 +331,13 @@ void setParticularReg(int reg, operand &op)
     spillReg(reg);
     if (!isPresent)
     {
-        std::string memAddr = getMem(op);
         if (op.entry && (op.entry->isGlobal || op.entry->isStatic > 0))
         {
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg], op.value)); //[lexeme]
         }
         else
         {
+            std::string memAddr = getMem(op);
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg], memAddr));
         }
     }
@@ -417,10 +416,13 @@ void emit_asm(const std::string &inputFile)
     for (auto &block : basic_blocks)
     {
         next_use_analysis(block);
-        emit_instr("; Block begins");
+        if (print_comments)
+            emit_instr("\t; Block begins");
         bool regs_spilled = false;
         for (auto &instr : block)
         {
+            if (print_comments)
+                emit_instr("\t; " + stringify(instr, true));
             updateSeenOperand(instr);
             const std::string curr_op = instr.op;
             if (curr_op.substr(0, 5) == "FUNC_")
@@ -435,7 +437,8 @@ void emit_asm(const std::string &inputFile)
                     inside_fn = false;
                     if (!regs_spilled)
                     {
-                        emit_instr("; spilling all registers");
+                        if (print_comments)
+                            emit_instr("\t; (spilling all registers)");
                         for (int reg = 0; reg < uRegCnt; reg++)
                             spillReg(reg);
 
@@ -492,7 +495,8 @@ void emit_asm(const std::string &inputFile)
             {
                 if (!regs_spilled)
                 {
-                    emit_instr("; spilling all registers");
+                    if (print_comments)
+                        emit_instr("\t; (spilling all registers)");
                     for (int reg = 0; reg < uRegCnt; reg++)
                         spillReg(reg);
                     regs_spilled = true;
@@ -504,7 +508,8 @@ void emit_asm(const std::string &inputFile)
         }
         if (!regs_spilled)
         {
-            emit_instr("; spilling all registers");
+            if (print_comments)
+                emit_instr("\t; (spilling all registers)");
             for (int reg = 0; reg < uRegCnt; reg++)
                 spillReg(reg);
 
@@ -528,8 +533,8 @@ void emit_fn_defn(quad &instr)
     else
         emit_label("\n" + instr.op.substr(0, instr.op.length() - 8));
 
-    emit_instr(x86_lib::push("ebp"));
-    emit_instr(x86_lib::mov("ebp", "esp"));
+    emit_instr(x86_lib::push(reg_names[EBP]));
+    emit_instr(x86_lib::mov(reg_names[EBP], reg_names[ESP]));
     auto pos = instr.op.find(' ');
     std::string func_name = instr.op.substr(0, pos);
     int func_size = 0;
@@ -551,7 +556,7 @@ void emit_fn_defn(quad &instr)
         func_size = entry->size;
         if (func_size % 4 != 0)
             func_size += 4 - (func_size % 4);
-        emit_instr(x86_lib::sub("esp", std::to_string(func_size)));
+        emit_instr(x86_lib::sub(reg_names[ESP], std::to_string(func_size)));
     }
     else
     {
@@ -559,18 +564,18 @@ void emit_fn_defn(quad &instr)
         exit(1);
     }
 
-    emit_instr(x86_lib::push("ebx"));
-    emit_instr(x86_lib::push("esi"));
-    emit_instr(x86_lib::push("edi"));
+    emit_instr(x86_lib::push(reg_names[EBX]));
+    emit_instr(x86_lib::push(reg_names[ESI]));
+    emit_instr(x86_lib::push(reg_names[EDI]));
 }
 
 void emit_param(quad &instr)
 {
     if (!fn_prologue_emitted)
     {
-        emit_instr(x86_lib::push("eax"));
-        emit_instr(x86_lib::push("ecx"));
-        emit_instr(x86_lib::push("edx"));
+        emit_instr(x86_lib::push(reg_names[EAX]));
+        emit_instr(x86_lib::push(reg_names[ECX]));
+        emit_instr(x86_lib::push(reg_names[EDX]));
         fn_prologue_emitted = true;
     }
 
@@ -605,15 +610,15 @@ void emit_fn_call(quad &instr)
 {
     if (!fn_prologue_emitted)
     {
-        emit_instr(x86_lib::push("eax"));
-        emit_instr(x86_lib::push("ecx"));
-        emit_instr(x86_lib::push("edx"));
+        emit_instr(x86_lib::push(reg_names[EAX]));
+        emit_instr(x86_lib::push(reg_names[ECX]));
+        emit_instr(x86_lib::push(reg_names[EDX]));
         fn_prologue_emitted = true;
     }
 
     emit_instr(x86_lib::call(instr.arg1.value));
     if (params_size > 0)
-        emit_instr(x86_lib::add("esp", std::to_string(params_size)));
+        emit_instr(x86_lib::add(reg_names[ESP], std::to_string(params_size)));
     params_size = 0;
 
     if (instr.result.value != "")
@@ -621,19 +626,18 @@ void emit_fn_call(quad &instr)
         if (instr.result.entry)
         {
             std::string mem = getMem(instr.result);
-            emit_instr(x86_lib::mov_mem_reg(mem, "eax"));
-            // any other cases other than getmem??
+            emit_instr(x86_lib::mov_mem_reg(mem, reg_names[EAX]));
         }
         else
-        { // any else cases shouldn't be there??
+        {
             std::cerr << "Error: Operand entry is null in emit_fn_call\n";
             exit(1);
         }
     }
 
-    emit_instr(x86_lib::pop("edx"));
-    emit_instr(x86_lib::pop("ecx"));
-    emit_instr(x86_lib::pop("eax"));
+    emit_instr(x86_lib::pop(reg_names[EDX]));
+    emit_instr(x86_lib::pop(reg_names[ECX]));
+    emit_instr(x86_lib::pop(reg_names[EAX]));
 
     fn_prologue_emitted = false; // reset for next function
 }
@@ -642,30 +646,20 @@ void emit_fn_epilogue()
 {
     if (inside_main)
     {
-        emit_instr(x86_lib::xor_op("eax", "eax"));
+        emit_instr(x86_lib::xor_op(reg_names[EAX], reg_names[EAX]));
         inside_main = false;
     }
-    emit_instr(x86_lib::pop("edi"));
-    emit_instr(x86_lib::pop("esi"));
-    emit_instr(x86_lib::pop("ebx"));
+    emit_instr(x86_lib::pop(reg_names[EDI]));
+    emit_instr(x86_lib::pop(reg_names[ESI]));
+    emit_instr(x86_lib::pop(reg_names[EBX]));
     emit_instr(x86_lib::leave());
     emit_instr(x86_lib::ret());
 }
 
 void emit_return(quad &instr)
 {
-    if (is_num_constant(instr.arg1.value))
-        emit_instr(x86_lib::mov_reg_imm("eax", instr.arg1.value));
-    else if (instr.arg1.entry)
-    {
-        if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0)
-            emit_instr(x86_lib::mov_reg_mem("eax", instr.arg1.value));
-        else if (instr.arg1.entry->addrDesc.inRegs.size())
-            emit_instr(x86_lib::mov("eax", reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
-        else if (instr.arg1.entry->addrDesc.inStack)
-            emit_instr(x86_lib::mov_reg_mem("eax", getMem(instr.arg1)));
-    }
 
+    setParticularReg(EAX, instr.arg1);
     if (inside_main) // return at end of main -> OK
         inside_main = false;
 }

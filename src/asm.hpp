@@ -7,6 +7,7 @@
 #include "tac.hpp"
 
 extern std::ofstream asm_file;
+extern bool print_comments;
 
 inline void emit_instr(const std::string &instr)
 {

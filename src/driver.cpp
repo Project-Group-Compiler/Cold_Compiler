@@ -8,6 +8,7 @@ extern FILE *yyin;
 bool print_ast = false;
 bool print_symtab = false;
 bool debug_enabled = false;
+bool print_comments = false;
 std::string inputFilename;
 std::string outputDir = std::filesystem::current_path().string() + "/";
 std::string astDir = std::filesystem::current_path().string() + "/";
@@ -43,6 +44,7 @@ int main(int argc, char *argv[])
                       << "  -s, --symtab     Print symbol tables\n"
                       << "  -d, --debug      Print debug trace\n"
                       << "  -t, --tac        Print three address code\n"
+                      << "  -c, --comments   Print comments in the generated asms\n"
                       << "  -f, --force      Forcefully continue even if errors are present\n";
             return 42;
         }
@@ -75,6 +77,8 @@ int main(int argc, char *argv[])
             debug_enabled = true;
         else if (arg == "-t" || arg == "--tac")
             print_ir = true;
+        else if (arg == "-c" || arg == "--comments")
+            print_comments = true;
         else if (arg == "-f" || arg == "--force")
             force = true;
         else if (arg == "--output")
@@ -120,7 +124,7 @@ int main(int argc, char *argv[])
                 print_tac_code(inputFileString);
 
             update_ir();
-            
+
             if (optimize_ir)
                 run_optimisations();
 
