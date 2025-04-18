@@ -184,31 +184,6 @@ void spillReg(int reg)
     regDesc[reg].clear();
 }
 
-// void pushRegonStack(int reg)
-// {
-//     for (auto &op : regDesc[reg])
-//     {
-//         if (op.entry)
-//         {
-//             eraseFromVector(op.entry->addrDesc.inRegs, reg);
-//             if (op.isLive)
-//             {
-//                 // if (op.entry->isGlobal || op.entry->isStatic > 0)//check
-//                 // {
-//                 //     emit_instr(x86_lib::mov_mem_reg(op.value, reg_names[reg]));
-//                 // }
-//                 if (!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap || op.entry->isGlobal || op.entry->isStatic > 0))
-//                 {
-//                     std::string memAddr = getMem(op);
-//                     if (op.entry) // Extra check after getMem call
-//                         op.entry->addrDesc.inStack = 1;
-//                     emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));
-//                 }
-//             }
-//         }
-//     }
-// }
-
 int getBestReg(std::vector<int> resReg)
 {
     std::vector<int> isResReg(uRegCnt);
@@ -570,24 +545,18 @@ void emit_fn_defn(quad &instr)
         exit(1);
     }
 
-    // emit_instr(x86_lib::push("ebx"));
-    // emit_instr(x86_lib::push("esi"));
-    // emit_instr(x86_lib::push("edi"));
-
-    // mov ret value to eax
-
-    // emit_instr(x86_lib::pop("edi"));
-    // emit_instr(x86_lib::pop("esi"));
-    // emit_instr(x86_lib::pop("ebx"));
+    emit_instr(x86_lib::push("ebx"));
+    emit_instr(x86_lib::push("esi"));
+    emit_instr(x86_lib::push("edi"));
 }
 
 void emit_param(quad &instr)
 {
     if (!fn_prologue_emitted)
     {
-        // emit_instr(x86_lib::push("eax"));
-        // emit_instr(x86_lib::push("ecx"));
-        // emit_instr(x86_lib::push("edx"));
+        emit_instr(x86_lib::push("eax"));
+        emit_instr(x86_lib::push("ecx"));
+        emit_instr(x86_lib::push("edx"));
         fn_prologue_emitted = true;
     }
 
@@ -602,12 +571,14 @@ void emit_param(quad &instr)
 
     if (instr.arg1.entry)
     {
-        if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0)
+        if (instr.arg1.value.substr(0, 6) == "__str_")
             emit_instr(x86_lib::push(instr.arg1.value));
+        else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0)
+            emit_instr(x86_lib::push_mem("dword", instr.arg1.value)); // TODO : Check
         else if (instr.arg1.entry->addrDesc.inRegs.size())
             emit_instr(x86_lib::push(reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
         else if (instr.arg1.entry->addrDesc.inStack)
-            emit_instr(x86_lib::push_mem("dword", getMem(instr.arg1)));
+            emit_instr(x86_lib::push_mem("dword", getMem(instr.arg1))); // TODO : Check
 
         int sz = instr.arg1.entry->size;
         if (sz % 4 != 0)
@@ -620,9 +591,9 @@ void emit_fn_call(quad &instr)
 {
     if (!fn_prologue_emitted)
     {
-        // emit_instr(x86_lib::push("eax"));
-        // emit_instr(x86_lib::push("ecx"));
-        // emit_instr(x86_lib::push("edx"));
+        emit_instr(x86_lib::push("eax"));
+        emit_instr(x86_lib::push("ecx"));
+        emit_instr(x86_lib::push("edx"));
         fn_prologue_emitted = true;
     }
 
@@ -640,12 +611,15 @@ void emit_fn_call(quad &instr)
             // any other cases other than getmem??
         }
         else
-            std::cout << "Boogey\n"; // any else cases shouldn't be there??
+        { // any else cases shouldn't be there??
+            std::cerr << "Error: Operand entry is null in emit_fn_call\n";
+            exit(1);
+        }
     }
 
-    // emit_instr(x86_lib::pop("edx"));
-    // emit_instr(x86_lib::pop("ecx"));
-    // emit_instr(x86_lib::pop("eax"));
+    emit_instr(x86_lib::pop("edx"));
+    emit_instr(x86_lib::pop("ecx"));
+    emit_instr(x86_lib::pop("eax"));
 
     fn_prologue_emitted = false; // reset for next function
 }
@@ -657,6 +631,9 @@ void emit_fn_epilogue()
         emit_instr(x86_lib::xor_op("eax", "eax"));
         inside_main = false;
     }
+    emit_instr(x86_lib::pop("edi"));
+    emit_instr(x86_lib::pop("esi"));
+    emit_instr(x86_lib::pop("ebx"));
     emit_instr(x86_lib::leave());
     emit_instr(x86_lib::ret());
 }
@@ -672,7 +649,7 @@ void emit_return(quad &instr)
         else if (instr.arg1.entry->addrDesc.inRegs.size())
             emit_instr(x86_lib::mov("eax", reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
         else if (instr.arg1.entry->addrDesc.inStack)
-            emit_instr(x86_lib::mov("eax", getMem(instr.arg1)));
+            emit_instr(x86_lib::mov_reg_mem("eax", getMem(instr.arg1)));
     }
 
     if (inside_main) // return at end of main -> OK
@@ -1012,7 +989,6 @@ void get_string_literals()
             if (string_literals.find(instr.arg1.value) == string_literals.end())
                 string_literals[instr.arg1.value] = str_cnt++;
             instr.arg1.value = "__str_" + std::to_string(string_literals[instr.arg1.value]);
-            instr.arg1.entry->isGlobal = true;
             instr.arg1.entry->size = 4;
         }
         if (instr.arg2.value.length() > 0 && instr.arg2.value[0] == '\"')
@@ -1020,7 +996,6 @@ void get_string_literals()
             if (string_literals.find(instr.arg2.value) == string_literals.end())
                 string_literals[instr.arg2.value] = str_cnt++;
             instr.arg2.value = "__str_" + std::to_string(string_literals[instr.arg2.value]);
-            instr.arg2.entry->isGlobal = true;
             instr.arg2.entry->size = 4;
         }
         if (instr.result.value.length() > 0 && instr.result.value[0] == '\"')
@@ -1028,7 +1003,6 @@ void get_string_literals()
             if (string_literals.find(instr.result.value) == string_literals.end())
                 string_literals[instr.result.value] = str_cnt++;
             instr.result.value = "__str_" + std::to_string(string_literals[instr.result.value]);
-            instr.result.entry->isGlobal = true;
             instr.result.entry->size = 4;
         }
     }
