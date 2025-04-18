@@ -403,9 +403,10 @@ void emit_asm(const std::string &inputFile)
     if (tac_code.empty())
         return;
 
+    fixgotoLabels();
     compute_basic_blocks();
-    // print_basic_blocks();
-    print_tac_code(inputFile);
+
+    print_tac_code(inputFile, true); // only for debugging
 
     add_extern_funcs();
     emit_section(".text");
@@ -442,7 +443,7 @@ void emit_asm(const std::string &inputFile)
                 }
             }
             else if (curr_op.back() == ':')
-                emit_label(curr_op.substr(0, curr_op.length() - 1));
+                emit_label(curr_op.substr(0, curr_op.length() - 2));
             else if (curr_op == "param")
                 emit_param(instr);
             else if (curr_op == "CALL")
@@ -510,11 +511,11 @@ void emit_fn_defn(quad &instr)
 {
     if (instr.op.substr(5, 5) == "4main")
     {
-        emit_label("\nmain ");
+        emit_label("\nmain");
         inside_main = true;
     }
     else
-        emit_label("\n" + instr.op.substr(0, instr.op.length() - 7));
+        emit_label("\n" + instr.op.substr(0, instr.op.length() - 8));
 
     emit_instr(x86_lib::push("ebp"));
     emit_instr(x86_lib::mov("ebp", "esp"));
@@ -1013,6 +1014,7 @@ void get_string_literals()
         }
     }
 }
+
 void fixgotoLabels()
 {
     std::map<int, int> label_map;
@@ -1030,6 +1032,7 @@ void fixgotoLabels()
             instr.gotoLabel = label_map[instr.gotoLabel];
     }
 }
+
 void global_init_pass()
 {
     bool in_fn = false;
@@ -1100,7 +1103,6 @@ void global_init_pass()
 void update_ir()
 {
     addgotoLabels();
-    fixgotoLabels();
     get_string_literals();
     global_init_pass();
 }
@@ -1345,7 +1347,7 @@ void print_next_use()
         std::cout << "Block " << block_no++ << ":\n";
         for (auto &instr : block)
         {
-            std::cout << stringify(instr) << std::endl;
+            std::cout << stringify(instr, true) << std::endl;
             if (instr.result.entry)
                 std::cout << '\t' << instr.result.value << ": " << instr.result.isLive << ' ' << instr.result.nextUse << '\n';
             if (instr.arg1.entry)

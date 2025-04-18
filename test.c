@@ -4,5 +4,5 @@ int main()
     goto Label;
     a=2;
     Label:
-    printf("%d", a);
+    printf("%d\n", a);
 }

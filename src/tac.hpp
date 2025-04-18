@@ -32,15 +32,17 @@ struct operand
     {
         return value == other.value && entry == other.entry;
     }
-    bool operator<(const operand& other) const {
+    bool operator<(const operand &other) const
+    {
         if (value != other.value)
             return value < other.value;
-        return entry < other.entry;  // pointer comparison
+        return entry < other.entry; // pointer comparison
     }
-    bool operator>(const operand& other) const {
+    bool operator>(const operand &other) const
+    {
         if (value != other.value)
             return value > other.value;
-        return entry > other.entry;  // pointer comparison
+        return entry > other.entry; // pointer comparison
     }
 };
 
@@ -60,7 +62,7 @@ public:
 void run_optimisations();
 
 operand getTempVariable(std::string);
-void print_tac_code(const std::string &inputFile);
+void print_tac_code(const std::string &inputFile, bool modifygotoLabels = false);
 int getCurrentSize();
 void extendList(std::vector<int> &list1, std::vector<int> &list2);
 int emit(std::string, operand, operand, operand, int);
@@ -84,11 +86,9 @@ void generate_ir();
 void addgotoLabels();
 
 void compute_basic_blocks();
-void print_basic_blocks();
-void build_cfg();
-void print_cfg();
+void print_basic_blocks(bool modifygotoLabels = false);
 
-inline std::string stringify(const quad &instr)
+inline std::string stringify(const quad &instr, bool modifygotoLabels = false)
 {
     std::string s = std::to_string(instr.Label) + ":  ";
     const std::string &curr_op = instr.op;
@@ -136,10 +136,13 @@ inline std::string stringify(const quad &instr)
         s += instr.result.value + " = " + instr.arg1.value + "[" + instr.arg2.value + "]";
     else if (curr_op == "GOTO")
     {
+        std::string print_goto = " GOTO ";
+        if (modifygotoLabels)
+            print_goto = " GOTO L";
         if (instr.arg1.value == "IF")
-            s += "IF " + instr.arg2.value + " GOTO L" +std::to_string(instr.gotoLabel);
+            s += "IF " + instr.arg2.value + print_goto + std::to_string(instr.gotoLabel);
         else
-            s += "GOTO L" + std::to_string(instr.gotoLabel);
+            s += print_goto.substr(1) + std::to_string(instr.gotoLabel);
     }
     else if (curr_op == "CopyToOffset")
         s += instr.result.value + " offset " + instr.arg2.value + " <- " + instr.arg1.value;

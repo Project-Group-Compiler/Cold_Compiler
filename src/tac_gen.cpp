@@ -210,7 +210,7 @@ void addgotoLabels()
     tac_code = std::move(labelled_tac_code);
 }
 
-void print_tac_code(const std::string &inputFile)
+void print_tac_code(const std::string &inputFile, bool modifygotoLabels)
 {
     std::ofstream out(outputDir + inputFile + "_IR.txt");
     if (!out)
@@ -221,7 +221,7 @@ void print_tac_code(const std::string &inputFile)
 
     out << "Three Address Code:\n\n";
     for (auto &instr : tac_code)
-        out << stringify(instr) << "\n";
+        out << stringify(instr, modifygotoLabels) << "\n";
     out << "\n"
         << std::string(60, '-') << "\n";
 
@@ -238,10 +238,13 @@ void print_tac_code(const std::string &inputFile)
     for (size_t i = 0; i < tac_code.size(); i++)
     {
         const auto &q = tac_code[i];
+        std::string gotolabel = (q.gotoLabel < 0) ? "" : std::to_string(q.gotoLabel);
+        if (modifygotoLabels && q.gotoLabel >= 0)
+            gotolabel = "L" + std::to_string(q.gotoLabel);
         tout << std::left << std::setw(10) << q.Label << std::setw(50) << q.op
              << std::setw(20) << q.arg1.value << std::setw(20) << q.arg2.value
              << std::setw(20) << q.result.value
-             << std::setw(20) << (q.gotoLabel < 0 ? "" : "L"+std::to_string(q.gotoLabel))
+             << std::setw(20) << gotolabel
              << "\n";
     }
 }

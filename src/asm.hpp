@@ -15,7 +15,7 @@ inline void emit_instr(const std::string &instr)
 
 inline void emit_label(const std::string &label)
 {
-    asm_file << label << ":\n";
+    asm_file << label << " :\n";
 }
 
 inline void emit_data(const std::string &data)

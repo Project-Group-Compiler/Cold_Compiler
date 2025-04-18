@@ -46,7 +46,7 @@ void compute_basic_blocks()
     compute_map();
 }
 
-void print_basic_blocks()
+void print_basic_blocks(bool modifygotoLabels)
 {
     int block_no = 0;
     for (auto &block : basic_blocks)
@@ -54,7 +54,7 @@ void print_basic_blocks()
         std::cout << "Block " << block_no++ << ":\n";
         for (auto &instr : block)
         {
-            std::cout << stringify(instr) << std::endl;
+            std::cout << stringify(instr, modifygotoLabels) << std::endl;
         }
         std::cout << "\n";
     }
