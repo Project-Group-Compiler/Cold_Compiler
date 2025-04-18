@@ -41,7 +41,7 @@ void emit_fn_epilogue();
 void emit_param(quad &instr);
 void emit_fn_call(quad &instr);
 void emit_return(quad &instr);
-
+void emit_goto(quad &instr);
 void emit_assign(quad &instr);
 void emit_add(quad &instr);
 void emit_sub(quad &instr);
@@ -68,6 +68,7 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg);
 int getBestReg(std::vector<int> resReg);
 
 void update_ir();
+void fixgotoLabels();
 void emit_data_section();
 void emit_bss_section();
 

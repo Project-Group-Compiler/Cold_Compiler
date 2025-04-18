@@ -137,9 +137,9 @@ inline std::string stringify(const quad &instr)
     else if (curr_op == "GOTO")
     {
         if (instr.arg1.value == "IF")
-            s += "IF " + instr.arg2.value + " GOTO " + std::to_string(instr.gotoLabel);
+            s += "IF " + instr.arg2.value + " GOTO L" +std::to_string(instr.gotoLabel);
         else
-            s += "GOTO " + std::to_string(instr.gotoLabel);
+            s += "GOTO L" + std::to_string(instr.gotoLabel);
     }
     else if (curr_op == "CopyToOffset")
         s += instr.result.value + " offset " + instr.arg2.value + " <- " + instr.arg1.value;

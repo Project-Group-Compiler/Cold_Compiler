@@ -405,7 +405,7 @@ void emit_asm(const std::string &inputFile)
 
     compute_basic_blocks();
     // print_basic_blocks();
-    // print_tac_code(inputFile);
+    print_tac_code(inputFile);
 
     add_extern_funcs();
     emit_section(".text");
@@ -485,6 +485,8 @@ void emit_asm(const std::string &inputFile)
                 emit_logical_or(instr);
             else if (curr_op == "!")
                 emit_logical_not(instr);
+            else if (curr_op == "GOTO")
+                emit_goto(instr);
 
             printReg_addr_Desc(instr.Label);
         }
@@ -656,6 +658,10 @@ void emit_return(quad &instr)
         inside_main = false;
 }
 
+void emit_goto(quad &instr)
+{
+    emit_instr(x86_lib::jmp("L" + std::to_string(instr.gotoLabel)));
+}
 /* Logical Operator */
 void emit_logical_and(quad &instr)
 {
@@ -1007,7 +1013,23 @@ void get_string_literals()
         }
     }
 }
-
+void fixgotoLabels()
+{
+    std::map<int, int> label_map;
+    for (const auto &instr : tac_code)
+    {
+        if (instr.op.back() == ':' && instr.op[0] == 'L')
+        {
+            int label_num = std::stoi(instr.op.substr(1, instr.op.length() - 3));
+            label_map[instr.Label] = label_num;
+        }
+    }
+    for (auto &instr : tac_code)
+    {
+        if (instr.gotoLabel != -1)
+            instr.gotoLabel = label_map[instr.gotoLabel];
+    }
+}
 void global_init_pass()
 {
     bool in_fn = false;
@@ -1078,6 +1100,7 @@ void global_init_pass()
 void update_ir()
 {
     addgotoLabels();
+    fixgotoLabels();
     get_string_literals();
     global_init_pass();
 }

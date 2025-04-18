@@ -1,8 +1,8 @@
-int d=5,e;
 int main()
 {
-    int a,b;
-
-    b=e -a +1;
-    
+    int a=1;
+    goto Label;
+    a=2;
+    Label:
+    printf("%d", a);
 }

@@ -241,7 +241,7 @@ void print_tac_code(const std::string &inputFile)
         tout << std::left << std::setw(10) << q.Label << std::setw(50) << q.op
              << std::setw(20) << q.arg1.value << std::setw(20) << q.arg2.value
              << std::setw(20) << q.result.value
-             << std::setw(20) << (q.gotoLabel < 0 ? "" : std::to_string(q.gotoLabel))
+             << std::setw(20) << (q.gotoLabel < 0 ? "" : "L"+std::to_string(q.gotoLabel))
              << "\n";
     }
 }
