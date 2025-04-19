@@ -1,3 +1,8 @@
+// to check if var in stack : condition is : op.entry->addrDesc.inStack==1
+// inStack = 0 (for all local and global at start of program)
+// inStack = 1 (correct value of local var available in stack)
+// inStack = 2 (value in stack is old, need to generate a mov instr)
+
 #include "asm.hpp"
 #include "tac.hpp"
 #include "data_structures.hpp"
@@ -95,7 +100,7 @@ void printReg_addr_Desc(int currInstrLabel)
         {
             des_out << op.value << ' ';
             ops[op.value].push_back(reg);
-            if (op.entry && op.entry->addrDesc.inStack)
+            if (op.entry && op.entry->addrDesc.inStack == 1)
             {
                 opsinmem[op.value] = 1;
             }
@@ -116,7 +121,7 @@ void printReg_addr_Desc(int currInstrLabel)
             {
                 des_out << reg_names[reg] << ' ';
             }
-            if (it.entry->addrDesc.inStack)
+            if (it.entry->addrDesc.inStack == 1)
             {
                 des_out << "| In Memory";
             }
@@ -128,14 +133,24 @@ std::string getMem(operand &op)
 {
     if (op.entry)
     {
-        // asm_file << "; getMem called for " << op.value << "\n";
-        op.entry->addrDesc.inStack = 1;
+        std::string memAddr;
         int offset = op.entry->offset;
-        // asm_file << "; offset: " << offset << "\n";
         if (offset < 0)
-            return reg_names[EBP] + "+" + std::to_string(-offset);
-
-        return reg_names[EBP] + "-" + std::to_string(offset + 4);
+            memAddr = reg_names[EBP] + "+" + std::to_string(-offset);
+        else
+            memAddr = reg_names[EBP] + "-" + std::to_string(offset + 4);
+        if (op.entry->addrDesc.inStack == 2)
+        {
+            if (op.entry->addrDesc.inRegs.size())
+                emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[op.entry->addrDesc.inRegs[0]]));
+            else
+            {
+                std::cerr << "Error: Operand not found anywhere (getMem)\n";
+                exit(1);
+            }
+        }
+        op.entry->addrDesc.inStack = 1;
+        return memAddr;
     }
     std::cerr << "Error: Operand entry is null in getMem\n";
     exit(1);
@@ -172,11 +187,9 @@ void spillReg(int reg)
                 // {
                 //     emit_instr(x86_lib::mov_mem_reg(op.value, reg_names[reg]));
                 // }
-                if (!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap || op.entry->isGlobal || op.entry->isStatic > 0))
+                if (!(op.entry->addrDesc.inRegs.size() || op.entry->addrDesc.inStack == 1 || op.entry->addrDesc.inHeap || op.entry->isGlobal || op.entry->isStatic > 0))
                 {
                     std::string memAddr = getMem(op);
-                    if (op.entry) // Extra check after getMem call
-                        op.entry->addrDesc.inStack = 1;
                     emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));
                 }
             }
@@ -213,7 +226,7 @@ int getBestReg(std::vector<int> resReg)
         {
             if (op.isLive)
             {
-                if (op.entry == NULL || !(op.entry->addrDesc.inRegs.size() > 1 || op.entry->addrDesc.inStack || op.entry->addrDesc.inHeap))
+                if (op.entry == NULL || !(op.entry->addrDesc.inRegs.size() > 1 || op.entry->addrDesc.inStack == 1 || op.entry->addrDesc.inHeap))
                     cnt++;
             }
         }
@@ -273,7 +286,7 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
             {
                 if (tempOp.isLive)
                 {
-                    if (tempOp.entry == NULL || !((tempOp.entry->addrDesc.inRegs.size() > 1) || tempOp.entry->addrDesc.inStack || tempOp.entry->addrDesc.inHeap))
+                    if (tempOp.entry == NULL || !((tempOp.entry->addrDesc.inRegs.size() > 1) || tempOp.entry->addrDesc.inStack == 1 || tempOp.entry->addrDesc.inHeap))
                         cnt++;
                 }
             }
@@ -363,7 +376,7 @@ void updateRegDesc_assign(int reg, operand &op)
         regDesc[reg].push_back(op);
         op.entry->addrDesc.inRegs.clear();
         op.entry->addrDesc.inRegs.push_back(reg);
-        op.entry->addrDesc.inStack = 0;
+        op.entry->addrDesc.inStack = 2;
         op.entry->addrDesc.inHeap = 0;
     }
 }
@@ -388,7 +401,7 @@ void updateRegDesc(int reg, operand &op)
         regDesc[reg].push_back(op);
         op.entry->addrDesc.inRegs.clear();
         op.entry->addrDesc.inRegs.push_back(reg);
-        op.entry->addrDesc.inStack = 0;
+        op.entry->addrDesc.inStack = 2;
         op.entry->addrDesc.inHeap = 0;
     }
 }
@@ -605,21 +618,27 @@ void emit_param(quad &instr)
     {
         if (instr.arg1.value.substr(0, 6) == "__str_")
             emit_instr(x86_lib::push(instr.arg1.value));
-        else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0 || instr.arg1.value.substr(0, 4) == "__f_"){
-            if(instr.arg1.entry->type == "float"){
+        else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0 || instr.arg1.value.substr(0, 4) == "__f_")
+        {
+            if (instr.arg1.entry->type == "float")
+            {
                 emit_fparam(instr.arg1);
             }
-            else{
+            else
+            {
                 emit_instr(x86_lib::push_mem("dword", instr.arg1.value));
             }
         } // TODO : Check
         else if (instr.arg1.entry->addrDesc.inRegs.size())
             emit_instr(x86_lib::push(reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
-        else if (instr.arg1.entry->addrDesc.inStack){
-            if(instr.arg1.entry->type == "float"){
+        else if (instr.arg1.entry->addrDesc.inStack == 1)
+        {
+            if (instr.arg1.entry->type == "float")
+            {
                 emit_fparam(instr.arg1);
             }
-            else{
+            else
+            {
                 emit_instr(x86_lib::push_mem("dword", getMem(instr.arg1))); // TODO : Check
             }
         }
@@ -627,17 +646,18 @@ void emit_param(quad &instr)
         if (sz % 4 != 0)
             sz += 4 - (sz % 4);
         params_size += sz;
-        if(instr.arg1.entry->type == "float"){
+        if (instr.arg1.entry->type == "float")
+        {
             params_size += 4;
         }
     }
 }
 
-void emit_fparam(operand op){
+void emit_fparam(operand op)
+{
     emit_instr(x86_lib::lea(reg_names[ESP], reg_names[ESP] + "-" + std::to_string(8)));
     emit_fload(op);
     emit_instr(x86_lib::fstp_mem("qword", reg_names[ESP]));
-
 }
 
 void emit_fn_call(quad &instr)
@@ -660,7 +680,8 @@ void emit_fn_call(quad &instr)
         if (instr.result.entry)
         {
             std::string mem = getMem(instr.result);
-            if(instr.result.entry->type == "float"){
+            if (instr.result.entry->type == "float")
+            {
                 emit_fstore(instr.result);
             }
             else
@@ -1069,25 +1090,30 @@ void emit_assign(quad &instr)
     }
 }
 
-void emit_fload(operand &arg){
-    if((arg.value).substr(0, 4) == "__f_"){
+void emit_fload(operand &arg)
+{
+    if ((arg.value).substr(0, 4) == "__f_")
+    {
         emit_instr(x86_lib::fld_mem("dword", arg.value));
     }
     else if (arg.entry && (arg.entry->isGlobal || arg.entry->isStatic > 0))
     {
-        emit_instr(x86_lib::fld_mem("dword", arg.value)); //TODO : Check... not working
+        emit_instr(x86_lib::fld_mem("dword", arg.value)); // TODO : Check... not working
     }
-    else{
+    else
+    {
         emit_instr(x86_lib::fld_mem("dword", getMem(arg)));
     }
 }
 
-void emit_fstore(operand &arg){
+void emit_fstore(operand &arg)
+{
     if (arg.entry && (arg.entry->isGlobal || arg.entry->isStatic > 0))
     {
         emit_instr(x86_lib::fstp_mem("dword", arg.value));
     }
-    else{
+    else
+    {
         emit_instr(x86_lib::fstp_mem("dword", getMem(arg)));
     }
 }

@@ -1,4 +1,5 @@
 int main()
 {
-    printf("%f\n", 5.6);
+    float f = 5.6f;
+    printf("%.2f" ,f);
 }

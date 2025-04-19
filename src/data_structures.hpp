@@ -28,7 +28,7 @@ struct Desc
 {
 	std::vector<int> inRegs;
 	// enum {EAX = 0,EBX = 1,ECX = 2,EDX = 3,ESI = 4,EDI = 5,ESP = 6,EBP = 7 };
-	bool inStack = false;
+	int inStack = 0;
 	bool inHeap = false;
 };
 
