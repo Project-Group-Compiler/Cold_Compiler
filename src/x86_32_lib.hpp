@@ -562,7 +562,7 @@ namespace x86_lib
     }
     inline std::string fucompp() { return "fucompp"; }
     inline std::string fcomi(const std::string &src = "st1") { return "fcomi " + src; }
-    inline std::string fcomip(const std::string &src = "st1") { return "fcomip " + src; }
+    inline std::string fcomip() { return "fcomip";}
     inline std::string fucomi(const std::string &src = "st1") { return "fucomi " + src; }
     inline std::string fucomip(const std::string &src = "st1") { return "fucomip " + src; }
 

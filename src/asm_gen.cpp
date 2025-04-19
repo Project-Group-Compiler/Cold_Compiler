@@ -471,6 +471,8 @@ void emit_asm(const std::string &inputFile)
                 emit_return(instr);
             else if (curr_op == "=")
                 emit_assign(instr);
+            else if (curr_op == "(f)=")
+                emit_fassign(instr);
             else if (curr_op == "+")
                 emit_add(instr);
             else if (curr_op == "(f)+")
@@ -507,12 +509,16 @@ void emit_asm(const std::string &inputFile)
                 emit_left_shift(instr);
             else if (curr_op == "==" || curr_op == "!=" || curr_op == ">" || curr_op == "<" || curr_op == "<=" || curr_op == ">=")
                 emit_cmp(instr);
+            else if (curr_op == "(f)<" || curr_op == "(f)<=" || curr_op == "(f)>" || curr_op == "(f)>=" || curr_op == "(f)==")
+                emit_fcmp(instr);
             else if (curr_op == "&&")
                 emit_logical_and(instr);
             else if (curr_op == "||")
                 emit_logical_or(instr);
             else if (curr_op == "!")
                 emit_logical_not(instr);
+            else if (curr_op == "intToFloat")
+                emit_intToFloat(instr);
             else if (curr_op == "GOTO")
             {
                 if (!regs_spilled)
@@ -525,10 +531,7 @@ void emit_asm(const std::string &inputFile)
                 }
                 emit_goto(instr);
             }
-            else if (curr_op == "(f)=")
-            {
-                emit_fassign(instr);
-            }
+            
 
             printReg_addr_Desc(instr.Label);
         }
@@ -620,7 +623,7 @@ void emit_param(quad &instr)
             emit_instr(x86_lib::push(instr.arg1.value));
         else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0 || instr.arg1.value.substr(0, 4) == "__f_")
         {
-            if (instr.arg1.entry->type == "float")
+            if (instr.arg1.entry->type == "float" && instr.arg2.value== "lea") 
             {
                 emit_fparam(instr.arg1);
             }
@@ -633,7 +636,7 @@ void emit_param(quad &instr)
             emit_instr(x86_lib::push(reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
         else if (instr.arg1.entry->addrDesc.inStack == 1)
         {
-            if (instr.arg1.entry->type == "float")
+            if (instr.arg1.entry->type == "float" && instr.arg2.value== "lea")
             {
                 emit_fparam(instr.arg1);
             }
@@ -717,8 +720,12 @@ void emit_fn_epilogue()
 
 void emit_return(quad &instr)
 {
-
-    setParticularReg(EAX, instr.arg1);
+    if(instr.arg1.entry && instr.arg1.entry->type == "float"){
+        emit_fload(instr.arg1);   
+    }
+    else{
+        setParticularReg(EAX, instr.arg1);
+    }
     if (inside_main) // return at end of main -> OK
         inside_main = false;
 }
@@ -853,6 +860,13 @@ void emit_cmp(quad &instr)
     emit_instr(x86_lib::mov_reg_imm(reg_names[reg1], "1"));
     emit_label(label2);
     updateRegDesc(reg1, instr.result);
+}
+
+void emit_fcmp(quad &instr){
+    emit_fload(instr.arg1);
+    emit_fload(instr.arg2);
+    emit_instr(x86_lib::fcomip());
+    emit_fstore(instr.result);
 }
 
 /* Bitwise Operator */
@@ -1098,7 +1112,7 @@ void emit_fload(operand &arg)
     }
     else if (arg.entry && (arg.entry->isGlobal || arg.entry->isStatic > 0))
     {
-        emit_instr(x86_lib::fld_mem("dword", arg.value)); // TODO : Check... not working
+        emit_instr(x86_lib::fld_mem("dword", arg.value)); 
     }
     else
     {
@@ -1123,6 +1137,19 @@ void emit_fassign(quad &instr)
     if (!inside_fn) // global, TODO: check
         return;
     emit_fload(instr.arg1);
+    emit_fstore(instr.result);
+}
+
+void emit_intToFloat(quad &instr)
+{
+    if (is_int_constant(instr.arg1.value))
+        return;
+
+    if (instr.arg1.entry && (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0))
+        emit_instr(x86_lib::fild("dword", instr.arg1.value));
+    else
+        emit_instr(x86_lib::fild("dword", getMem(instr.arg1)));
+    
     emit_fstore(instr.result);
 }
 
@@ -1163,6 +1190,15 @@ void get_constants()
         }
         if (in_fn)
         {
+            if (instr.op == "intToFloat" && is_int_constant(instr.arg1.value))
+            {
+                if (float_constants.find(instr.arg1.value) == float_constants.end())
+                    float_constants[instr.arg1.value] = float_cnt++;
+                float_constants[instr.result.value] = float_constants[instr.arg1.value];
+                instr.result.value = "__f_" + std::to_string(float_constants[instr.arg1.value]);
+                instr.result.entry->size = 4;
+                instr.result.entry->type = "float";
+            }
             if (is_float_constant(instr.arg1.value))
             {
                 if (float_constants.find(instr.arg1.value) == float_constants.end())
@@ -1171,6 +1207,13 @@ void get_constants()
                 instr.arg1.entry->size = 4;
                 instr.arg1.entry->type = "float";
             }
+            else if (float_constants.find(instr.arg1.value) != float_constants.end() && !is_int_constant(instr.arg1.value))
+            {
+                instr.arg1.value = "__f_" + std::to_string(float_constants[instr.arg1.value]);
+                instr.arg1.entry->size = 4;
+                instr.arg1.entry->type = "float";
+            }
+
             if (is_float_constant(instr.arg2.value))
             {
                 if (float_constants.find(instr.arg2.value) == float_constants.end())
@@ -1179,6 +1222,13 @@ void get_constants()
                 instr.arg2.entry->size = 4;
                 instr.arg2.entry->type = "float";
             }
+            else if (float_constants.find(instr.arg2.value) != float_constants.end() && !is_int_constant(instr.arg2.value))
+            {
+                instr.arg2.value = "__f_" + std::to_string(float_constants[instr.arg2.value]);
+                instr.arg2.entry->size = 4;
+                instr.arg2.entry->type = "float";
+            }
+
             if (is_float_constant(instr.result.value))
             {
                 if (float_constants.find(instr.result.value) == float_constants.end())
@@ -1187,9 +1237,16 @@ void get_constants()
                 instr.result.entry->size = 4;
                 instr.result.entry->type = "float";
             }
+            else if (float_constants.find(instr.result.value) != float_constants.end() && !is_int_constant(instr.result.value))
+            {
+                instr.result.value = "__f_" + std::to_string(float_constants[instr.result.value]);
+                instr.result.entry->size = 4;
+                instr.result.entry->type = "float";
+            }
         }
     }
 }
+
 
 void fixgotoLabels()
 {
@@ -1375,7 +1432,12 @@ void emit_data_section()
         for (const auto &[str, cnt] : float_constants)
         {
             if (cnt == i)
-                emit_data("__f_" + std::to_string(cnt) + ": dd " + str);
+            {
+                if (is_float_constant(str))
+                    emit_data("__f_" + std::to_string(cnt) + ": dd " + str);
+                else if (is_int_constant(str))
+                    emit_data("__f_" + std::to_string(cnt) + ": dd " + str + ".0");
+            }
         }
     }
 }

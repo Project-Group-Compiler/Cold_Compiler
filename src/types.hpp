@@ -255,8 +255,14 @@ inline std::string shiftExp(std::string a, std::string b)
 inline std::string relExp(std::string a, std::string b)
 {
     setVar(a, b);
-    if ((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar))
-        return "ok";
+    if (isAInt && isBInt)
+        return "int";
+    else if ((isAInt || isAFloat) && (isBInt || isBFloat))
+        return "float";
+    else if ((isAInt && isBChar) || (isAChar && isBInt))
+        return "int";
+    // if ((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar))
+    //     return "ok";
     return "";
 }
 

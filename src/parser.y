@@ -313,9 +313,23 @@ postfix_expression
 				}
 				//3AC
 				$$->tempName = $1->tempName;
+				bool check = false;
+				for (auto it : lib_funcs)
+				{
+					if (mangledName == it){
+						check = true;
+						break;
+					}
+				}
 				reverse(actualArgs.begin(), actualArgs.end());
-				for(auto&x : actualArgs)
-					emit("param", x, {}, {}, -1);
+				if(check){
+					for(auto&x : actualArgs)
+						emit("param", x, {"lea"}, {}, -1);
+				}
+				else{
+					for(auto&x : actualArgs)
+						emit("param", x, {}, {}, -1);
+				}
 				if($$->type != "void")
 				{
 					operand q2 = getTempVariable($$->type);
@@ -1593,14 +1607,28 @@ relational_expression
         string temp = relExp($1->type, $3->type);
         if (!temp.empty()) {
             $$->type = "bool";
-            if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
-			// 3AC 
-			operand q = getTempVariable($$->type);
-			emit("<", $1->place, $3->place, q, -1);
-			$$->place = q;
-			$$->nextlist.clear();
+			// 3AC
+			if(isFloat(temp)){
+				operand q = getTempVariable($$->type);
+				if(checkInt($1->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,{},q1,-1);					
+					emit("(f)<", q1, $3->place, q, -1);
+				}else if(checkInt($3->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,{},q1,-1);
+					emit("(f)<", $1->place, q1, q, -1);
+				}else{
+					emit("(f)<", $1->place, $3->place, q, -1);
+				}
+			}else{
+				operand q = getTempVariable($$->type);
+				emit("<", $1->place, $3->place, q, -1);
+				$$->place = q;
+				$$->nextlist.clear();
+			}
         } else {
-            semantic_error("Invalid operands to binary <", "type error");
+            semantic_error(("Invalid operands " + string($1->type) + " and " + string($3->type) + " to binary <").c_str(), "type error");
         }
     }
     | relational_expression '>' inclusive_or_expression {
@@ -1608,17 +1636,43 @@ relational_expression
         $$ = getNode(">", mergeAttrs($1, $3));
         // Semantic
         if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-        string temp = relExp($1->type, $3->type);
+        // string temp = relExp($1->type, $3->type);
+        // if (!temp.empty()) {
+        //     $$->type = "bool";
+		// 	if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
+		// 	// 3AC
+		// 	operand q = getTempVariable($$->type);
+		// 	emit(">", $1->place, $3->place, q, -1);
+		// 	$$->place = q;
+		// 	$$->nextlist.clear();
+        // } else {
+        //     semantic_error("Invalid operands to binary >", "type error");
+        // }
+		string temp = relExp($1->type, $3->type);
         if (!temp.empty()) {
             $$->type = "bool";
-			if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
 			// 3AC
-			operand q = getTempVariable($$->type);
-			emit(">", $1->place, $3->place, q, -1);
-			$$->place = q;
-			$$->nextlist.clear();
+			if(isFloat(temp)){
+				operand q = getTempVariable($$->type);
+				if(checkInt($1->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,{},q1,-1);					
+					emit("(f)>", q1, $3->place, q, -1);
+				}else if(checkInt($3->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,{},q1,-1);
+					emit("(f)>", $1->place, q1, q, -1);
+				}else{
+					emit("(f)>", $1->place, $3->place, q, -1);
+				}
+			}else{
+				operand q = getTempVariable($$->type);
+				emit(">", $1->place, $3->place, q, -1);
+				$$->place = q;
+				$$->nextlist.clear();
+			}
         } else {
-            semantic_error("Invalid operands to binary >", "type error");
+            semantic_error(("Invalid operands " + string($1->type) + " and " + string($3->type) + " to binary <").c_str(), "type error");
         }
     }
     | relational_expression LE_OP inclusive_or_expression {
@@ -1627,34 +1681,85 @@ relational_expression
         // Semantic
         if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
         string temp = relExp($1->type, $3->type);
-        if (!temp.empty()) {
+		 if (!temp.empty()) {
             $$->type = "bool";
-            if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
-			//3AC
-			operand q = getTempVariable($$->type);
-			emit("<=", $1->place, $3->place, q, -1);
-			$$->place = q;
-			$$->nextlist.clear();
+			// 3AC
+			if(isFloat(temp)){
+				operand q = getTempVariable($$->type);
+				if(checkInt($1->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,{},q1,-1);					
+					emit("(f)<=", q1, $3->place, q, -1);
+				}else if(checkInt($3->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,{},q1,-1);
+					emit("(f)<=", $1->place, q1, q, -1);
+				}else{
+					emit("(f)<=", $1->place, $3->place, q, -1);
+				}
+			}else{
+				operand q = getTempVariable($$->type);
+				emit("<=", $1->place, $3->place, q, -1);
+				$$->place = q;
+				$$->nextlist.clear();
+			}
         } else {
-            semantic_error("Invalid operands to binary <=", "type error");
+            semantic_error(("Invalid operands " + string($1->type) + " and " + string($3->type) + " to binary <").c_str(), "type error");
         }
+        // if (!temp.empty()) {
+        //     $$->type = "bool";
+        //     if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
+		// 	//3AC
+		// 	operand q = getTempVariable($$->type);
+		// 	emit("<=", $1->place, $3->place, q, -1);
+		// 	$$->place = q;
+		// 	$$->nextlist.clear();
+        // } else {
+        //     semantic_error("Invalid operands to binary <=", "type error");
+        // }
     }
     | relational_expression GE_OP inclusive_or_expression {
         DBG("relational_expression -> relational_expression GE_OP inclusive_or_expression");
         $$ = getNode(">=", mergeAttrs($1, $3));
         // Semantic
         if ($1->isInit == 1 && $3->isInit == 1) $$->isInit = 1;
-        string temp = relExp($1->type, $3->type);
-        if (!temp.empty()) {
+        // string temp = relExp($1->type, $3->type);
+        // if (!temp.empty()) {
+        //     $$->type = "bool";
+        //     if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
+		// 	// 3AC
+		// 	operand q = getTempVariable($$->type);
+		// 	emit(">=", $1->place, $3->place, q, -1);
+		// 	$$->place = q;
+		// 	$$->nextlist.clear();
+        // } else {
+        //     semantic_error("Invalid operands to binary >=", "type error");
+        // }
+		string temp = relExp($1->type, $3->type);
+		 if (!temp.empty()) {
             $$->type = "bool";
-            if (temp.empty()) semantic_error("Comparison between pointer and integer","type error");
 			// 3AC
-			operand q = getTempVariable($$->type);
-			emit(">=", $1->place, $3->place, q, -1);
-			$$->place = q;
-			$$->nextlist.clear();
+			if(isFloat(temp)){
+				operand q = getTempVariable($$->type);
+				if(checkInt($1->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$1->place,{},q1,-1);					
+					emit("(f)>=", q1, $3->place, q, -1);
+				}else if(checkInt($3->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("intToFloat",$3->place,{},q1,-1);
+					emit("(f)>=", $1->place, q1, q, -1);
+				}else{
+					emit("(f)>=", $1->place, $3->place, q, -1);
+				}
+			}else{
+				operand q = getTempVariable($$->type);
+				emit(">=", $1->place, $3->place, q, -1);
+				$$->place = q;
+				$$->nextlist.clear();
+			}
         } else {
-            semantic_error("Invalid operands to binary >=", "type error");
+            semantic_error(("Invalid operands " + string($1->type) + " and " + string($3->type) + " to binary <").c_str(), "type error");
         }
     }
     ;
