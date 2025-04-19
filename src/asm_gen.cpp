@@ -112,7 +112,10 @@ std::string getMem(operand &op)
         if (offset < 0)
             memAddr = reg_names[EBP] + "+" + std::to_string(-offset);
         else
+        {
+            if(op.entry->isArray) offset += op.entry->size;
             memAddr = reg_names[EBP] + "-" + std::to_string(offset + 4);
+        }
         if (op.entry->addrDesc.inStack == 2)
         {
             if (op.entry->addrDesc.inRegs.size())
@@ -165,7 +168,6 @@ void spillReg(int reg)
                     std::string memAddr = getMem(op);
                     if (op.entry) // Extra check after getMem call
                         op.entry->addrDesc.inStack = 1;
-                    emit_instr(x86_lib::mov_mem_reg(memAddr, reg_names[reg]));
                 }
             // }
             eraseFromVector(op.entry->addrDesc.inRegs, reg);
@@ -281,7 +283,9 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
         }
         if (bestReg != -1)
         {
+            // emit_instr("; getreg wala"+op.value);
             spillReg(bestReg); // TODO: check value also
+            // emit_instr("; getreg jdd"+op.value);
             regDesc[bestReg].push_back(op);
             if (op.entry)
             {
@@ -509,6 +513,13 @@ void emit_asm(const std::string &inputFile)
                 }
                 emit_goto(instr);
             }
+            else if (curr_op == "ptr+")
+                emit_logical_ptr_add(instr);
+            else if (curr_op == "ptr-")
+                emit_logical_ptr_sub(instr);
+            else if (curr_op == "CopyToOffset"){
+                emit_copy_to_offset(instr);
+            }
 
             printReg_addr_Desc(instr.Label);
         }
@@ -527,6 +538,54 @@ void emit_asm(const std::string &inputFile)
     emit_data_section(); // add initialized data
     emit_section(".bss");
     emit_bss_section(); // add uninitialized data
+}
+
+void emit_copy_to_offset(quad &instr){
+    spillAllReg();
+    int reg1 = getReg(instr.arg1,1,{}); //reg1 -> value
+    int reg2 = getReg(instr.arg2,1,{reg1}); //->reg2 -> offset
+    int reg3 = getReg(instr.result,1,{reg1,reg2});
+    std::string mem = getMem(instr.result); //arr
+    emit_instr(x86_lib::lea(reg_names[reg3], mem));
+    emit_instr(x86_lib::mov_mem_reg(reg_names[reg3]+"+"+reg_names[reg2], reg_names[reg1]));
+}
+
+void emit_logical_ptr_add(quad &instr){
+    int reg1 = getReg(instr.arg1, 1, {});
+    // emit_instr(";" + stringify(instr));
+    if (is_int_constant(instr.arg2.value))
+    {
+        emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
+    }
+    else if (instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
+    {
+        emit_instr(x86_lib::add_reg_mem(reg_names[reg1], instr.arg2.value));
+    }
+    else
+    {
+        int reg2 = getReg(instr.arg2, 1, {reg1});
+        emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
+    }
+    // emit_instr("; khatam");
+    updateRegDesc(reg1, instr.result);
+}
+
+void emit_logical_ptr_sub(quad &instr){
+    int reg1 = getReg(instr.arg1, 1, {});
+    if (is_int_constant(instr.arg2.value))
+    {
+        emit_instr(x86_lib::sub_reg_imm(reg_names[reg1], instr.arg2.value));
+    }
+    else if (instr.arg2.entry && (instr.arg2.entry->isGlobal || instr.arg2.entry->isStatic > 0))
+    {
+        emit_instr(x86_lib::sub_reg_mem(reg_names[reg1], instr.arg2.value));
+    }
+    else
+    {
+        int reg2 = getReg(instr.arg2, 1, {reg1});
+        emit_instr(x86_lib::sub(reg_names[reg1], reg_names[reg2]));
+    }
+    updateRegDesc(reg1, instr.result);
 }
 
 void emit_unary_star(quad &instr){
@@ -1020,8 +1079,14 @@ void emit_assign(quad &instr)
     // Pointer ->
     // TODO : is there any case of *ptr1 = *ptr2
 
-    _debug_(stringify(instr));    
-    if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&'){ 
+    _debug_(stringify(instr));   
+    if(instr.arg1.entry && instr.arg1.entry->isArray){//t0 = arr
+        // spillAllReg();
+        std::string mem = getMem(instr.arg1);
+        int reg1 = getReg(instr.result,1,{});
+        emit_instr(x86_lib::lea(reg_names[reg1], mem));
+        updateRegDesc(reg1,instr.result);
+    }else if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&'){ 
         // can Handle integer constant more optimally
         //t0(&) = 5
         spillAllReg();

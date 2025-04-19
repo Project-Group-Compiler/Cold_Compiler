@@ -171,12 +171,15 @@ postfix_expression
 				operand q = getTempVariable($$->type + "*");
 				emit("=", $1->place,{}, q, -1); 
 				operand q2 = getTempVariable($$->type);
-				emit("*", $3->place, {std::to_string(q2.entry->size)}, q2, -1); // TODO : check
+				emit("*", $3->place, {std::to_string(q2.entry->size)}, q2, -1); 
 				operand q3 = getTempVariable($$->type + "*");
 				emit("ptr+", q, q2, q3, -1);
-				std::string tempValue = "*" + q3.value;
+				operand q4 = getTempVariable($$->type + "&"); //TODO: Handle offset for this in symbol table
+				$$->place = q4;
+				emit("unary*", q3, {}, q4, -1);
+				// std::string tempValue = "*" + q3.value;
 				// insertSymbol(*curr_table, tempValue, $$->type, getSize($$->type), 0, NULL); // TODO: Check
-				$$->place = {tempValue,$1->place.entry}; //TODO: check entry
+				// $$->place = {tempValue,$1->place.entry}; //TODO: check entry
 			}else{
 				operand q = getTempVariable($$->type);
 				$$->place = q;
