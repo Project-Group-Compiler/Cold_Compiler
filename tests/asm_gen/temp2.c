@@ -60,16 +60,143 @@
 //     int x=arr[1];
 //     printf("%d\n",x);
 // }
+// int f5(int x){
+//     int *ptr = &x;
+//     x=7;
+//     return *ptr;
+// }
+// #include<stdio.h>
+// #include<stdlib.h>
+// #include <cstdio>
+// #include <iostream>  
+// void f6(){
+//     int x = 5, y = 10, z = 10;
+//     int *ptr = &y;
+//     int *ptr2 = &x;
+//     z = *ptr - *ptr2;
+//     printf("%d\n",z);
+//     z = (*ptr) * (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) / (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) % (*ptr2);
+//     printf("%d\n",z);
+// }
+
+// void f7(){
+//     int x = 5, y = 10, z = 10;
+//     int *ptr = &y;
+//     int *ptr2 = &x;
+//     z = (*ptr) | (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) & (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) ^ (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) >> (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) << (*ptr2);
+//     printf("%d\n",z);
+// }
+
+void f8(){
+    int x = 5, y = 10, z = 10;
+    int *ptr = &y;
+    int *ptr2 = &x;
+    z = x && y;
+    printf("%d\n",z);
+    z = x || y;
+    printf("%d\n",z);
+    z = !x;
+    printf("---%d\n",z);
+    z = (*ptr) && (*ptr2);
+    printf("%d\n",z);
+    z = (*ptr) || (*ptr2);
+    printf("%d\n",z);
+    z = !(*ptr);
+    printf("%d\n",z);
+}
+
+void f9(){
+    int x = 5, y = 10, z = 10;
+    int *ptr = &y;
+    int *ptr2 = &x;
+    z = (*ptr) < (*ptr2);
+    printf("%d\n",z);
+    z = (*ptr) > (*ptr2);
+    printf("%d\n",z);
+    z = (*ptr) <= (*ptr2);
+    printf("%d\n",z);
+    z = (*ptr) >= (*ptr2);
+    printf("%d\n",z);
+    z = (*ptr) == (*ptr2);
+    printf("%d\n",z);
+    z = (*ptr) != (*ptr2);
+    printf("%d\n",z);
+}
+
+void f10(){
+    int x = 5, y = 10, z = 10;
+    int *ptr2 = &x;
+    int arr[5] = {1,2,3,4,5};
+    arr[2] = arr[1] + arr[3];
+    printf("%d\n",arr[2]); 
+    arr[2] = arr[1] - arr[3];
+    printf("%d\n",arr[2]);
+
+    printf("%p\n",ptr2);
+    ptr2 = ptr2 + 1;
+    printf("%p\n",ptr2);
+    ptr2 = ptr2 - 1;
+    printf("%p\n",ptr2);
+}
+
+void f11(){
+    int x = 5, y = 10, z = 10;
+    int *ptr = &y;
+    int *ptr2 = &x;
+    z = -(*ptr);
+    printf("%d\n",z);
+    z = +(*ptr);
+    printf("%d\n",z);
+}
 
 int main(){
+    // f6();
+    // f7();
+    // f8();
+    f9();
+    f10();
+    f11();
+}
+
+
+// void backup(){
     // int arr[2][2] = {{10,12},{3,5}};
     // int arr[1][1] = {{10},{3}};
     // int x = arr[0][0];
     // printf("%d\n",x);
 
-    int arr[2][2][3];
-    int x = arr[1][1][2];
+    // int arr[2][2][3];
+    // int x = arr[1][1][2];
 
+
+    // int x = 5,a=1,b=2;
+    // int c=a+b;
+    // int *ptr1=&x;
+    // int *ptr2=&a;
+    // int *ptr3=&c;
+    // printf("%d\n",c);
+    // printf("%d\n",c);
+    // *ptr1=*ptr2+*ptr3+*ptr1;
+    // printf("%d\n",x);
+    
+
+    // int **ptr2 = &ptr;
+    // **ptr2=6;
+    // printf("%d\n",**ptr2);
+    // printf("%d\n",*ptr);
+    // printf("%d\n",x);
 
     // f();
     // f2();
@@ -96,4 +223,4 @@ int main(){
     // printf("ptr %d\n",arr[2]);
     // printf("ptr %p\n",ptr2);
     // printf("%d\n",y);
-}
+// }
