@@ -512,7 +512,8 @@ void emit_asm(const std::string &inputFile)
                 }
                 emit_goto(instr);
             }
-            else if(curr_op == "(f)="){
+            else if (curr_op == "(f)=")
+            {
                 emit_fassign(instr);
             }
 
@@ -602,20 +603,41 @@ void emit_param(quad &instr)
 
     if (instr.arg1.entry)
     {
-        if (instr.arg1.value.substr(0, 6) == "__str_" || instr.arg1.value.substr(0, 4) == "__f_")
+        if (instr.arg1.value.substr(0, 6) == "__str_")
             emit_instr(x86_lib::push(instr.arg1.value));
-        else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0)
-            emit_instr(x86_lib::push_mem("dword", instr.arg1.value)); // TODO : Check
+        else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0 || instr.arg1.value.substr(0, 4) == "__f_"){
+            if(instr.arg1.entry->type == "float"){
+                emit_fparam(instr.arg1);
+            }
+            else{
+                emit_instr(x86_lib::push_mem("dword", instr.arg1.value));
+            }
+        } // TODO : Check
         else if (instr.arg1.entry->addrDesc.inRegs.size())
             emit_instr(x86_lib::push(reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
-        else if (instr.arg1.entry->addrDesc.inStack)
-            emit_instr(x86_lib::push_mem("dword", getMem(instr.arg1))); // TODO : Check
-
+        else if (instr.arg1.entry->addrDesc.inStack){
+            if(instr.arg1.entry->type == "float"){
+                emit_fparam(instr.arg1);
+            }
+            else{
+                emit_instr(x86_lib::push_mem("dword", getMem(instr.arg1))); // TODO : Check
+            }
+        }
         int sz = instr.arg1.entry->size;
         if (sz % 4 != 0)
             sz += 4 - (sz % 4);
         params_size += sz;
+        if(instr.arg1.entry->type == "float"){
+            params_size += 4;
+        }
     }
+}
+
+void emit_fparam(operand op){
+    emit_instr(x86_lib::lea(reg_names[ESP], reg_names[ESP] + "-" + std::to_string(8)));
+    emit_fload(op);
+    emit_instr(x86_lib::fstp_mem("qword", reg_names[ESP]));
+
 }
 
 void emit_fn_call(quad &instr)
@@ -638,7 +660,11 @@ void emit_fn_call(quad &instr)
         if (instr.result.entry)
         {
             std::string mem = getMem(instr.result);
-            emit_instr(x86_lib::mov_mem_reg(mem, reg_names[EAX]));
+            if(instr.result.entry->type == "float"){
+                emit_fstore(instr.result);
+            }
+            else
+                emit_instr(x86_lib::mov_mem_reg(mem, reg_names[EAX]));
         }
         else
         {
@@ -956,7 +982,8 @@ void emit_mul(quad &instr)
     updateRegDesc(reg1, instr.result);
 }
 
-void emit_fmul(quad &instr){
+void emit_fmul(quad &instr)
+{
     emit_fload(instr.arg1);
     emit_fload(instr.arg2);
     emit_instr(x86_lib::fmulp());
@@ -1011,7 +1038,8 @@ void emit_add(quad &instr)
     updateRegDesc(reg1, instr.result);
 }
 
-void emit_fadd(quad &instr){
+void emit_fadd(quad &instr)
+{
     emit_fload(instr.arg1);
     emit_fload(instr.arg2);
     emit_instr(x86_lib::faddp());
@@ -1064,8 +1092,8 @@ void emit_fstore(operand &arg){
     }
 }
 
-
-void emit_fassign(quad &instr){
+void emit_fassign(quad &instr)
+{
     if (!inside_fn) // global, TODO: check
         return;
     emit_fload(instr.arg1);
@@ -1115,6 +1143,7 @@ void get_constants()
                     float_constants[instr.arg1.value] = float_cnt++;
                 instr.arg1.value = "__f_" + std::to_string(float_constants[instr.arg1.value]);
                 instr.arg1.entry->size = 4;
+                instr.arg1.entry->type = "float";
             }
             if (is_float_constant(instr.arg2.value))
             {
@@ -1122,6 +1151,7 @@ void get_constants()
                     float_constants[instr.arg2.value] = float_cnt++;
                 instr.arg2.value = "__f_" + std::to_string(float_constants[instr.arg2.value]);
                 instr.arg2.entry->size = 4;
+                instr.arg2.entry->type = "float";
             }
             if (is_float_constant(instr.result.value))
             {
@@ -1129,6 +1159,7 @@ void get_constants()
                     float_constants[instr.result.value] = float_cnt++;
                 instr.result.value = "__f_" + std::to_string(float_constants[instr.result.value]);
                 instr.result.entry->size = 4;
+                instr.result.entry->type = "float";
             }
         }
     }
