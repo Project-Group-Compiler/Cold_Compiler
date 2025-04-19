@@ -1202,19 +1202,22 @@ unary_expression
     	if(!temp.empty()){
     	    $$->type = temp;
     	    $$->intVal = $2->intVal;
-			if(rValue == 0 && $1->place.value == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
-				$$->tempName = $2->tempName;
-				$$->place.value = "*" + $2->place.value;
-				$$->place.entry = $2->place.entry;
-				$$->nextlist.clear();
+			// TODO : Handle char*, ...
+			$$->tempName = $2->tempName;
+			//rvalue == 0 
+			if($1->place.value == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
+				// $$->place.value = "*" + $2->place.value;
+				// $$->place.entry = $2->place.entry;
+				operand q = getTempVariable(temp+"&"); //TODO: Handle offset for this in symbol table
+				$$->place = q;
+				emit($1->place.value, $2->place, {}, q, -1);
 			}
 			else{
 				operand q = getTempVariable(temp);
-				$$->tempName = $2->tempName;
 				$$->place = q;
-				$$->nextlist.clear();
 				emit($1->place.value, $2->place, {}, q, -1);
 			}
+			$$->nextlist.clear();
     	}
     	else{
     	    semantic_error("Type inconsistent with operator", "type error");

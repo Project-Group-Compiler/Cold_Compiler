@@ -35,6 +35,21 @@ inline void add_extern_funcs()
         asm_file << "extern " << func << "\n";
 }
 
+template <typename T>
+inline void __print__(const T &x){
+    std::cerr << x;
+}
+
+template <typename T, typename... Args>
+inline void __print__(const T &x, const Args &...rest){
+    std::cerr << x << ", ";
+    __print__(rest...);
+}
+#define _debug_(x...)                                             \
+    std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; \
+    __print__(x);                                                 \
+    std::cerr << std::endl;
+
 
 void emit_asm(const std::string &);
 void emit_unary_star(quad &instr);
