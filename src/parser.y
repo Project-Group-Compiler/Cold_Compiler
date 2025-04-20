@@ -2028,7 +2028,7 @@ declaration
 		debug($$->tempName);
         $$->type = $2->type;
         $$->size = $2->size;
-        
+        $$->arraydims = $2->arraydims;
         type = "";
 
         // 3AC
@@ -2068,8 +2068,11 @@ init_declarator_list
 	: init_declarator {
 		DBG("init_declarator_list -> init_declarator");
 		$$ = $1;
-		array_decl = 0;
-		is_arr = false;
+		if(className.empty() || inMethodBody){
+			array_decl = 0;
+			is_arr = false;
+		}
+		
 		DBG("Array dec 0");
 	}
 	| init_declarator_list ',' NEXT_INSTR init_declarator {
@@ -2113,7 +2116,7 @@ init_declarator
 					enum_decl = 0;
 				}
 				else
-					insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 0, NULL,"",isStaticDecl, false, is_arr);
+					insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 0, NULL,"",isStaticDecl, false, is_arr,0,$1->arraydims);
 			}
 		}
 		if(flag3 && className.empty()){
@@ -2128,7 +2131,9 @@ init_declarator
 		if(isStaticDecl>0){
 			static_vars.push_back($$->place);
 		}
-		isStaticDecl=0;
+		if(className.empty() || inMethodBody){
+			isStaticDecl=0;	
+		}
 	}
 	| declarator '=' {rValue = 1;} NEXT_INSTR initializer {
 		DBG("init_declarator -> declarator '=' initializer");
@@ -2144,7 +2149,7 @@ init_declarator
 					insertSymbol(*curr_table, $1->tempName, "int", 4, 0, NULL);
 					enum_decl = 0;
 			} else
-				insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 1, NULL,"",isStaticDecl,isConstDecl, is_arr);
+				insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 1, NULL,"",isStaticDecl,isConstDecl, is_arr,0,$1->arraydims);
 			std::string type = $1->type;
 			DBG("Type of variable: " + $1->type);
 			DBG("Type of initializer: " + $5->type);
@@ -2583,8 +2588,11 @@ class_member
         DBG("class_member -> declaration");
         $1->strVal = currentAccess;
 		// Add declaration as a class member with proper access specifier
-        insertClassAttr($1->tempName, $1->type, $1->size, 0,currentAccess);
+        insertClassAttr($1->tempName, $1->type, $1->size, 0,currentAccess,isStaticDecl,is_arr,$1->arraydims);
 		$$ = $1; 
+		is_arr = false;
+		array_decl = 0;
+		isStaticDecl = 0;
 	}
 	;
 
@@ -2809,16 +2817,17 @@ struct_declarator
 		$$ = $1;
 		
 		// Semantics
-		if (insertStructAttr($1->tempName, $1->type, $1->size, 0) != 1) {
+		if (insertStructAttr($1->tempName, $1->type, $1->size, 0,is_arr,$$->arraydims) != 1) {//confirm if is_arr or array_decl should be argument
 			debug($1->tempName);
 			semantic_error(("The Attribute " + string($1->tempName) + " is already declared in the same struct").c_str(), "scope error");
 		}
+		is_arr=false;
 	}
 	| ':' constant_expression {
 		DBG("struct_declarator -> ':' constant_expression");
 		$$ = $2;
 	}
-	| declarator ':' constant_expression {
+	| declarator ':' constant_expression {//No support for initializer list
 		DBG("struct_declarator -> declarator ':' constant_expression");
 		$$ = getNode(":", mergeAttrs($1, $3));
 		
@@ -2988,6 +2997,12 @@ direct_declarator
 
 			$$->tempName = $1->tempName;
 			$$->size = $1->size * $3->intVal;
+			$$->arraydims = $1->arraydims;
+			$$->arraydims.push_back($3->intVal);
+			//debug
+			for(auto dim : $$->arraydims){
+				DBG("Array dimension: " + std::to_string(dim));
+			}
 			is_arr = true;
 			if(rValue == 0){
 				array_decl = 1;
@@ -2999,7 +3014,7 @@ direct_declarator
 			semantic_error(("Function " + $1->tempName + " cannot be used as an array").c_str(), "type error");
 		}
 	}
-	| direct_declarator '[' ']' {
+	| direct_declarator '[' ']' {//need to handle
 		DBG("direct_declarator -> direct_declarator '[' ']'");
 		std::vector<Data> attr;
 		insertAttr(attr, $1, "", 1);
@@ -3267,7 +3282,7 @@ parameter_declaration
 			} else {
 				DBG("Inserting into symbol table: " + $2->tempName);
 				// insertSymbol(*curr_table, $2->tempName, $2->type, $2->size, true, NULL);
-				paramInsert(*curr_table, $2->tempName, $2->type, $2->size, true, NULL);
+				paramInsert(*curr_table, $2->tempName, $2->type, $2->size, true, NULL,isStaticDecl,isConstDecl,is_arr,$2->arraydims);
 			}
 			debug($2->type);
 			funcArgs.push_back($2->type);
@@ -3355,7 +3370,7 @@ direct_abstract_declarator
 		$$->type = $1->type + "*"; // Semantics
 		$$->size = 4; //Default size for pointer
 	}
-	| direct_abstract_declarator '[' constant_expression ']' {
+	| direct_abstract_declarator '[' constant_expression ']' { //when does this happen?
 		DBG("direct_abstract_declarator -> direct_abstract_declarator '[' constant_expression ']'");
 		$$ = getNode("direct_abstract_declarator", mergeAttrs($1, getNode("[ ]", mergeAttrs($3))));
 		$$->type = $1->type + "*"; // Semantics

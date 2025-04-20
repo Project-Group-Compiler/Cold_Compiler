@@ -49,6 +49,7 @@ typedef struct sym_entry
 	int isLive = 0;
 	Desc addrDesc;
 	int isDerefer = 0; //For _ti_ = *x 
+	std::vector<int> array_dims;
 } sym_entry;
 
 typedef std::map<std::string, sym_entry *> sym_table;
@@ -91,7 +92,7 @@ bool searchIdConst(std::string id);
 std::string getSizeOfType(const std::string &typeStr);
 
 void symTable_init();
-sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
+sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false,std::vector<int> array_dims = {});
 void makeSymbolTable(std::string name, std::string f_type, bool offset_flag);
 void removeFuncProto();
 int updSymbolTable(std::string id, bool offset_flag);
@@ -101,7 +102,7 @@ void insertKeywords();
 void insert_std_func(std::string func_name, std::vector<std::string> type, std::string ret_type);
 std::string getType(std::string id);
 void createStructTable();
-int insertStructAttr(std::string attr, std::string type, int size, bool init);
+int insertStructAttr(std::string attr, std::string type, int size, bool init, bool isArray = false,std::vector<int> array_dims = {});
 int printStructTable(std::string struct_name);
 std::string StructAttrType(std::string struct_name, std::string id);
 int StructAttrOffset(std::string struct_name, std::string id);
@@ -109,7 +110,7 @@ int findStruct(std::string struct_name);
 int lookupStruct(std::string struct_name, std::string id);
 
 void createClassTable();
-int insertClassAttr(std::string attr, std::string type, int size, bool init, std::string access = "private");
+int insertClassAttr(std::string attr, std::string type, int size, bool init, std::string access = "private",int isStatic = 0,bool isArray = false,std::vector<int> array_dims = {});
 int printClassTable(std::string class_name);
 std::string ClassAttrType(std::string class_name, std::string id);
 int ClassAttrOffset(std::string class_name, std::string id);
@@ -119,7 +120,7 @@ int findClass(std::string class_name);
 int lookupClass(std::string class_name, std::string &id);
 sym_entry *lookupClassEntry(std::string class_name, std::string &id);
 void createParamList();
-void insertSymbol(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false);
+void insertSymbol(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false,std::vector<int> array_dims = {});
 std::vector<std::string> getFuncArgs(std::string id);
 std::string mangleFunctionName(const std::string &name, const std::vector<std::string> &paramTypes);
 std::string getTypeCode(const std::string &type);
@@ -138,7 +139,7 @@ extern std::set<std::string> called_lib_funcs;
 
 extern std::map<std::string, std::string> global_init;
 
-void paramInsert(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr);
+void paramInsert(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr,int isStatic = 0, bool isConst = false, bool isArray = false,std::vector<int> array_dims = {});
 void clear_paramoffset();
 
 #endif // SYMBOL_TABLE_H

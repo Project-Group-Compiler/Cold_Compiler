@@ -29,6 +29,7 @@ struct Node
     std::vector<int> continuelist;
     std::vector<int> nextlist;
     std::vector<int> caselist;
+    std::vector<int> arraydims;
 };
 
 struct Data
