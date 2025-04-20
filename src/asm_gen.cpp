@@ -1226,9 +1226,9 @@ void emit_cassign(quad &instr)
 {
     setParticularReg(EDX, instr.arg1);
     if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
-        emit_instr(x86_lib::mov_mem_reg(instr.result.value, reg_names[EDX]));
+        emit_instr(x86_lib::mov_mem_reg(instr.result.value, "dl"));
     else
-        emit_instr(x86_lib::mov_mem_reg(getMem(instr.result), reg_names[EDX]));
+        emit_instr(x86_lib::mov_mem_reg(getMem(instr.result), "dl"));
 }
 
 void emit_intToChar(quad &instr)

@@ -123,6 +123,8 @@ primary_expression
 		}
 		//3AC
 		sym_entry* newEntry = new sym_entry;
+		newEntry->size = getSize($$->type);
+		newEntry->type = $$->type;
 		$$->place = {$$->tempName,newEntry}; // TODO : check
 		$$->nextlist.clear();
 
@@ -1349,30 +1351,71 @@ multiplicative_expression
 		string temp = Exp($1->type, $3->type, "*");
 		
 		if(!temp.empty()){
-			if(temp == "int"){
-				$$->type = "int";
-			}
-			else if(isFloat(temp)){
-				$$->type = "float";
-			}
+			$$->type= temp;
 
 			//3AC
 			if(isFloat(temp)){
 				operand q = getTempVariable($$->type);
-				if(checkInt($1->type)){
+				if(checkInt($1->type) || isChar($1->type)){
 					operand q1 = getTempVariable($$->type);
-					emit("intToFloat",$1->place,{},q1,-1);					
+					if(isChar($1->type)){
+						operand q2 = getTempVariable("int");
+						emit("charToInt", $1->place, {}, q2, -1);
+						emit("intToFloat", q2, {}, q1, -1);
+					} else {
+						emit("intToFloat", $1->place, {}, q1, -1);
+					}
 					emit("(f)*", q1, $3->place, q, -1);
-				}else if(checkInt($3->type)){
+				}else if(checkInt($3->type) || isChar($3->type)){
 					operand q1 = getTempVariable($$->type);
-					emit("intToFloat",$3->place,{},q1,-1);
+					if(isChar($3->type)){
+						operand q2 = getTempVariable("int");
+						emit("charToInt", $3->place, {}, q2, -1);
+						emit("intToFloat", q2, {}, q1, -1);
+					} else {
+						emit("intToFloat", $3->place, {}, q1, -1);
+					}
 					emit("(f)*", $1->place, q1, q, -1);
-				}else{
+				}
+				else{
 					emit("(f)*", $1->place, $3->place, q, -1);
 				}
 				$$->place = q;
 				$$->tempName = q.value;
-			}else{ 
+			}else if(temp == "int"){
+				operand q = getTempVariable($$->type);
+				if(isChar($1->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("charToInt", $1->place, {}, q1, -1);
+					emit("*", q1, $3->place, q, -1);
+				}else if(isChar($3->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("charToInt", $3->place, {}, q1, -1);
+					emit("*", $1->place, q1, q, -1);
+				}else{
+					emit("*", $1->place, $3->place, q, -1);
+				}
+				$$->place = q;
+				$$->tempName = q.value;
+			}
+			else if(temp == "char"){
+				operand q = getTempVariable($$->type);
+				
+				operand q1 = getTempVariable("int");
+				emit("charToInt", $1->place, {}, q1, -1);
+			
+				operand q2 = getTempVariable("int");
+				emit("charToInt", $3->place, {}, q2, -1);
+
+				operand q3 = getTempVariable("int");
+				emit("/", q1, q2, q3, -1);
+
+				emit("intToChar", q3, {}, q, -1);
+				
+				$$->place = q;
+				$$->tempName = q.value;
+			}
+			else{ 
 				operand q = getTempVariable($$->type); //TODO not always int
 				$$->place = q;
 				$$->tempName = q.value;
@@ -1401,28 +1444,96 @@ multiplicative_expression
 			else if(isFloat(temp)){
 				$$->type = "float";
 			}
-			//3AC
+			// //3AC
+			// if(isFloat(temp)){
+			// 	operand q = getTempVariable($$->type);
+			// 	if(checkInt($1->type)){
+			// 		operand q1 = getTempVariable($$->type);
+			// 		emit("intToFloat",$1->place,{},q1,-1);					
+			// 		emit("(f)/", q1, $3->place, q, -1);
+			// 	}else if(checkInt($3->type)){
+			// 		operand q1 = getTempVariable($$->type);
+			// 		emit("intToFloat",$3->place,{},q1,-1);
+			// 		emit("(f)/", $1->place, q1, q, -1);
+			// 	}else{
+			// 		emit("(f)/", $1->place, $3->place, q, -1);
+			// 	}
+			// 	$$->place = q;
+			// 	$$->tempName = q.value;
+			// }else{ 
+			// 	operand q = getTempVariable($$->type); //TODO not always int
+			// 	$$->place = q;
+			// 	$$->tempName = q.value;
+			// 	emit("/", $1->place, $3->place, q, -1);
+			// }
+
 			if(isFloat(temp)){
 				operand q = getTempVariable($$->type);
-				if(checkInt($1->type)){
+				if(checkInt($1->type) || isChar($1->type)){
 					operand q1 = getTempVariable($$->type);
-					emit("intToFloat",$1->place,{},q1,-1);					
+					if(isChar($1->type)){
+						operand q2 = getTempVariable("int");
+						emit("charToInt", $1->place, {}, q2, -1);
+						emit("intToFloat", q2, {}, q1, -1);
+					} else {
+						emit("intToFloat", $1->place, {}, q1, -1);
+					}
 					emit("(f)/", q1, $3->place, q, -1);
-				}else if(checkInt($3->type)){
+				}else if(checkInt($3->type) || isChar($3->type)){
 					operand q1 = getTempVariable($$->type);
-					emit("intToFloat",$3->place,{},q1,-1);
+					if(isChar($3->type)){
+						operand q2 = getTempVariable("int");
+						emit("charToInt", $3->place, {}, q2, -1);
+						emit("intToFloat", q2, {}, q1, -1);
+					} else {
+						emit("intToFloat", $3->place, {}, q1, -1);
+					}
 					emit("(f)/", $1->place, q1, q, -1);
 				}else{
 					emit("(f)/", $1->place, $3->place, q, -1);
 				}
 				$$->place = q;
 				$$->tempName = q.value;
-			}else{ 
+			}else if(temp == "int"){
+				operand q = getTempVariable($$->type);
+				if(isChar($1->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("charToInt", $1->place, {}, q1, -1);
+					emit("/", q1, $3->place, q, -1);
+				}else if(isChar($3->type)){
+					operand q1 = getTempVariable($$->type);
+					emit("charToInt", $3->place, {}, q1, -1);
+					emit("/", $1->place, q1, q, -1);
+				}else{
+					emit("/", $1->place, $3->place, q, -1);
+				}
+				$$->place = q;
+				$$->tempName = q.value;
+			}
+			else if(temp == "char"){
+				operand q = getTempVariable($$->type);
+				
+				operand q1 = getTempVariable("int");
+				emit("charToInt", $1->place, {}, q1, -1);
+			
+				operand q2 = getTempVariable("int");
+				emit("charToInt", $3->place, {}, q2, -1);
+
+				operand q3 = getTempVariable("int");
+				emit("/", q1, q2, q3, -1);
+
+				emit("intToChar", q3, {}, q, -1);
+				
+				$$->place = q;
+				$$->tempName = q.value;
+			}
+			else{ 
 				operand q = getTempVariable($$->type); //TODO not always int
 				$$->place = q;
 				$$->tempName = q.value;
-				emit("/", $1->place, $3->place, q, -1);
+				emit("*", $1->place, $3->place, q, -1);
 			}
+
 			$$->nextlist.clear();
 		}
 		else{
@@ -1484,18 +1595,70 @@ additive_expression
 			}else{
 				//TODO : Handle float pointer 
 				if(isFloat(temp)){
-					if(checkInt($1->type)){
+					operand q = getTempVariable($$->type);
+					if(checkInt($1->type) || isChar($1->type)){
 						operand q1 = getTempVariable($$->type);
-						emit("intToFloat",$1->place,{},q1,-1);					
+						if(isChar($1->type)){
+							operand q2 = getTempVariable("int");
+							emit("charToInt", $1->place, {}, q2, -1);
+							emit("intToFloat", q2, {}, q1, -1);
+						} else {
+							emit("intToFloat", $1->place, {}, q1, -1);
+						}
 						emit("(f)+", q1, $3->place, q, -1);
-					}else if(checkInt($3->type)){
+					}else if(checkInt($3->type) || isChar($3->type)){
 						operand q1 = getTempVariable($$->type);
-						emit("intToFloat",$3->place,{},q1,-1);
+						if(isChar($3->type)){
+							operand q2 = getTempVariable("int");
+							emit("charToInt", $3->place, {}, q2, -1);
+							emit("intToFloat", q2, {}, q1, -1);
+						} else {
+							emit("intToFloat", $3->place, {}, q1, -1);
+						}
 						emit("(f)+", $1->place, q1, q, -1);
-					}else{
+					}
+					else{
 						emit("(f)+", $1->place, $3->place, q, -1);
 					}
-				}else{ 
+					$$->place = q;
+					$$->tempName = q.value;
+				}else if(temp == "int"){
+					operand q = getTempVariable($$->type);
+					if(isChar($1->type)){
+						operand q1 = getTempVariable($$->type);
+						emit("charToInt", $1->place, {}, q1, -1);
+						emit("+", q1, $3->place, q, -1);
+					}else if(isChar($3->type)){
+						operand q1 = getTempVariable($$->type);
+						emit("charToInt", $3->place, {}, q1, -1);
+						emit("+", $1->place, q1, q, -1);
+					}else{
+						emit("+", $1->place, $3->place, q, -1);
+					}
+					$$->place = q;
+					$$->tempName = q.value;
+				}
+				else if(temp == "char"){
+					operand q = getTempVariable($$->type);
+					
+					operand q1 = getTempVariable("int");
+					emit("charToInt", $1->place, {}, q1, -1);
+				
+					operand q2 = getTempVariable("int");
+					emit("charToInt", $3->place, {}, q2, -1);
+
+					operand q3 = getTempVariable("int");
+					emit("+", q1, q2, q3, -1);
+
+					emit("intToChar", q3, {}, q, -1);
+					
+					$$->place = q;
+					$$->tempName = q.value;
+				}
+				else{ 
+					operand q = getTempVariable($$->type); //TODO not always int
+					$$->place = q;
+					$$->tempName = q.value;
 					emit("+", $1->place, $3->place, q, -1);
 				}
 			}
@@ -1529,18 +1692,70 @@ additive_expression
 				emit("ptr-", $1->place, q2, q, -1);
 			}else{
 				if(isFloat(temp)){
-					if(checkInt($1->type)){
+					operand q = getTempVariable($$->type);
+					if(checkInt($1->type) || isChar($1->type)){
 						operand q1 = getTempVariable($$->type);
-						emit("intToFloat",$1->place,{},q1,-1);					
+						if(isChar($1->type)){
+							operand q2 = getTempVariable("int");
+							emit("charToInt", $1->place, {}, q2, -1);
+							emit("intToFloat", q2, {}, q1, -1);
+						} else {
+							emit("intToFloat", $1->place, {}, q1, -1);
+						}
 						emit("(f)-", q1, $3->place, q, -1);
-					}else if(checkInt($3->type)){
+					}else if(checkInt($3->type) || isChar($3->type)){
 						operand q1 = getTempVariable($$->type);
-						emit("intToFloat",$3->place,{},q1,-1);
+						if(isChar($3->type)){
+							operand q2 = getTempVariable("int");
+							emit("charToInt", $3->place, {}, q2, -1);
+							emit("intToFloat", q2, {}, q1, -1);
+						} else {
+							emit("intToFloat", $3->place, {}, q1, -1);
+						}
 						emit("(f)-", $1->place, q1, q, -1);
-					}else{
+					}
+					else{
 						emit("(f)-", $1->place, $3->place, q, -1);
 					}
-				}else{ 
+					$$->place = q;
+					$$->tempName = q.value;
+				}else if(temp == "int"){
+					operand q = getTempVariable($$->type);
+					if(isChar($1->type)){
+						operand q1 = getTempVariable($$->type);
+						emit("charToInt", $1->place, {}, q1, -1);
+						emit("-", q1, $3->place, q, -1);
+					}else if(isChar($3->type)){
+						operand q1 = getTempVariable($$->type);
+						emit("charToInt", $3->place, {}, q1, -1);
+						emit("-", $1->place, q1, q, -1);
+					}else{
+						emit("-", $1->place, $3->place, q, -1);
+					}
+					$$->place = q;
+					$$->tempName = q.value;
+				}
+				else if(temp == "char"){
+					operand q = getTempVariable($$->type);
+					
+					operand q1 = getTempVariable("int");
+					emit("charToInt", $1->place, {}, q1, -1);
+				
+					operand q2 = getTempVariable("int");
+					emit("charToInt", $3->place, {}, q2, -1);
+
+					operand q3 = getTempVariable("int");
+					emit("-", q1, q2, q3, -1);
+
+					emit("intToChar", q3, {}, q, -1);
+					
+					$$->place = q;
+					$$->tempName = q.value;
+				}
+				else{ 
+					operand q = getTempVariable($$->type); //TODO not always int
+					$$->place = q;
+					$$->tempName = q.value;
 					emit("-", $1->place, $3->place, q, -1);
 				}
 			}
@@ -1621,13 +1836,14 @@ relational_expression
 				}else{
 					emit("(f)<", $1->place, $3->place, q, -1);
 				}
+				$$->place = q;
 			}else{
 				operand q = getTempVariable($$->type);
 				emit("<", $1->place, $3->place, q, -1);
 				$$->place = q;
-				$$->nextlist.clear();
 			}
-        } else {
+			$$->nextlist.clear();
+			} else {
             semantic_error(("Invalid operands " + string($1->type) + " and " + string($3->type) + " to binary <").c_str(), "type error");
         }
     }
@@ -1665,12 +1881,13 @@ relational_expression
 				}else{
 					emit("(f)>", $1->place, $3->place, q, -1);
 				}
+				$$->place = q;
 			}else{
 				operand q = getTempVariable($$->type);
 				emit(">", $1->place, $3->place, q, -1);
 				$$->place = q;
-				$$->nextlist.clear();
 			}
+			$$->nextlist.clear();
         } else {
             semantic_error(("Invalid operands " + string($1->type) + " and " + string($3->type) + " to binary <").c_str(), "type error");
         }
@@ -1697,12 +1914,13 @@ relational_expression
 				}else{
 					emit("(f)<=", $1->place, $3->place, q, -1);
 				}
+				$$->place = q;
 			}else{
 				operand q = getTempVariable($$->type);
 				emit("<=", $1->place, $3->place, q, -1);
 				$$->place = q;
-				$$->nextlist.clear();
 			}
+			$$->nextlist.clear();
         } else {
             semantic_error(("Invalid operands " + string($1->type) + " and " + string($3->type) + " to binary <").c_str(), "type error");
         }
@@ -1736,7 +1954,7 @@ relational_expression
         //     semantic_error("Invalid operands to binary >=", "type error");
         // }
 		string temp = relExp($1->type, $3->type);
-		 if (!temp.empty()) {
+		if (!temp.empty()) {
             $$->type = "bool";
 			// 3AC
 			if(isFloat(temp)){
@@ -1752,12 +1970,13 @@ relational_expression
 				}else{
 					emit("(f)>=", $1->place, $3->place, q, -1);
 				}
+				$$->place = q;
 			}else{
 				operand q = getTempVariable($$->type);
 				emit(">=", $1->place, $3->place, q, -1);
-				$$->place = q;
-				$$->nextlist.clear();
+				$$->place = q;	
 			}
+			$$->nextlist.clear();
         } else {
             semantic_error(("Invalid operands " + string($1->type) + " and " + string($3->type) + " to binary <").c_str(), "type error");
         }

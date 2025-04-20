@@ -4,6 +4,8 @@
 # Don't specify -h here
 
 # Check if the compiler exists
+make
+
 if [ ! -f "bin/compiler" ]; then
     echo "Error: Compiler not found in bin/compiler."
     exit 1
