@@ -181,11 +181,22 @@ postfix_expression
 				// insertSymbol(*curr_table, tempValue, $$->type, getSize($$->type), 0, NULL); // TODO: Check
 				// $$->place = {tempValue,$1->place.entry}; //TODO: check entry
 			}else{
-				operand q = getTempVariable($$->type);
+				std::cerr << $1->tempName << " " << $3->tempName << std::endl;
+				std::vector<int>previDims = lookup($1->tempName)->array_dims;
+				for(auto it: previDims){
+					std::cerr << "it = " << it << std::endl;
+					if(it == 0){
+						semantic_error("Array index out of bound", "semantic error");
+					}
+				}
+				
+				std::vector<int>arraydims = previDims.size() > 1 ? std::vector<int>(previDims.begin() + 1, previDims.end()) : std::vector<int>();
+				operand q = getTempVariableForArray($$->type, arraydims);
 				$$->place = q;
+				$$->arraydims = arraydims;
 				emit("[ ]", $1->place, $3->place, q, -1);
 			}
-			$$->tempName = $1->tempName;
+			$$->tempName = $$->place.value;
 		}
 		else{
 			//semantic_error(("Array " + $1->tempName +  " Index out of bound").c_str(), "semantic error"); ->TODO
@@ -1208,9 +1219,16 @@ unary_expression
 			// TODO : Handle char*, ...
 			$$->tempName = $2->tempName;
 			//rvalue == 0 
-			if($1->place.value == "unary*" && $2->type == "int*"){ // (*ptr) = 10 -> ptr store 10 
-				// $$->place.value = "*" + $2->place.value;
-				// $$->place.entry = $2->place.entry;
+			int cntStar = 0;
+			for(int i=(int)$2->type.size()-1;i>=0;i--){ //TODO: Is there any other case
+				if($2->type[i] == '*')
+					cntStar++;
+				else
+					break;
+			}
+			
+			if($1->place.value == "unary*" && cntStar == 1){ 
+				// (*ptr) = 10 -> ptr store 10 
 				operand q = getTempVariable(temp+"&"); //TODO: Handle offset for this in symbol table
 				$$->place = q;
 				emit($1->place.value, $2->place, {}, q, -1);

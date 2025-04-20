@@ -62,6 +62,7 @@ public:
 void run_optimisations();
 
 operand getTempVariable(std::string);
+operand getTempVariableForArray(std::string, std::vector<int>&);
 void print_tac_code(const std::string &inputFile, bool modifygotoLabels = false);
 int getCurrentSize();
 void extendList(std::vector<int> &list1, std::vector<int> &list2);

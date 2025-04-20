@@ -81,6 +81,7 @@ void emit_logical_not(quad &instr);
 void emit_logical_ptr_add(quad &instr);
 void emit_logical_ptr_sub(quad &instr);
 void emit_copy_to_offset(quad &instr);
+void emit_array_indexing(quad &instr);
 
 
 void next_use_analysis(std::vector<quad> &block);

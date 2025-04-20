@@ -67,6 +67,23 @@ operand getTempVariable(std::string type)
     operand q = {tempName, lookup(tempName)};
     return q;
 }
+operand getTempVariableForArray(std::string type, std::vector<int>&array_dims)
+{
+    std::string tempName = "_t_" + std::to_string(counter++);
+    // std::string baseType = type;
+    // while(baseType.size() && baseType.back() == '*')
+    // {
+    //     baseType.pop_back();
+    // }
+    // int size = getSize(baseType);
+    // for(auto it:array_dims){
+    //     size *= it;
+    // }
+    // insertSymbol(*curr_table, tempName, type, size, 0, NULL, "", 0, 0, 1, 0, array_dims); 
+    insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL, "", 0, 0, 0, 0, array_dims); 
+    operand q = {tempName, lookup(tempName)};
+    return q;
+}
 
 // Emit for assignment expressions
 int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, int isLocalStaticInit)

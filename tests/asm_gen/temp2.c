@@ -69,6 +69,90 @@
 // #include<stdlib.h>
 // #include <cstdio>
 // #include <iostream>  
+
+// void test_arithmetic_operations(){
+//     int x = 5, y = 10, z;
+
+//     z = y - x;
+//     printf("Subtraction: %d\n", z);
+
+//     z = y * x;
+//     printf("Multiplication: %d\n", z);
+
+//     z = y / x;
+//     printf("Division: %d\n", z);
+
+//     z = y % x;
+//     printf("Modulus: %d\n", z);
+// }
+
+// void test_bitwise_operations(){
+//     int x = 5, y = 10, z;
+
+//     z = y | x;
+//     printf("Bitwise OR: %d\n", z);
+
+//     z = y & x;
+//     printf("Bitwise AND: %d\n", z);
+
+//     z = y ^ x;
+//     printf("Bitwise XOR: %d\n", z);
+
+//     z = y >> x;
+//     printf("Right Shift: %d\n", z);
+
+//     z = y << x;
+//     printf("Left Shift: %d\n", z);
+// }
+
+// void test_logical_operations(){
+//     int x = 5, y = 10, z;
+
+//     z = x && y;
+//     printf("Logical AND: %d\n", z);
+
+//     z = x || y;
+//     printf("Logical OR: %d\n", z);
+
+//     z = !x;
+//     printf("Logical NOT: %d\n", z);
+// }
+
+// void test_comparison_operations(){
+//     int x = 5, y = 10, z;
+
+//     z = y < x;
+//     printf("Less than: %d\n", z);
+
+//     z = y > x;
+//     printf("Greater than: %d\n", z);
+
+//     z = y <= x;
+//     printf("Less than or equal: %d\n", z);
+
+//     z = y >= x;
+//     printf("Greater than or equal: %d\n", z);
+
+//     z = y == x;
+//     printf("Equal to: %d\n", z);
+
+//     z = y != x;
+//     printf("Not equal to: %d\n", z);
+// }
+
+// void test_unary_operations(){
+//     int x = 5, z;
+
+//     z = -x;
+//     printf("Unary minus: %d\n", z);
+
+//     z = +x;
+//     printf("Unary plus: %d\n", z);
+// }
+
+// //
+
+
 // void f6(){
 //     int x = 5, y = 10, z = 10;
 //     int *ptr = &y;
@@ -99,75 +183,148 @@
 //     printf("%d\n",z);
 // }
 
-void f8(){
-    int x = 5, y = 10, z = 10;
-    int *ptr = &y;
-    int *ptr2 = &x;
-    z = x && y;
-    printf("%d\n",z);
-    z = x || y;
-    printf("%d\n",z);
-    z = !x;
-    printf("---%d\n",z);
-    z = (*ptr) && (*ptr2);
-    printf("%d\n",z);
-    z = (*ptr) || (*ptr2);
-    printf("%d\n",z);
-    z = !(*ptr);
-    printf("%d\n",z);
-}
+// void f8(){
+//     int x = 5, y = 10, z = 10;
+//     int *ptr = &y;
+//     int *ptr2 = &x;
+//     z = x && y;
+//     printf("%d\n",z);
+//     z = x || y;
+//     printf("%d\n",z);
+//     z = !x;
+//     printf("---%d\n",z);
+//     z = (*ptr) && (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) || (*ptr2);
+//     printf("%d\n",z);
+//     z = !(*ptr);
+//     printf("%d\n",z);
+// }
 
-void f9(){
-    int x = 5, y = 10, z = 10;
-    int *ptr = &y;
-    int *ptr2 = &x;
-    z = (*ptr) < (*ptr2);
-    printf("%d\n",z);
-    z = (*ptr) > (*ptr2);
-    printf("%d\n",z);
-    z = (*ptr) <= (*ptr2);
-    printf("%d\n",z);
-    z = (*ptr) >= (*ptr2);
-    printf("%d\n",z);
-    z = (*ptr) == (*ptr2);
-    printf("%d\n",z);
-    z = (*ptr) != (*ptr2);
-    printf("%d\n",z);
-}
+// void f9(){
+//     int x = 5, y = 10, z = 10;
+//     int *ptr = &y;
+//     int *ptr2 = &x;
+//     z = (*ptr) < (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) > (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) <= (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) >= (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) == (*ptr2);
+//     printf("%d\n",z);
+//     z = (*ptr) != (*ptr2);
+//     printf("%d\n",z);
+// }
 
-void f10(){
-    int x = 5, y = 10, z = 10;
-    int *ptr2 = &x;
-    int arr[5] = {1,2,3,4,5};
-    arr[2] = arr[1] + arr[3];
-    printf("%d\n",arr[2]); 
-    arr[2] = arr[1] - arr[3];
-    printf("%d\n",arr[2]);
+// void f10(){
+//     int x = 5, y = 10, z = 10;
+//     int *ptr2 = &x;
+//     int arr[5] = {1,2,3,4,5};
+//     arr[2] = arr[1] + arr[3];
+//     printf("%d\n",arr[2]); 
+//     arr[2] = arr[1] - arr[3];
+//     printf("%d\n",arr[2]);
 
-    printf("%p\n",ptr2);
-    ptr2 = ptr2 + 1;
-    printf("%p\n",ptr2);
-    ptr2 = ptr2 - 1;
-    printf("%p\n",ptr2);
-}
+//     printf("%p\n",ptr2);
+//     ptr2 = ptr2 + 1;
+//     printf("%p\n",ptr2);
+//     ptr2 = ptr2 - 1;
+//     printf("%p\n",ptr2);
+// }
 
-void f11(){
-    int x = 5, y = 10, z = 10;
-    int *ptr = &y;
-    int *ptr2 = &x;
-    z = -(*ptr);
-    printf("%d\n",z);
-    z = +(*ptr);
-    printf("%d\n",z);
-}
+// void f11(){
+//     int x = 5, y = 10, z = 10;
+//     int *ptr = &y;
+//     int *ptr2 = &x;
+//     z = -(*ptr);
+//     printf("%d\n",z);
+//     z = +(*ptr);
+//     printf("%d\n",z);
+// }
 
-int main(){
-    // f6();
+// void f12(){
+//     char c = 'a';
+//     char d = 'b';
+//     char *ptr = &c;
+//     char *ptr2 = &d;
+//     printf("%c\n",c);
+//     printf("%c\n",*ptr);
+//     printf("%c\n",*ptr2);
+//     *ptr = 'c';
+//     printf("%c\n",c);
+// }
+
+// void callAboveFunctions(){
+//     test_arithmetic_operations();
+//     test_bitwise_operations();
+//     test_logical_operations();
+//     test_comparison_operations();
+//     test_unary_operations();
+ // f6();
     // f7();
     // f8();
-    f9();
-    f10();
-    f11();
+    // f9();
+    // f10();
+    // f11();
+    // f12();
+// }
+
+int main(){
+
+    int arr3d[2][2][3] = {{ {10,12,13},
+                            {3,5,6}
+                          },
+                          { {7,8,9},
+                            {1,2,3}
+                          }
+                        };
+    int x;
+    // x = arr3d[1][1][2];
+    x = arr3d[0][0][1];
+    printf("%d\n",x);
+    printf("%d\n",arr3d[0][0][0]);
+    arr3d[1][1][2] = 1;
+    printf("arr3d[0][0][0] = %d\n",arr3d[0][0][0]);
+    // x = arr3d[1][1][2];
+    // printf("%d\n",x);
+    // x = arr3d[1][1][2];
+    // printf("%d\n",arr3d[0][0][0]);
+    // printf("%d\n",x);
+
+    //array = array case
+    // int x;
+    // x = arr3d[1][1][2];
+    // printf("%d\n",x);
+    // printf("%d\n",arr3d[0][0][0]);
+    // arr3d[1][1][2] = 1;
+    // printf("%d\n",arr3d[0][0][0]);
+    // x = arr3d[1][1][2];
+    // printf("%d\n",x);
+    // x = arr3d[1][1][2];
+    // printf("%d\n",arr3d[0][0][0]);
+    // printf("%d\n",x);
+
+    // char arr[2][2] = {{'a','b'},{'c','d'}};
+    // char arr1[2] = arr[1];
+    // char x = arr[1][0];
+    // printf("%c\n",x);
+
+    // int x = 19;
+    // int arr[2];
+    // arr[1] = 1;
+    // printf("x %d\n",x);
+    // x = arr[1];
+    // printf("x %d\n",x);
+
+    // int x = 19;
+    // int arr[2][2] = {{10,12},{3,5}};
+    // int arr[2][3];
+    // arr[1][1] = 10;
+    // x = arr[1][1];
+    // printf("x %d\n",x);
 }
 
 
