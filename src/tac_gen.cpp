@@ -71,7 +71,7 @@ operand getTempVariable(std::string type)
 // Emit for assignment expressions
 int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, int isLocalStaticInit)
 {
-    // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1 << "#" << arg2 << std::endl;
+    // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1.value << "#" << arg2.value << std::endl;
     if (isLocalStaticInit > 0)
         arg1.value += "_" + std::to_string(isLocalStaticInit);
     std::string temp_op = "";
@@ -107,6 +107,13 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
                     q = getTempVariable(type);
                     emit("(f)" + temp_op, arg1, q1, q, -1);
                 }
+                else if (checkInt(type1) && isFloat(type2))
+                {
+                    operand q1 = getTempVariable(type1);
+                    emit("floatToInt", arg2, {}, q1, -1);
+                    q = getTempVariable(type);
+                    emit(temp_op, arg1, q1, q, -1);
+                }
                 else if (isFloat(type1) && isFloat(type2))
                 {
                     q = getTempVariable(type);
@@ -131,6 +138,11 @@ int assign_exp(std::string op, std::string type, std::string type1, std::string 
         {
             q = getTempVariable(type1);
             emit("intToFloat", arg2, operand(), q, -1);
+        }
+        else if (checkInt(type1) && isFloat(type2))
+        {
+            q = getTempVariable(type1);
+            emit("floatToInt", arg2, operand(), q, -1);
         }
         else
             q = arg2;

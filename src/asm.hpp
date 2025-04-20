@@ -29,6 +29,11 @@ inline void emit_section(const std::string &section)
     asm_file << "\nsection " << section << "\n";
 }
 
+inline void emit_comment(const std::string &comment)
+{
+    asm_file << "\t\t\t; " << comment << "\n";
+}
+
 inline void add_extern_funcs()
 {
     for (auto &func : called_lib_funcs)
@@ -72,6 +77,7 @@ void emit_logical_and(quad &instr);
 void emit_logical_or(quad &instr);
 void emit_logical_not(quad &instr);
 void emit_intToFloat(quad &instr);
+void emit_floatToInt(quad &instr);
 
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();

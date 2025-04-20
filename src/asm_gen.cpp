@@ -431,12 +431,12 @@ void emit_asm(const std::string &inputFile)
     {
         next_use_analysis(block);
         if (print_comments)
-            emit_instr("\t\t; Block begins");
+            emit_comment("Block begins");
         bool regs_spilled = false;
         for (auto &instr : block)
         {
             if (print_comments)
-                emit_instr("\t\t; " + stringify(instr, true));
+                emit_comment(stringify(instr, true));
             updateSeenOperand(instr);
             const std::string curr_op = instr.op;
             if (curr_op.substr(0, 5) == "FUNC_")
@@ -452,7 +452,7 @@ void emit_asm(const std::string &inputFile)
                     if (!regs_spilled)
                     {
                         if (print_comments)
-                            emit_instr("\t\t; (spilling all registers)");
+                            emit_comment("(spilling all registers)");
                         for (int reg = 0; reg < uRegCnt; reg++)
                             spillReg(reg);
 
@@ -519,26 +519,27 @@ void emit_asm(const std::string &inputFile)
                 emit_logical_not(instr);
             else if (curr_op == "intToFloat")
                 emit_intToFloat(instr);
+            else if (curr_op == "floatToInt")
+                emit_floatToInt(instr);
             else if (curr_op == "GOTO")
             {
                 if (!regs_spilled)
                 {
                     if (print_comments)
-                        emit_instr("\t\t; (spilling all registers)");
+                        emit_comment("(spilling all registers)");
                     for (int reg = 0; reg < uRegCnt; reg++)
                         spillReg(reg);
                     regs_spilled = true;
                 }
                 emit_goto(instr);
             }
-            
 
             printReg_addr_Desc(instr.Label);
         }
         if (!regs_spilled)
         {
             if (print_comments)
-                emit_instr("\t\t; (spilling all registers)");
+                emit_comment("(spilling all registers)");
             for (int reg = 0; reg < uRegCnt; reg++)
                 spillReg(reg);
 
@@ -623,7 +624,7 @@ void emit_param(quad &instr)
             emit_instr(x86_lib::push(instr.arg1.value));
         else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0 || instr.arg1.value.substr(0, 4) == "__f_")
         {
-            if (instr.arg1.entry->type == "float" && instr.arg2.value== "lea") 
+            if (instr.arg1.entry->type == "float" && instr.arg2.value == "lea")
             {
                 emit_fparam(instr.arg1);
             }
@@ -636,7 +637,7 @@ void emit_param(quad &instr)
             emit_instr(x86_lib::push(reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
         else if (instr.arg1.entry->addrDesc.inStack == 1)
         {
-            if (instr.arg1.entry->type == "float" && instr.arg2.value== "lea")
+            if (instr.arg1.entry->type == "float" && instr.arg2.value == "lea")
             {
                 emit_fparam(instr.arg1);
             }
@@ -649,7 +650,7 @@ void emit_param(quad &instr)
         if (sz % 4 != 0)
             sz += 4 - (sz % 4);
         params_size += sz;
-        if (instr.arg1.entry->type == "float")
+        if (instr.arg1.entry->type == "float" && instr.arg2.value == "lea")
         {
             params_size += 4;
         }
@@ -720,10 +721,12 @@ void emit_fn_epilogue()
 
 void emit_return(quad &instr)
 {
-    if(instr.arg1.entry && instr.arg1.entry->type == "float"){
-        emit_fload(instr.arg1);   
+    if (instr.arg1.entry && instr.arg1.entry->type == "float")
+    {
+        emit_fload(instr.arg1);
     }
-    else{
+    else
+    {
         setParticularReg(EAX, instr.arg1);
     }
     if (inside_main) // return at end of main -> OK
@@ -862,7 +865,8 @@ void emit_cmp(quad &instr)
     updateRegDesc(reg1, instr.result);
 }
 
-void emit_fcmp(quad &instr){
+void emit_fcmp(quad &instr)
+{
     emit_fload(instr.arg1);
     emit_fload(instr.arg2);
     emit_instr(x86_lib::fcomip());
@@ -1112,7 +1116,7 @@ void emit_fload(operand &arg)
     }
     else if (arg.entry && (arg.entry->isGlobal || arg.entry->isStatic > 0))
     {
-        emit_instr(x86_lib::fld_mem("dword", arg.value)); 
+        emit_instr(x86_lib::fld_mem("dword", arg.value));
     }
     else
     {
@@ -1149,8 +1153,18 @@ void emit_intToFloat(quad &instr)
         emit_instr(x86_lib::fild("dword", instr.arg1.value));
     else
         emit_instr(x86_lib::fild("dword", getMem(instr.arg1)));
-    
+
     emit_fstore(instr.result);
+}
+
+void emit_floatToInt(quad &instr)
+{
+    emit_fload(instr.arg1);
+
+    if (instr.result.entry && instr.result.entry->isGlobal || instr.result.entry->isStatic > 0)
+        emit_instr(x86_lib::fisttp("dword", instr.result.value));
+    else
+        emit_instr(x86_lib::fisttp("dword", getMem(instr.result)));
 }
 
 void get_constants()
@@ -1246,7 +1260,6 @@ void get_constants()
         }
     }
 }
-
 
 void fixgotoLabels()
 {
@@ -1436,7 +1449,7 @@ void emit_data_section()
                 if (is_float_constant(str))
                     emit_data("__f_" + std::to_string(cnt) + ": dd " + str);
                 else if (is_int_constant(str))
-                    emit_data("__f_" + std::to_string(cnt) + ": dd " + str + ".0");
+                    emit_data("__f_" + std::to_string(cnt) + ": dd " + std::to_string(std::stoi(str, nullptr, 0)) + ".0");
             }
         }
     }
