@@ -38,6 +38,17 @@ namespace x86_lib
         return "mov " + size + " " + mem(dest_addr) + ", " + imm;
     }
 
+    // MOVZX instruction
+    inline std::string movzx(const std::string &dest, const std::string &src)
+    {
+        return "movzx " + dest + ", " + src;
+    }
+
+    inline std::string movzx_reg_mem(const std::string &dest_reg, const std::string &size, const std::string &src_addr)
+    {
+        return "movzx " + dest_reg + ", " + size + " " + mem(src_addr);
+    }
+
     // PUSH instruction
     inline std::string push(const std::string &reg)
     {
@@ -562,7 +573,7 @@ namespace x86_lib
     }
     inline std::string fucompp() { return "fucompp"; }
     inline std::string fcomi(const std::string &src = "st1") { return "fcomi " + src; }
-    inline std::string fcomip() { return "fcomip";}
+    inline std::string fcomip() { return "fcomip"; }
     inline std::string fucomi(const std::string &src = "st1") { return "fucomi " + src; }
     inline std::string fucomip(const std::string &src = "st1") { return "fucomip " + src; }
 

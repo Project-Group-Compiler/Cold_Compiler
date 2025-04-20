@@ -78,6 +78,9 @@ void emit_logical_or(quad &instr);
 void emit_logical_not(quad &instr);
 void emit_intToFloat(quad &instr);
 void emit_floatToInt(quad &instr);
+void emit_intToChar(quad &instr);
+void emit_charToInt(quad &instr);
+void emit_cassign(quad &instr);
 
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();
