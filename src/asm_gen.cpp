@@ -141,7 +141,7 @@ std::string getMem(operand &op)
         else
         {
             if(op.entry->isArray) offset += op.entry->size;
-            memAddr = reg_names[EBP] + "-" + std::to_string(offset + 4);
+            memAddr = reg_names[EBP] + "-" + std::to_string(offset + op.entry->size);
         }
         if (op.entry->addrDesc.inStack == 2)
         {
@@ -475,7 +475,7 @@ void emit_asm(const std::string &inputFile)
 
                         regs_spilled = true;
                     }
-                    emit_fn_epilogue();
+                    // emit_fn_epilogue();
                 }
             }
             else if (curr_op.back() == ':')
@@ -607,8 +607,8 @@ void emit_fn_defn(quad &instr)
     if (entry)
     {
         func_size = entry->size;
-        if (func_size % 4 != 0)
-            func_size += 4 - (func_size % 4);
+        // if (func_size % 4 != 0)
+        //     func_size += 4 - (func_size % 4);
         emit_instr(x86_lib::sub(reg_names[ESP], std::to_string(func_size)));
     }
     else
@@ -651,6 +651,12 @@ void emit_param(quad &instr)
             {
                 emit_fparam(instr.arg1);
             }
+            else if (instr.arg1.entry->type == "char")
+            {
+                setParticularReg(EBX, instr.arg1);
+                // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", instr.arg1.value));
+                emit_instr(x86_lib::push(reg_names[EBX]));
+            }
             else
             {
                 emit_instr(x86_lib::push_mem("dword", instr.arg1.value));
@@ -658,11 +664,18 @@ void emit_param(quad &instr)
         } // TODO : Check
         else if (instr.arg1.entry->addrDesc.inRegs.size())
             emit_instr(x86_lib::push(reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
-        else if (instr.arg1.entry->addrDesc.inStack == 1)
+        else if (instr.arg1.entry->addrDesc.inStack == 1 || (instr.arg1.entry->offset<0 && instr.arg1.entry->addrDesc.inStack==0))
         {
             if (instr.arg1.entry->type == "float" && instr.arg2.value == "lea")
             {
                 emit_fparam(instr.arg1);
+            }
+            
+            else if (instr.arg1.entry->type == "char")
+            {
+                setParticularReg(EBX, instr.arg1);
+                // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", getMem(instr.arg1)));
+                emit_instr(x86_lib::push(reg_names[EBX]));
             }
             else
             {
@@ -670,12 +683,17 @@ void emit_param(quad &instr)
             }
         }
         int sz = instr.arg1.entry->size;
-        if (sz % 4 != 0)
-            sz += 4 - (sz % 4);
+        // if (sz % 4 != 0)
+        //     sz += 4 - (sz % 4);
+        
         params_size += sz;
         if (instr.arg1.entry->type == "float" && instr.arg2.value == "lea")
         {
             params_size += 4;
+        }
+        if (instr.arg1.entry->type == "char")
+        {
+            params_size += 3;
         }
     }
 }
@@ -754,6 +772,7 @@ void emit_return(quad &instr)
     }
     if (inside_main) // return at end of main -> OK
         inside_main = false;
+    emit_fn_epilogue();
 }
 
 void emit_goto(quad &instr)

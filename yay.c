@@ -1,32 +1,22 @@
-// static int x = 7;
 
-int yay()
+int g=99;
+
+int fact(int n)
 {
-    int x = 0;
-    x++;
-    return x;
+    int y;
+    int k=n-1;
+    int z=0;
+    g--;
+    if (n == z)
+        return 1;
+    y=fact(k);
+    return n * y;
 }
-
-// int foo()
-// {
-//     int y = 2 * x;
-//     y = y - 1;
-//     yay();
-//     return yay() + y;
-// }
-
-// int bar()
-// {
-//     x = x + 1;
-//     foo();
-//     return foo();
-// }
 
 int main()
 {
-    int x = 4;
-    int y;
-    x++;
-    y = yay();
-    printf("%d %d\n", x, y);
+    int x=5;
+     x=fact(x);
+    printf("%d\n", x);
+    return 0;
 }

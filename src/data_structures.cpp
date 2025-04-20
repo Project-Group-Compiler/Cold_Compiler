@@ -920,12 +920,12 @@ void insertSymbol(sym_table &table, std::string id, std::string type, int size, 
     }
 }
 
-int param_offset = -4;
+int param_offset = -8;
 
 // insert function parameters into the symbol table of the function
 void paramInsert(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr)
 {
-    table.insert(make_pair(id, createEntry(type, size, is_init, param_offset - size, ptr)));
+    table.insert(make_pair(id, createEntry(type, size, is_init, param_offset, ptr)));
 
     // if(type[type.length()-1] == '*' && !array_dims.empty()){
     // 	size = 4;
@@ -941,11 +941,16 @@ void paramInsert(sym_table &table, std::string id, std::string type, int size, b
     // 	array_dims.clear();
     // }
     param_offset -= size;
+    if(param_offset % 4 != 0)
+    {
+        int padding = (4 - (abs(param_offset) % 4));
+        param_offset -= padding;
+    }
 }
 
 void clear_paramoffset()
 {
-    param_offset = -4;
+    param_offset = -8;
 }
 
 std::vector<std::string> getFuncArgs(std::string id)

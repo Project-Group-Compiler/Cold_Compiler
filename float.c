@@ -21,27 +21,24 @@ int main()
     int i = 'B';
     float f = 0.5;
     i = c;
-	c = (float) i;
-	// printf("c : %c\n", c); //nhi hua print
-	// printf("i : %d\n", i);
-	// printf("f : %f\n", f);
-	// printf("\n");
-	// c = i+1;
-	// i=c;
-	// // printf("c : %c\n", c);
-	// printf("c : %c\n", i);
-	// printf("f : %f\n", f);
-    // printf("\n");
-	// f = c;
-	// // printf("c : %c\n", c);
-	// printf("i : %d\n", i);
-	// printf("f : %f\n", f);
-    // printf("\n");
-	// c = f+1;
-	// i=c;
-	// // printf("c : %c\n", c);
-	// printf("c : %c\n", i);
-	// printf("f : %f\n", f);
-	// printf("\n");
-//     return 0;
+	printf("c : %c\n", c); //nhi hua print
+	printf("i : %d\n", i);
+	printf("f : %f\n", f);
+	printf("\n");
+	c = i+1;
+	printf("c : %c\n", c);
+	printf("i : %d\n", i);
+	printf("f : %f\n", f);
+    printf("\n");
+	f = c;
+	printf("c : %c\n", c);
+	printf("i : %d\n", i);
+	printf("f : %f\n", f);
+    printf("\n");
+	c = f+1;
+	printf("c : %c\n", c);
+	printf("i : %d\n", i);
+	printf("f : %f\n", f);
+	printf("\n");
+  
 }

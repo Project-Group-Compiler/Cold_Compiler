@@ -325,8 +325,9 @@ postfix_expression
 				}
 				reverse(actualArgs.begin(), actualArgs.end());
 				if(check){
-					for(auto&x : actualArgs)
+					for(auto&x : actualArgs){
 						emit("param", x, {"lea"}, {}, -1);
+					}
 				}
 				else{
 					for(auto&x : actualArgs)
