@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
                       << "  -s, --symtab     Print symbol tables\n"
                       << "  -d, --debug      Print debug trace\n"
                       << "  -t, --tac        Print three address code\n"
-                      << "  -c, --comments   Print comments in the generated asms\n"
+                      << "  -c, --comments   Print comments in the generated asm\n"
                       << "  -f, --force      Forcefully continue even if errors are present\n";
             return 42;
         }

@@ -118,8 +118,8 @@ inline std::string stringify(const quad &instr, bool modifygotoLabels = false)
         else
             s += instr.result.value + " = " + instr.arg1.value + " " + curr_op.back() + " " + instr.arg2.value + "\t\t(float)";
     }
-    else if (curr_op == "=")
-        s += instr.result.value + " = " + instr.arg1.value;
+    else if (curr_op == "=" || curr_op == "(c)=")
+        s += instr.result.value + " " + curr_op + " " + instr.arg1.value;
     else if (curr_op == "+" || curr_op == "-" || curr_op == "*" || curr_op == "/" || curr_op == "%")
         s += instr.result.value + " = " + instr.arg1.value + " " + curr_op + " " + instr.arg2.value;
     else if (curr_op == "==" || curr_op == "!=" || curr_op == "<" || curr_op == ">" || curr_op == "<=" || curr_op == ">=" || curr_op == "&&" || curr_op == "||" || curr_op == ">>" || curr_op == "<<" || curr_op == "&" || curr_op == "|" || curr_op == "^" || curr_op == "ptr+" || curr_op == "ptr-")
@@ -147,7 +147,7 @@ inline std::string stringify(const quad &instr, bool modifygotoLabels = false)
     }
     else if (curr_op == "CopyToOffset")
         s += instr.result.value + " offset " + instr.arg2.value + " <- " + instr.arg1.value;
-    else if (curr_op == "intToFloat" || curr_op == "SIZEOF")
+    else if (curr_op == "intToFloat" || curr_op == "floatToInt" || curr_op == "charToInt" || curr_op == "intToChar" || curr_op == "SIZEOF")
         s += instr.result.value + " = " + curr_op + "(" + instr.arg1.value + ")";
     else if (curr_op.substr(0, 5) == "CAST_")
         s += instr.result.value + " = CAST " + instr.arg1.value + " to " + curr_op.substr(5);
@@ -155,11 +155,11 @@ inline std::string stringify(const quad &instr, bool modifygotoLabels = false)
 }
 
 inline std::regex hex_integer("[-]?0[xX][0-9a-fA-F]+");
-inline std::regex octal_integer("[-]?0[0-9]+");
+inline std::regex octal_integer("[-]?0[0-7]+");
 inline std::regex decimal_integer("[-]?[0-9]+");
-inline std::regex scientific_float("[-]?[0-9]+[Ee][+-]?[0-9]+");
-inline std::regex float_leading_decimal("[-]?[0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?");
-inline std::regex float_trailing_decimal("[-]?[0-9]*\\.[0-9]+([Ee][+-]?[0-9]+)?");
+inline std::regex scientific_float("[-]?[0-9]+[Ee][+-]?[0-9]+[fF]?");
+inline std::regex float_leading_decimal("[-]?[0-9]+\\.[0-9]*([Ee][+-]?[0-9]+)?[fF]?");
+inline std::regex float_trailing_decimal("[-]?[0-9]*\\.[0-9]+([Ee][+-]?[0-9]+)?[fF]?");
 
 inline bool is_int_constant(const std::string &s)
 {

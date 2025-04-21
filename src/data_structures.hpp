@@ -89,7 +89,7 @@ std::string searchTypedefTable(std::string Token);
 void printType(std::ofstream &out);
 void printTables(const std::string &inputFile);
 bool searchIdConst(std::string id);
-std::string getSizeOfType(const std::string &typeStr);
+// std::string getSizeOfType(const std::string &typeStr);
 
 void symTable_init();
 sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_table *ptr, std::string access = "", int isStatic = 0, bool isConst = false, bool isArray = false, bool isEnum = false,std::vector<int> array_dims = {});

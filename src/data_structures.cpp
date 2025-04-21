@@ -106,25 +106,25 @@ bool searchIdConst(std::string id)
     }
     return 0;
 }
-std::string getSizeOfType(const std::string &typeStr)
-{
-    if (typeStr == "int")
-    {
-        return "4";
-    }
-    else if (typeStr == "int*")
-    {
-        return "4";
-    }
-    else if (typeStr.size() >= 4 && typeStr.substr(0, 4) == "int*")
-    { // for int****
-        return "4";
-    }
-    else
-    {
-        return "0"; // Unknown type
-    }
-}
+// std::string getSizeOfType(const std::string &typeStr)
+// {
+//     if (typeStr == "int")
+//     {
+//         return "4";
+//     }
+//     else if (typeStr == "int*")
+//     {
+//         return "4";
+//     }
+//     else if (typeStr.size() >= 4 && typeStr.substr(0, 4) == "int*")
+//     { // for int****
+//         return "4";
+//     }
+//     else
+//     {
+//         return "0"; // Unknown type
+//     }
+// }
 
 void symTable_init()
 {
@@ -146,7 +146,7 @@ void symTable_init()
     insertKeywords();
 }
 
-sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum,std::vector<int> array_dims)
+sym_entry *createEntry(std::string type, int size, bool init, int offset, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum, std::vector<int> array_dims)
 {
     sym_entry *new_sym = new (std::nothrow) sym_entry;
 
@@ -433,7 +433,7 @@ void createStructTable()
 }
 
 // insert struct attributes in struct symbol table
-int insertStructAttr(std::string attr, std::string type, int size, bool init,bool isArray ,std::vector<int> array_dims)
+int insertStructAttr(std::string attr, std::string type, int size, bool init, bool isArray, std::vector<int> array_dims)
 {
     if (!curr_structure)
     {
@@ -458,7 +458,7 @@ int insertStructAttr(std::string attr, std::string type, int size, bool init,boo
                     Goffset.top() += padding;
             }
         }
-        (*curr_structure).insert(std::make_pair(attr, createEntry(type, size, init, struct_offset, nullptr,"",0,0,isArray,0,array_dims)));
+        (*curr_structure).insert(std::make_pair(attr, createEntry(type, size, init, struct_offset, nullptr, "", 0, 0, isArray, 0, array_dims)));
         struct_offset += size;
         return 1;
     }
@@ -597,7 +597,7 @@ void createClassTable()
     curr_class_structure = new_table;
     class_offset = 0;
 }
-int insertClassAttr(std::string attr, std::string type, int size, bool init, std::string access,int isStatic, bool isArray ,std::vector<int> array_dims )
+int insertClassAttr(std::string attr, std::string type, int size, bool init, std::string access, int isStatic, bool isArray, std::vector<int> array_dims)
 {
     if (!curr_class_structure)
     {
@@ -622,7 +622,7 @@ int insertClassAttr(std::string attr, std::string type, int size, bool init, std
                     Goffset.top() += padding;
             }
         }
-        (*curr_class_structure).insert(std::make_pair(attr, createEntry(type, size, init, class_offset, nullptr, access,isStatic,0,isArray,0,array_dims)));
+        (*curr_class_structure).insert(std::make_pair(attr, createEntry(type, size, init, class_offset, nullptr, access, isStatic, 0, isArray, 0, array_dims)));
         class_offset += size;
         return 1;
     }
@@ -882,7 +882,7 @@ int inheritFromClass(std::string childClassName, std::string parentClassName)
 
             if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end())
             {
-                insertClassAttr(memberName, member->type, member->size, member->init, member->access,member->isStatic, member->isArray,member->array_dims);
+                insertClassAttr(memberName, member->type, member->size, member->init, member->access, member->isStatic, member->isArray, member->array_dims);
             }
         }
     }
@@ -902,7 +902,7 @@ void createParamList()
     avl = 1;
 }
 
-void insertSymbol(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum,std::vector<int> array_dims)
+void insertSymbol(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, std::string access, int isStatic, bool isConst, bool isArray, bool isEnum, std::vector<int> array_dims)
 {
     table.insert(std::make_pair(id, createEntry(type, size, is_init, blockSz.top(), ptr, access, isStatic, isConst, isArray, isEnum, array_dims)));
     if (!blockSz.empty())
@@ -921,12 +921,12 @@ void insertSymbol(sym_table &table, std::string id, std::string type, int size, 
     }
 }
 
-int param_offset = -4;
+int param_offset = -8;
 
 // insert function parameters into the symbol table of the function
-void paramInsert(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, int isStatic, bool isConst, bool isArray,std::vector<int> array_dims)
+void paramInsert(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr, int isStatic, bool isConst, bool isArray, std::vector<int> array_dims)
 {
-    table.insert(make_pair(id, createEntry(type, size, is_init, param_offset - size, ptr,"", isStatic, isConst, isArray, 0, array_dims)));
+    table.insert(make_pair(id, createEntry(type, size, is_init, param_offset, ptr, "", isStatic, isConst, isArray, 0, array_dims)));
 
     // if(type[type.length()-1] == '*' && !array_dims.empty()){
     // 	size = 4;
@@ -942,11 +942,16 @@ void paramInsert(sym_table &table, std::string id, std::string type, int size, b
     // 	array_dims.clear();
     // }
     param_offset -= size;
+    if(abs(param_offset) % 4 != 0)
+    {
+        int padding = (4 - (abs(param_offset) % 4));
+        param_offset -= padding;
+    }
 }
 
 void clear_paramoffset()
 {
-    param_offset = -4;
+    param_offset = -8;
 }
 
 std::vector<std::string> getFuncArgs(std::string id)
@@ -1096,8 +1101,8 @@ void printSymbolTable(sym_table *table, std::string file_name)
                     << it.second->access << ","
                     << (it.second->isStatic > 0 ? "static" : "") << ", "
                     << (it.second->isConst ? "const" : "") << ", "
-                    << (it.second->isArray ? "array" : "") ;
-                    //print array dims
+                    << (it.second->isArray ? "array" : "");
+            // print array dims
             if (it.second->isArray)
             {
                 outFile << ",[";
@@ -1128,18 +1133,18 @@ void printSymbolTable(sym_table *table, std::string file_name)
                     << (it.second->isConst ? "const" : "") << ", "
                     << (it.second->isArray ? "array" : "") << ", "
                     << (it.second->isEnum ? "enum const" : "");
-                    if (it.second->isArray)
-                    {
-                        outFile << ",[";
-                        for (int i = 0; i < it.second->array_dims.size(); i++)
-                        {
-                            outFile << it.second->array_dims[i];
-                            if (i != it.second->array_dims.size() - 1)
-                                outFile << ", ";
-                        }
-                        outFile << "]";
-                    }
-                    outFile << "\n";
+            if (it.second->isArray)
+            {
+                outFile << ",[";
+                for (int i = 0; i < it.second->array_dims.size(); i++)
+                {
+                    outFile << it.second->array_dims[i];
+                    if (i != it.second->array_dims.size() - 1)
+                        outFile << ", ";
+                }
+                outFile << "]";
+            }
+            outFile << "\n";
         }
     }
 }

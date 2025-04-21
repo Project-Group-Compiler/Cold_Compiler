@@ -38,6 +38,17 @@ namespace x86_lib
         return "mov " + size + " " + mem(dest_addr) + ", " + imm;
     }
 
+    // MOVZX instruction
+    inline std::string movzx(const std::string &dest, const std::string &src)
+    {
+        return "movzx " + dest + ", " + src;
+    }
+
+    inline std::string movzx_reg_mem(const std::string &dest_reg, const std::string &size, const std::string &src_addr)
+    {
+        return "movzx " + dest_reg + ", " + size + " " + mem(src_addr);
+    }
+
     // PUSH instruction
     inline std::string push(const std::string &reg)
     {
@@ -448,9 +459,9 @@ namespace x86_lib
         return "fadd " + size + " " + mem(addr);
     }
 
-    inline std::string faddp(const std::string &dest = "st1")
+    inline std::string faddp()
     {
-        return "faddp " + dest;
+        return "faddp";
     }
 
     inline std::string fsub(const std::string &src = "")
@@ -463,9 +474,9 @@ namespace x86_lib
         return "fsub " + size + " " + mem(addr);
     }
 
-    inline std::string fsubp(const std::string &dest = "st1")
+    inline std::string fsubp()
     {
-        return "fsubp " + dest;
+        return "fsubp";
     }
 
     inline std::string fsubr(const std::string &src = "")
@@ -493,9 +504,9 @@ namespace x86_lib
         return "fmul " + size + " " + mem(addr);
     }
 
-    inline std::string fmulp(const std::string &dest = "st1")
+    inline std::string fmulp()
     {
-        return "fmulp " + dest;
+        return "fmulp";
     }
 
     inline std::string fdiv(const std::string &src = "")
@@ -508,9 +519,9 @@ namespace x86_lib
         return "fdiv " + size + " " + mem(addr);
     }
 
-    inline std::string fdivp(const std::string &dest = "st1")
+    inline std::string fdivp()
     {
-        return "fdivp " + dest;
+        return "fdivp";
     }
 
     inline std::string fdivr(const std::string &src = "")
@@ -562,7 +573,7 @@ namespace x86_lib
     }
     inline std::string fucompp() { return "fucompp"; }
     inline std::string fcomi(const std::string &src = "st1") { return "fcomi " + src; }
-    inline std::string fcomip(const std::string &src = "st1") { return "fcomip " + src; }
+    inline std::string fcomip() { return "fcomip"; }
     inline std::string fucomi(const std::string &src = "st1") { return "fucomi " + src; }
     inline std::string fucomip(const std::string &src = "st1") { return "fucomip " + src; }
 
