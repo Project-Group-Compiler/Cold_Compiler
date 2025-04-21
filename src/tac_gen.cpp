@@ -70,16 +70,6 @@ operand getTempVariable(std::string type)
 operand getTempVariableForArray(std::string type, std::vector<int>&array_dims)
 {
     std::string tempName = "_t_" + std::to_string(counter++);
-    // std::string baseType = type;
-    // while(baseType.size() && baseType.back() == '*')
-    // {
-    //     baseType.pop_back();
-    // }
-    // int size = getSize(baseType);
-    // for(auto it:array_dims){
-    //     size *= it;
-    // }
-    // insertSymbol(*curr_table, tempName, type, size, 0, NULL, "", 0, 0, 1, 0, array_dims); 
     insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL, "", 0, 0, 0, 0, array_dims); 
     operand q = {tempName, lookup(tempName)};
     return q;
