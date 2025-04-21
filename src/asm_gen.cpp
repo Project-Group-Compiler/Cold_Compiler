@@ -33,9 +33,11 @@ std::ofstream asm_file;
 
 std::map<std::string, int> string_literals;
 std::map<std::string, int> float_constants;
+bool block_regs_spilled = false;
 bool inside_fn = false;
-bool inside_main = false;
+bool main_no_ret = false;
 bool fn_prologue_emitted = false;
+bool fn_epilogue_emitted = false;
 int params_size = 0;
 
 int labelCnt = 0;
@@ -140,7 +142,7 @@ std::string getMem(operand &op)
             memAddr = reg_names[EBP] + "+" + std::to_string(-offset);
         else
         {
-            if(op.entry->isArray) offset += op.entry->size;
+            // if(op.entry->isArray) offset += op.entry->size;
             memAddr = reg_names[EBP] + "-" + std::to_string(offset + op.entry->size);
         }
         if (op.entry->addrDesc.inStack == 2)
@@ -205,7 +207,8 @@ void spillReg(int reg)
 }
 
 void spillAllReg(){
-    emit_instr("; spilling all reg");
+    if(print_comments)
+        emit_comment("(spilling all reg)");
     for(int reg=0;reg<uRegCnt;reg++){
         spillReg(reg);
     }
@@ -449,7 +452,6 @@ void emit_asm(const std::string &inputFile)
         next_use_analysis(block);
         if (print_comments)
             emit_comment("Block begins");
-        bool regs_spilled = false;
         for (auto &instr : block)
         {
             if (print_comments)
@@ -465,17 +467,22 @@ void emit_asm(const std::string &inputFile)
                 }
                 else
                 {
-                    inside_fn = false;
-                    if (!regs_spilled)
+                    if (!block_regs_spilled)
                     {
-                        if (print_comments)
-                            emit_comment("(spilling all registers)");
-                        for (int reg = 0; reg < uRegCnt; reg++)
-                            spillReg(reg);
-
-                        regs_spilled = true;
+                        spillAllReg();
+                        block_regs_spilled = true;
                     }
-                    // emit_fn_epilogue();
+                    if(!fn_epilogue_emitted)
+                    {
+                        if (main_no_ret)
+                        {
+                            emit_instr(x86_lib::xor_op(reg_names[EAX], reg_names[EAX]));
+                            main_no_ret = false;
+                        }
+                        emit_fn_epilogue();
+                    }
+                    inside_fn = false;
+                    main_no_ret = false;
                 }
             }
             else if (curr_op.back() == ':')
@@ -546,28 +553,20 @@ void emit_asm(const std::string &inputFile)
                 emit_charToInt(instr);
             else if (curr_op == "GOTO")
             {
-                if (!regs_spilled)
+                if (!block_regs_spilled)
                 {
-                    if (print_comments)
-                        emit_comment("(spilling all registers)");
-                    for (int reg = 0; reg < uRegCnt; reg++)
-                        spillReg(reg);
-                    regs_spilled = true;
+                    spillAllReg();
+                    block_regs_spilled = true;
                 }
                 emit_goto(instr);
             }
 
             printReg_addr_Desc(instr.Label);
         }
-        if (!regs_spilled)
-        {
-            if (print_comments)
-                emit_comment("(spilling all registers)");
-            for (int reg = 0; reg < uRegCnt; reg++)
-                spillReg(reg);
+        if (!block_regs_spilled)
+            spillAllReg();
 
-            regs_spilled = true;
-        }
+        block_regs_spilled = false; // reset for next block
     }
 
     emit_section(".data");
@@ -581,7 +580,7 @@ void emit_fn_defn(quad &instr)
     if (instr.op.substr(5, 5) == "4main")
     {
         emit_label("\nmain");
-        inside_main = true;
+        main_no_ret = true;
     }
     else
         emit_label("\n" + instr.op.substr(0, instr.op.length() - 8));
@@ -620,6 +619,8 @@ void emit_fn_defn(quad &instr)
     emit_instr(x86_lib::push(reg_names[EBX]));
     emit_instr(x86_lib::push(reg_names[ESI]));
     emit_instr(x86_lib::push(reg_names[EDI]));
+
+    fn_epilogue_emitted = false;
 }
 
 void emit_param(quad &instr)
@@ -664,7 +665,8 @@ void emit_param(quad &instr)
         } // TODO : Check
         else if (instr.arg1.entry->addrDesc.inRegs.size())
             emit_instr(x86_lib::push(reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
-        else if (instr.arg1.entry->addrDesc.inStack == 1 || (instr.arg1.entry->offset<0 && instr.arg1.entry->addrDesc.inStack==0))
+        // else if (instr.arg1.entry->addrDesc.inStack == 1 || (instr.arg1.entry->offset<0 && instr.arg1.entry->addrDesc.inStack==0))
+        else if (instr.arg1.entry->addrDesc.inStack == 1 || instr.arg1.entry->addrDesc.inStack==0) // initially at start of program inStack == 0 for local vars as well as args
         {
             if (instr.arg1.entry->type == "float" && instr.arg2.value == "lea")
             {
@@ -748,20 +750,21 @@ void emit_fn_call(quad &instr)
 
 void emit_fn_epilogue()
 {
-    if (inside_main)
-    {
-        emit_instr(x86_lib::xor_op(reg_names[EAX], reg_names[EAX]));
-        inside_main = false;
-    }
     emit_instr(x86_lib::pop(reg_names[EDI]));
     emit_instr(x86_lib::pop(reg_names[ESI]));
     emit_instr(x86_lib::pop(reg_names[EBX]));
     emit_instr(x86_lib::leave());
     emit_instr(x86_lib::ret());
+    fn_epilogue_emitted = true;
 }
 
 void emit_return(quad &instr)
 {
+    if (!block_regs_spilled)
+    {
+        spillAllReg();
+        block_regs_spilled = true;
+    }
     if (instr.arg1.entry && instr.arg1.entry->type == "float")
     {
         emit_fload(instr.arg1);
@@ -770,9 +773,11 @@ void emit_return(quad &instr)
     {
         setParticularReg(EAX, instr.arg1);
     }
-    if (inside_main) // return at end of main -> OK
-        inside_main = false;
+
     emit_fn_epilogue();
+
+    if (main_no_ret)
+        main_no_ret = false;
 }
 
 void emit_goto(quad &instr)

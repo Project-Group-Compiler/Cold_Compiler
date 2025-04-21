@@ -941,7 +941,7 @@ void paramInsert(sym_table &table, std::string id, std::string type, int size, b
     // 	array_dims.clear();
     // }
     param_offset -= size;
-    if(param_offset % 4 != 0)
+    if(abs(param_offset) % 4 != 0)
     {
         int padding = (4 - (abs(param_offset) % 4));
         param_offset -= padding;
