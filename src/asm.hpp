@@ -11,7 +11,7 @@ extern bool print_comments;
 
 inline void emit_instr(const std::string &instr)
 {
-    asm_file << "\t" << instr << "\n";
+    asm_file << "\t" << instr << std::endl;
 }
 
 inline void emit_label(const std::string &label)
@@ -100,7 +100,6 @@ void emit_cassign(quad &instr);
 void emit_logical_ptr_add(quad &instr);
 void emit_logical_ptr_sub(quad &instr);
 void emit_copy_to_offset(quad &instr);
-void emit_array_indexing(quad &instr);
 
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();

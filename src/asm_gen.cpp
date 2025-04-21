@@ -568,8 +568,6 @@ void emit_asm(const std::string &inputFile)
                 emit_logical_ptr_sub(instr);
             else if (curr_op == "CopyToOffset")
                 emit_copy_to_offset(instr);
-            else if (curr_op == "[ ]")
-                emit_array_indexing(instr);
 
             printReg_addr_Desc(instr.Label);
         }
@@ -585,44 +583,11 @@ void emit_asm(const std::string &inputFile)
     emit_bss_section(); // add uninitialized data
 }
 
-void emit_array_indexing(quad &instr)
-{
-    spillAllReg();
-    // t0 = arr[2] -> t0 is a pointer
-    std::string baseType = instr.result.entry->type;
-    while (baseType.size() && baseType.back() == '*')
-    {
-        baseType.pop_back();
-    }
-    int size = getSize(baseType);
-    for (auto it : instr.result.entry->array_dims)
-        size *= it;
-
-    int reg1 = getReg(instr.arg2, 1, {}); // reg1 -> idx
-    emit_instr("\t;size " + std::to_string(size));
-    // offset -> reg1 * res_size
-    emit_instr(x86_lib::imul_three(reg_names[reg1], reg_names[reg1], std::to_string(size)));
-
-    int reg2 = getReg(instr.arg1, 1, {reg1});
-    std::string mem = getMem(instr.arg1);
-    if (instr.arg1.entry->isArray)
-    {
-        emit_instr(x86_lib::lea(reg_names[reg2], mem));
-    }
-    else
-    {
-        emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], mem));
-    }
-    emit_instr(x86_lib::add(reg_names[reg2], reg_names[reg1]));
-    // t0 = reg2 + reg1
-    updateRegDesc(reg2, instr.result);
-}
-
 void emit_copy_to_offset(quad &instr)
 {
     spillAllReg();
     int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -636,7 +601,7 @@ void emit_copy_to_offset(quad &instr)
 void emit_logical_ptr_add(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -652,7 +617,7 @@ void emit_logical_ptr_add(quad &instr)
     else
     {
         int reg2;
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         {
             reg2 = getReg(instr.arg2, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -670,7 +635,7 @@ void emit_logical_ptr_add(quad &instr)
 void emit_logical_ptr_sub(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -685,7 +650,7 @@ void emit_logical_ptr_sub(quad &instr)
     else
     {
         int reg2;
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         {
             reg2 = getReg(instr.arg2, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -827,7 +792,7 @@ void emit_param(quad &instr)
         }
         else if (instr.arg1.entry->addrDesc.inRegs.size())
         {
-            if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+            if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
             {
                 int reg1 = getReg(instr.arg1, 1, {}); // add of x
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
@@ -841,7 +806,7 @@ void emit_param(quad &instr)
 
         else if (instr.arg1.entry->addrDesc.inStack == 1 || instr.arg1.entry->addrDesc.inStack == 0) // initially at start of program inStack == 0 for local vars as well as args
         {
-            if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+            if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
             {                                         // TODO:check once for float and char
                 int reg1 = getReg(instr.arg1, 1, {}); // add of x
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
@@ -942,7 +907,7 @@ void emit_fn_epilogue()
 
 void emit_return(quad &instr)
 { // TODO:handle &
-    // if(instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
+    // if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
     //     int reg1 = getReg(instr.arg1,1,{EAX}); //add of x
     //     emit_instr(x86_lib::mov_reg_mem(reg_names[reg1],reg_names[reg1]));
     //     spillReg(EAX);
@@ -974,7 +939,7 @@ void emit_goto(quad &instr)
     if (instr.arg1.value == "IF")
     {
         int reg2;
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         { // nhi need hai
             reg2 = getReg(instr.arg2, 1, {});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -995,13 +960,13 @@ void emit_goto(quad &instr)
 void emit_logical_and(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
 
     int reg2;
-    if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+    if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
     {
         reg2 = getReg(instr.arg2, 1, {reg1});
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1029,12 +994,12 @@ void emit_logical_and(quad &instr)
 void emit_logical_or(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
     int reg2 = getReg(instr.arg2, 1, {reg1});
-    if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+    if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
     {
         reg2 = getReg(instr.arg2, 1, {reg1});
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1063,7 +1028,7 @@ void emit_logical_or(quad &instr)
 void emit_logical_not(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1084,12 +1049,12 @@ void emit_logical_not(quad &instr)
 void emit_cmp(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
     int reg2;
-    if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+    if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
     {
         reg2 = getReg(instr.arg2, 1, {reg1});
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1145,7 +1110,7 @@ void emit_fcmp(quad &instr)
 /* Bitwise Operator */
 void emit_right_shift(quad &instr) // TODO: Check
 {                                  // check correct value of cl
-    if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+    if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
     {
         int reg2 = getReg(instr.arg2, 1, {ECX}); // add of x
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1157,7 +1122,7 @@ void emit_right_shift(quad &instr) // TODO: Check
         setParticularReg(ECX, instr.arg2);
     }
     int reg1 = getReg(instr.arg1, 1, {ECX});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1167,7 +1132,7 @@ void emit_right_shift(quad &instr) // TODO: Check
 
 void emit_left_shift(quad &instr)
 {
-    if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+    if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
     {
         int reg2 = getReg(instr.arg2, 1, {ECX}); // add of x
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1179,7 +1144,7 @@ void emit_left_shift(quad &instr)
         setParticularReg(ECX, instr.arg2);
     }
     int reg1 = getReg(instr.arg1, 1, {ECX});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1191,7 +1156,7 @@ void emit_or(quad &instr)
 {
     // x = y | z
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1206,7 +1171,7 @@ void emit_or(quad &instr)
     else
     {
         int reg2;
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         {
             reg2 = getReg(instr.arg2, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1224,7 +1189,7 @@ void emit_xor(quad &instr)
 {
     // x = y ^ z
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1239,7 +1204,7 @@ void emit_xor(quad &instr)
     else
     {
         int reg2;
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         {
             reg2 = getReg(instr.arg2, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1256,7 +1221,7 @@ void emit_and(quad &instr)
 {
     // x = y & z
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1271,7 +1236,7 @@ void emit_and(quad &instr)
     else
     {
         int reg2;
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         {
             reg2 = getReg(instr.arg2, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1294,7 +1259,7 @@ void emit_unary_plus(quad &instr)
 void emit_unary_minus(quad &instr)
 { // a = -b;
     int reg = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg], reg_names[reg]));
     }
@@ -1305,7 +1270,7 @@ void emit_unary_minus(quad &instr)
 void emit_not(quad &instr)
 {
     int reg = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg], reg_names[reg]));
     }
@@ -1316,7 +1281,7 @@ void emit_not(quad &instr)
 void emit_div(quad &instr)
 { // c = a/b
     // mov arg1 to eax
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         int reg1 = getReg(instr.arg1, 1, {EAX}); // add of x
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
@@ -1331,7 +1296,7 @@ void emit_div(quad &instr)
     emit_instr(x86_lib::xor_op(reg_names[EDX], reg_names[EDX]));
 
     int reg2 = getReg(instr.arg2, 1, {EAX, EDX});
-    if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+    if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
     }
@@ -1350,7 +1315,7 @@ void emit_fdiv(quad &instr)
 void emit_mod(quad &instr)
 { // c = a/b
     // mov arg1 to eax
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         int reg1 = getReg(instr.arg1, 1, {EAX}); // add of x
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
@@ -1365,7 +1330,7 @@ void emit_mod(quad &instr)
     emit_instr(x86_lib::xor_op(reg_names[EDX], reg_names[EDX]));
 
     int reg2 = getReg(instr.arg2, 1, {EAX, EDX});
-    if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+    if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
     }
@@ -1377,7 +1342,7 @@ void emit_mul(quad &instr)
 {
     // x = y * z
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1392,7 +1357,7 @@ void emit_mul(quad &instr)
     else
     {
         int reg2 = getReg(instr.arg2, 1, {reg1});
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         {
             reg2 = getReg(instr.arg2, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1403,7 +1368,9 @@ void emit_mul(quad &instr)
         }
         emit_instr(x86_lib::imul(reg_names[reg1], reg_names[reg2]));
     }
+    _debug_(instr.result.value);
     updateRegDesc(reg1, instr.result);
+    _debug_(instr.result.value);
 }
 
 void emit_fmul(quad &instr)
@@ -1418,7 +1385,7 @@ void emit_sub(quad &instr)
 {
     // x = y - z
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1433,7 +1400,7 @@ void emit_sub(quad &instr)
     else
     {
         int reg2;
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         {
             reg2 = getReg(instr.arg2, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
@@ -1459,7 +1426,7 @@ void emit_add(quad &instr)
 {
     // x = y + z
     int reg1 = getReg(instr.arg1, 1, {});
-    if (instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
@@ -1474,7 +1441,7 @@ void emit_add(quad &instr)
     else
     {
         int reg2;
-        if (instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
+        if (instr.arg2.entry && instr.arg2.entry->type.size() && instr.arg2.entry->type.back() == '&')
         {
             reg2 = getReg(instr.arg2, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));

@@ -179,9 +179,6 @@ postfix_expression
 				operand q4 = getTempVariable($$->type + "&"); //TODO: Handle offset for this in symbol table
 				$$->place = q4;
 				emit("unary*", q3, {}, q4, -1);
-				// std::string tempValue = "*" + q3.value;
-				// insertSymbol(*curr_table, tempValue, $$->type, getSize($$->type), 0, NULL); // TODO: Check
-				// $$->place = {tempValue,$1->place.entry}; //TODO: check entry
 			}else{
 				std::cerr << $1->tempName << " " << $3->tempName << std::endl;
 				std::vector<int>previDims = lookup($1->tempName)->array_dims;
@@ -193,10 +190,31 @@ postfix_expression
 				}
 				
 				std::vector<int>arraydims = previDims.size() > 1 ? std::vector<int>(previDims.begin() + 1, previDims.end()) : std::vector<int>();
+	
+				std::string baseType = $$->type;
+				while(baseType.size() && baseType.back() == '*')
+				{
+				    baseType.pop_back();
+				}
+				int off = getSize(baseType);
+				for(auto it:arraydims){
+				    off *= it;
+				}
+				// tj = arr[i]
+				/*
+					t0(ptr) = arr;
+					t1 = off * $3->place
+					t2 = to ptr+ t1
+				*/
+				operand q0 = getTempVariableForArray($$->type,arraydims);
+				emit("=",$1->place,{},q0,-1); //Todo: should i use assign_exp
+				operand q1 = getTempVariable("int");
+				emit("*",{to_string(off)}, $3->place, q1, -1);
 				operand q = getTempVariableForArray($$->type, arraydims);
+				emit("ptr+", q0, q1, q, -1);
 				$$->place = q;
 				$$->arraydims = arraydims;
-				emit("[ ]", $1->place, $3->place, q, -1);
+				// emit("[ ]", $1->place, $3->place, q, -1);
 			}
 			$$->tempName = $$->place.value;
 		}
