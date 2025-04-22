@@ -432,12 +432,13 @@ void constant_folding()
             q.gotoLabel = id_map[q.gotoLabel];
     }
     tac_code = std::move(folded_tac_code);
+    // std::cout << "CF pass : \n";
+    // for (auto &instr : tac_code)
+    // std::cout << stringify(instr) << std::endl;
 }
 
 void dead_code_elimination()
 {
-    reconstruct_basic_blocks();
-    blocks_to_code();
     compute_basic_blocks();
     build_cfg();
     // reachability analysis (DFS)
@@ -554,6 +555,10 @@ void dead_code_elimination()
     blocks_to_code();
     compute_basic_blocks();
     build_cfg();
+
+    // std::cout << "DCE pass : \n";
+    // for (auto &instr : tac_code)
+    // std::cout << stringify(instr) << std::endl;
 }
 
 std::map<int, std::vector<std::pair<operand, std::string>>> instr_annotation;
@@ -608,9 +613,8 @@ std::vector<std::pair<operand, std::string>> meet(const FunctionCFG &graph, cons
 
 void find_reaching_copies(const FunctionCFG &graph)
 {
-    if(graph.blocks.empty()){
+    if (graph.blocks.empty())
         return;
-    }
     block_annotation.clear();
     instr_annotation.clear();
     exclude_operands.clear();
@@ -696,9 +700,8 @@ void rewrite_instr(quad &instr)
         {
             if (instr.arg1 == arg)
             {
-                instr.arg1.value = val;
-                tac_updated = true;
-                instr.arg1.value = val;
+                sym_entry *newEntry = new sym_entry;
+                instr.arg1 = operand(val, newEntry);
                 tac_updated = true;
             }
         }
@@ -709,12 +712,14 @@ void rewrite_instr(quad &instr)
         {
             if (instr.arg1 == arg)
             {
-                instr.arg1.value = val;
+                sym_entry *newEntry = new sym_entry;
+                instr.arg1 = operand(val, newEntry);
                 tac_updated = true;
             }
             if (instr.arg2 == arg)
             {
-                instr.arg2.value = val;
+                sym_entry *newEntry = new sym_entry;
+                instr.arg2 = operand(val, newEntry);
                 tac_updated = true;
             }
         }
@@ -725,7 +730,8 @@ void rewrite_instr(quad &instr)
         {
             if (instr.arg2 == arg)
             {
-                instr.arg2.value = val;
+                sym_entry *newEntry = new sym_entry;
+                instr.arg2 = operand(val, newEntry);
                 tac_updated = true;
             }
         }
@@ -736,7 +742,7 @@ void run_optimisations()
 {
     if (tac_code.empty())
         return;
-    int optimization_cnt = 777;
+    int optimization_cnt = 77;
     do
     {
         tac_updated = false;
@@ -744,12 +750,16 @@ void run_optimisations()
         dead_code_elimination();
         for (auto &graph : function_cfgs)
         {
-
             find_reaching_copies(graph);
             for (auto &block : graph.blocks)
                 for (auto &instr : block)
                     rewrite_instr(instr);
-            optimization_cnt--;
         }
+        reconstruct_basic_blocks();
+        blocks_to_code();
+        // std::cout << "Constant propagation pass : \n";
+        // for (auto &instr : tac_code)
+        // std::cout << stringify(instr) << std::endl;
+        optimization_cnt--;
     } while (tac_updated && optimization_cnt > 0);
 }
