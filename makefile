@@ -42,7 +42,7 @@ FLEX = flex
 BISON = bison
 CXX = g++ 
 # CXXFLAGS = -I$(SRC_DIR)
-CXXFLAGS = -I$(SRC_DIR) -g -O0 # For debug
+CXXFLAGS = -std=c++17 -I$(SRC_DIR) -g -O0 # For debug
 
 # Default target
 all: $(OUTPUT)

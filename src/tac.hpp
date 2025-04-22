@@ -32,6 +32,10 @@ struct operand
     {
         return value == other.value && entry == other.entry;
     }
+    bool operator!=(const operand &other) const
+    {
+        return value != other.value || entry != other.entry;
+    }
     bool operator<(const operand &other) const
     {
         if (value != other.value)
@@ -62,7 +66,7 @@ public:
 void run_optimisations();
 
 operand getTempVariable(std::string);
-operand getTempVariableForArray(std::string, std::vector<int>&);
+operand getTempVariableForArray(std::string, std::vector<int> &);
 void print_tac_code(const std::string &inputFile, bool modifygotoLabels = false);
 int getCurrentSize();
 void extendList(std::vector<int> &list1, std::vector<int> &list2);
