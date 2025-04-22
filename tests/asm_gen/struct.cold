@@ -1,0 +1,18 @@
+// SEMANTICS WORKING
+// IR WORKING
+
+struct node{
+    int x;
+    int y;
+    struct node* next;
+};
+
+int main()
+{
+    struct node* head = (struct node*)malloc(sizeof(struct node));
+    struct node temp;
+    temp.x = 2;
+    head->x = 1;
+    head->next = &temp;
+    printf("%d %d\n", head->x, head->next->x);
+}

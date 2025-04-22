@@ -139,21 +139,6 @@ void separate_functions()
                 func.first_map[func.blocks[i][0].Label] = i;
 }
 
-void print_separate_functions()
-{
-    for (const auto &func : function_cfgs)
-    {
-        std::cout << "Function: " << func.name << "\n";
-        for (const auto &block : func.blocks)
-        {
-            std::cout << "Block:\n";
-            for (const auto &instr : block)
-                std::cout << stringify(instr) << "\n";
-        }
-        std::cout << "\n";
-    }
-}
-
 // Build CFG for a single function
 void build_function_cfg(FunctionCFG &func)
 {
@@ -589,7 +574,4 @@ void run_optimisations()
         return;
     constant_folding();
     dead_code_elimination();
-    print_basic_blocks();
-    print_separate_functions();
-    print_cfg();
 }

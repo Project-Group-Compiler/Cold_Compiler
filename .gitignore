@@ -18,3 +18,4 @@ ast/
 *.s
 Descriptor.txt
 exec_*
+original_tests/
