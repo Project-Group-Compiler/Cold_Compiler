@@ -28,7 +28,7 @@ for test_case in "$TEST_DIR"/*.cold; do
     test_name=$(basename "$test_case" .cold)
     echo "Running test case: $test_name"
 
-    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" "-O0" "$@"
+    "$EXECUTABLE" "$test_case" "--output" "$OUTPUT_DIR/" "$@"
 
 
     if [ $? -eq 0 ]; then

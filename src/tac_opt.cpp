@@ -5,15 +5,8 @@
 #include <cmath>
 
 bool optimize_ir = true;
-std::vector<std::vector<quad>> basic_blocks;
-std::unordered_map<int, int> leader_block_map;
-std::vector<std::vector<int>> adj, rev_adj;
 
-void compute_map()
-{
-    for (auto i = 0; i < basic_blocks.size(); i++)
-        leader_block_map[basic_blocks[i][0].Label] = i;
-}
+std::vector<std::vector<quad>> basic_blocks;
 
 void compute_basic_blocks()
 {
@@ -31,7 +24,7 @@ void compute_basic_blocks()
             }
             block.push_back(instr);
         }
-        else if ((curr_op == "GOTO") || (curr_op.substr(0, 5) == "FUNC_" && curr_op.substr(curr_op.length() - 3) == "end"))
+        else if ((curr_op == "GOTO") || curr_op == "RETURN" || (curr_op.substr(0, 5) == "FUNC_" && curr_op.substr(curr_op.length() - 3) == "end"))
         {
             block.push_back(instr);
             basic_blocks.push_back(block);
@@ -42,8 +35,6 @@ void compute_basic_blocks()
     }
     if (!block.empty())
         basic_blocks.push_back(block);
-
-    compute_map();
 }
 
 void print_basic_blocks(bool modifygotoLabels)
@@ -87,93 +78,202 @@ void blocks_to_code()
     tac_code = std::move(new_tac_code);
 }
 
-void build_cfg()
+struct FunctionCFG
 {
-    if (basic_blocks.empty())
-        return;
-    adj.clear();
-    rev_adj.clear();
-    adj.resize(basic_blocks.size());
-    rev_adj.resize(basic_blocks.size());
+    std::string name;
+    std::vector<std::vector<quad>> blocks;
+    std::unordered_map<int, int> first_map;
+    std::vector<std::vector<int>> adj;
+    std::vector<std::vector<int>> rev_adj;
+};
+
+std::vector<FunctionCFG> function_cfgs;
+
+void separate_functions()
+{
+    function_cfgs.clear();
+    FunctionCFG current_function;
+    bool in_function = false;
+
     for (auto i = 0; i < basic_blocks.size(); i++)
     {
         const auto &block = basic_blocks[i];
         if (block.empty())
             continue;
+
+        if (block[0].op.substr(0, 5) == "FUNC_" && block[0].op.substr(block[0].op.length() - 7) == "start :")
+        {
+            if (in_function && !current_function.blocks.empty())
+                function_cfgs.push_back(std::move(current_function));
+
+            current_function = FunctionCFG();
+            current_function.name = block[0].op.substr(0, block[0].op.length() - 7);
+            current_function.blocks.push_back(block);
+            in_function = true;
+        }
+        else if (block.back().op.substr(0, 5) == "FUNC_" && block.back().op.substr(block.back().op.length() - 3) == "end")
+        {
+            current_function.blocks.push_back(block);
+            function_cfgs.push_back(std::move(current_function));
+            in_function = false;
+        }
+        else if (in_function)
+        {
+            current_function.blocks.push_back(block);
+        }
+        else // Global code outside function
+        {
+            FunctionCFG global_code;
+            global_code.name = "global";
+            global_code.blocks.push_back(block);
+            function_cfgs.push_back(std::move(global_code));
+        }
+    }
+
+    if (in_function && !current_function.blocks.empty())
+        function_cfgs.push_back(std::move(current_function));
+
+    for (auto &func : function_cfgs)
+        for (auto i = 0; i < func.blocks.size(); i++)
+            if (!func.blocks[i].empty())
+                func.first_map[func.blocks[i][0].Label] = i;
+}
+
+void print_separate_functions()
+{
+    for (const auto &func : function_cfgs)
+    {
+        std::cout << "Function: " << func.name << "\n";
+        for (const auto &block : func.blocks)
+        {
+            std::cout << "Block:\n";
+            for (const auto &instr : block)
+                std::cout << stringify(instr) << "\n";
+        }
+        std::cout << "\n";
+    }
+}
+
+// Build CFG for a single function
+void build_function_cfg(FunctionCFG &func)
+{
+    if (func.blocks.empty())
+        return;
+
+    func.adj.clear();
+    func.rev_adj.clear();
+    func.adj.resize(func.blocks.size());
+    func.rev_adj.resize(func.blocks.size());
+
+    for (auto i = 0; i < func.blocks.size(); i++)
+    {
+        const auto &block = func.blocks[i];
+        if (block.empty())
+            continue;
+
         const std::string &last_op = block.back().op;
         if (last_op == "GOTO")
         {
-            int target_block = leader_block_map[block.back().gotoLabel];
-            adj[i].push_back(target_block);
-            rev_adj[target_block].push_back(i);
-            if (block.back().arg1.value == "IF")
+            auto it = func.first_map.find(block.back().gotoLabel);
+            if (it != func.first_map.end())
             {
-                if (i + 1 < basic_blocks.size() && i + 1 != target_block)
+                int target_block = it->second;
+                func.adj[i].push_back(target_block);
+                func.rev_adj[target_block].push_back(i);
+
+                if (block.back().arg1.value == "IF")
                 {
-                    adj[i].push_back(i + 1);
-                    rev_adj[i + 1].push_back(i);
+                    if (i + 1 < func.blocks.size() && i + 1 != target_block)
+                    {
+                        func.adj[i].push_back(i + 1);
+                        func.rev_adj[i + 1].push_back(i);
+                    }
                 }
             }
         }
-        else
+        else if (last_op == "RETURN")
         {
-            if (i + 1 < basic_blocks.size())
+            if (func.blocks.back().empty())
+                continue;
+            std::string back_op = func.blocks.back().back().op;
+            if (back_op.substr(0, 5) == "FUNC_" && back_op.substr(back_op.length() - 3) == "end")
             {
-                adj[i].push_back(i + 1);
-                rev_adj[i + 1].push_back(i);
+                func.adj[i].push_back(func.blocks.size() - 1);
+                func.rev_adj[func.blocks.size() - 1].push_back(i);
+            }
+        }
+        else if (last_op.substr(0, 5) != "FUNC_" || last_op.substr(last_op.length() - 3) != "end")
+        {
+            if (i + 1 < func.blocks.size())
+            {
+                func.adj[i].push_back(i + 1);
+                func.rev_adj[i + 1].push_back(i);
             }
         }
     }
 }
 
-void print_cfg()
+void reconstruct_basic_blocks()
 {
-    std::cout << "Control Flow Graph:\n";
-    std::cout << "-------------------\n";
+    if (function_cfgs.empty())
+        return;
+    basic_blocks.clear();
+    for (const auto &func : function_cfgs)
+        for (const auto &block : func.blocks)
+            basic_blocks.push_back(block);
+}
 
-    for (size_t i = 0; i < adj.size(); i++)
+void build_cfg()
+{
+    separate_functions();
+    for (auto &func : function_cfgs)
+        build_function_cfg(func);
+}
+
+void print_function_cfg(const FunctionCFG &func)
+{
+    std::cout << "Control Flow Graph for function " << func.name << ":\n";
+    std::cout << "---------------------------------------\n";
+    for (auto i = 0; i < func.adj.size(); i++)
     {
-        // Print basic block
         std::cout << "Block " << i << ":\n";
-        for (const auto &instr : basic_blocks[i])
-        {
+        for (const auto &instr : func.blocks[i])
             std::cout << "  " << stringify(instr) << "\n";
-        }
 
-        // Print outgoing edges
         std::cout << "Successors: ";
-        if (adj[i].empty())
-        {
+        if (func.adj[i].empty())
             std::cout << "none";
-        }
         else
         {
-            for (size_t j = 0; j < adj[i].size(); j++)
+            for (auto j = 0; j < func.adj[i].size(); j++)
             {
-                std::cout << adj[i][j];
-                if (j < adj[i].size() - 1)
+                std::cout << func.adj[i][j];
+                if (j < func.adj[i].size() - 1)
                     std::cout << ", ";
             }
         }
         std::cout << "\n";
 
-        // Print incoming edges
         std::cout << "Predecessors: ";
-        if (rev_adj[i].empty())
-        {
+        if (func.rev_adj[i].empty())
             std::cout << "none";
-        }
         else
         {
-            for (size_t j = 0; j < rev_adj[i].size(); j++)
+            for (auto j = 0; j < func.rev_adj[i].size(); j++)
             {
-                std::cout << rev_adj[i][j];
-                if (j < rev_adj[i].size() - 1)
+                std::cout << func.rev_adj[i][j];
+                if (j < func.rev_adj[i].size() - 1)
                     std::cout << ", ";
             }
         }
         std::cout << "\n\n";
     }
+}
+
+void print_cfg()
+{
+    for (const auto &func : function_cfgs)
+        print_function_cfg(func);
 }
 
 void constant_folding()
@@ -344,91 +444,115 @@ void constant_folding()
 
 void dead_code_elimination()
 {
+    reconstruct_basic_blocks();
     blocks_to_code();
     compute_basic_blocks();
     build_cfg();
     // reachability analysis (DFS)
-    std::vector<bool> visited(basic_blocks.size(), false);
-    visited[0] = true;
-    std::stack<int> st;
-    st.push(0);
-    while (!st.empty())
+    for (auto &func : function_cfgs)
     {
-        int curr = st.top();
-        st.pop();
-        for (auto &next : adj[curr])
+        std::vector<bool> visited(func.blocks.size(), false);
+        if (func.blocks.empty())
+            continue;
+
+        visited[0] = true;
+        std::stack<int> st;
+        st.push(0);
+
+        if (!func.adj.empty())
         {
-            if (!visited[next])
+            while (!st.empty())
             {
-                visited[next] = true;
-                st.push(next);
+                int curr = st.top();
+                st.pop();
+                for (auto &next : func.adj[curr])
+                {
+                    if (!visited[next])
+                    {
+                        visited[next] = true;
+                        st.push(next);
+                    }
+                }
             }
         }
-    }
-    // remove unreachable blocks
-    std::vector<std::vector<quad>> new_blocks;
-    for (int i = 0; i < basic_blocks.size(); i++)
-    {
-        if (visited[i])
-            new_blocks.push_back(std::move(basic_blocks[i]));
-    }
-    basic_blocks = std::move(new_blocks);
 
+        // Remove unreachable blocks in this function
+        std::vector<std::vector<quad>> new_blocks;
+        for (int i = 0; i < func.blocks.size(); i++)
+        {
+            if (visited[i])
+                new_blocks.push_back(std::move(func.blocks[i]));
+        }
+        func.blocks = std::move(new_blocks);
+    }
+
+    reconstruct_basic_blocks();
     blocks_to_code();
     compute_basic_blocks();
     build_cfg();
     // remove redundant jumps
-    for (auto i = 0; i < basic_blocks.size() - 1; i++)
+    for (auto &func : function_cfgs)
     {
-        auto &block = basic_blocks[i];
-        const std::string &last_op = block.back().op;
-        if (last_op == "GOTO")
+        for (auto i = 0; i < func.blocks.size() - 1; i++)
         {
-            bool keep_jump = false;
-            for (auto &x : adj[i])
+            auto &block = func.blocks[i];
+            if (block.empty())
+                continue;
+
+            const std::string &last_op = block.back().op;
+            if (last_op == "GOTO")
             {
-                if (x != i + 1)
+                bool keep_jump = false;
+                for (auto &next : func.adj[i])
                 {
-                    keep_jump = true;
-                    break;
+                    if (next != i + 1)
+                    {
+                        keep_jump = true;
+                        break;
+                    }
                 }
+                if (!keep_jump)
+                    block.pop_back();
             }
-            if (!keep_jump)
-                block.pop_back();
         }
     }
 
+    reconstruct_basic_blocks();
     blocks_to_code();
     compute_basic_blocks();
     build_cfg();
     // remove redundant labels
-    for (auto i = 1; i < basic_blocks.size(); i++)
+    for (auto &func : function_cfgs)
     {
-        const auto &block = basic_blocks[i];
-        if (!block.empty() && block[0].op.back() == ':' && block[0].op.substr(0, 5) != "FUNC_")
+        for (auto i = 1; i < func.blocks.size(); i++)
         {
+            const auto &block = func.blocks[i];
+            if (block.empty() || block[0].op.back() != ':' || block[0].op.substr(0, 5) == "FUNC_")
+                continue;
+
             bool keep_label = false;
-            for (auto &x : rev_adj[i])
+            for (auto &prev : func.rev_adj[i])
             {
-                if (x != i - 1)
+                if (prev != i - 1)
                 {
                     keep_label = true;
                     break;
                 }
             }
-            const auto &prev_bl = basic_blocks[i - 1];
-            if (!prev_bl.empty() && prev_bl.back().op == "GOTO" && prev_bl.back().gotoLabel == block[0].Label)
+
+            if (i > 0 && !func.blocks[i - 1].empty() && func.blocks[i - 1].back().op == "GOTO" && func.blocks[i - 1].back().gotoLabel == block[0].Label)
                 keep_label = true;
+
             if (!keep_label)
             {
                 std::vector<quad> new_block; // add all except first (label)
                 for (auto j = 1; j < block.size(); j++)
                     new_block.push_back(std::move(block[j]));
-                basic_blocks[i] = std::move(new_block);
+                func.blocks[i] = std::move(new_block);
             }
         }
     }
-
+    reconstruct_basic_blocks();
     blocks_to_code();
     compute_basic_blocks();
     build_cfg();
@@ -465,4 +589,7 @@ void run_optimisations()
         return;
     constant_folding();
     dead_code_elimination();
+    print_basic_blocks();
+    print_separate_functions();
+    print_cfg();
 }

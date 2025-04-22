@@ -3,13 +3,16 @@ class person{
         int age;
     };
     public{
+        int x;
         int foo()
         {
+            printf("You won!\n");
             return 42;
         }
         void bar(int a, int b)
         {
             int c = a + b;
+            printf("Kya baat hai!\n");
         }
     };
 };
@@ -22,5 +25,7 @@ int main()
     p.bar(4, 6);
     (*ptr).foo();
     ptr->bar(4, 6);
+    p.x = 88;
+    printf("%d\n", p.x);
 	return 0;
 }

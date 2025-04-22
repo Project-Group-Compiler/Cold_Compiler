@@ -460,8 +460,10 @@ postfix_expression
 			sym_entry* newEntry = new sym_entry;
 			emit("ptr+", q, {std::to_string(member_offset), newEntry}, q, -1);
 		}
-		q.value = "*" + q.value;
-        $$->place = q;
+		operand q1 = getTempVariable($1->type+'&');
+		emit("unary*", q, {}, q1, -1);
+		// q.value = "*" + q.value;
+        $$->place = q1;
 		$$->nextlist.clear();
 	}
 	| postfix_expression '.' IDENTIFIER '(' ')'  {
@@ -808,8 +810,13 @@ postfix_expression
 			sym_entry* newEntry = new sym_entry;
 			emit("ptr+", $1->place, {std::to_string(member_offset), newEntry}, q, -1);
 		}
-		q.value = "*" + q.value;
-        $$->place = q;
+		std::string q1Type = $1->type;
+		q1Type.pop_back();
+		operand q1 = getTempVariable(q1Type+'&');
+		emit("unary*", q, {}, q1, -1);
+        $$->place = q1;
+        // $$->place = q;
+		// q.value = "*" + q.value;
 		$$->nextlist.clear();
 	}
 	| postfix_expression PTR_OP IDENTIFIER '(' ')'  {

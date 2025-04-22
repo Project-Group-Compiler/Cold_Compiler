@@ -6,7 +6,7 @@
 
 extern FILE *yyin;
 bool print_ast = false;
-bool print_symtab = true;
+bool print_symtab = false;
 bool debug_enabled = false;
 bool print_comments = false;
 std::string inputFilename;
