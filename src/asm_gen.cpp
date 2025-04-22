@@ -115,7 +115,7 @@ std::string getMem(operand &op)
     {
         std::string memAddr;
         int offset = op.entry->offset;
-        emit_instr(";" + op.value + " = " + std::to_string(offset));
+        //emit_instr(";" + op.value + " = " + std::to_string(offset));
         if (offset < 0)
             memAddr = reg_names[EBP] + "+" + std::to_string(-offset);
         else
@@ -271,7 +271,7 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
 
         int bestReg = getBestReg(resReg);
         std::string memAddr = getMem(op);
-        emit_instr(";" + op.value + "_" + memAddr);
+        // emit_instr(";" + op.value + "_" + memAddr);
 
         if (op.entry && (op.entry->isGlobal || op.entry->isStatic > 0))
         {
@@ -321,7 +321,7 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
 
     int bestReg = getBestReg(resReg);
     std::string memAddr = getMem(op);
-    emit_instr(";" + op.value + "_" + memAddr);
+    // emit_instr(";" + op.value + "_" + memAddr);
     if (op.entry && (op.entry->isGlobal || op.entry->isStatic > 0))
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[bestReg], op.value)); //[lexeme]
@@ -666,7 +666,7 @@ void emit_logical_ptr_sub(quad &instr)
 
 void emit_unary_star(quad &instr)
 {
-    _debug_(stringify(instr));
+    // _debug_(stringify(instr));
     if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         // to = * ptr => to is a reference
@@ -685,7 +685,7 @@ void emit_unary_star(quad &instr)
 
 void emit_unary_and(quad &instr)
 {
-    _debug_(stringify(instr));
+    // _debug_(stringify(instr));
     // ptr = &t1(&)
     if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
@@ -1368,9 +1368,9 @@ void emit_mul(quad &instr)
         }
         emit_instr(x86_lib::imul(reg_names[reg1], reg_names[reg2]));
     }
-    _debug_(instr.result.value);
+    // _debug_(instr.result.value);
     updateRegDesc(reg1, instr.result);
-    _debug_(instr.result.value);
+    // _debug_(instr.result.value);
 }
 
 void emit_fmul(quad &instr)
@@ -1471,7 +1471,7 @@ void emit_assign(quad &instr)
     // Pointer ->
     // TODO : is there any case of *ptr1 = *ptr2
 
-    _debug_(stringify(instr));
+    // _debug_(stringify(instr));
     if (instr.arg1.entry && instr.arg1.entry->isArray)
     { // t0 = arr
         // spillAllReg();
@@ -1526,6 +1526,14 @@ void emit_assign(quad &instr)
 
 void emit_fload(operand &arg)
 {
+    if (arg.entry && arg.entry->type.size() && arg.entry->type.back() == '&')
+    {
+        int reg = getReg(arg, 1, {});
+        emit_instr(x86_lib::mov_reg_mem(reg_names[reg], reg_names[reg]));
+        emit_instr(x86_lib::mov_mem_reg(getMem(arg),reg_names[reg]));
+    }
+
+
     if ((arg.value).substr(0, 4) == "__f_")
     {
         emit_instr(x86_lib::fld_mem("dword", arg.value));
@@ -1585,11 +1593,27 @@ void emit_floatToInt(quad &instr)
 
 void emit_cassign(quad &instr)
 {
-    setParticularReg(EDX, instr.arg1);
-    if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
-        emit_instr(x86_lib::mov_mem_reg(instr.result.value, "dl"));
-    else
-        emit_instr(x86_lib::mov_mem_reg(getMem(instr.result), "dl"));
+
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    {
+        // can Handle integer constant more optimally
+        // t0(&) = 5
+        // std::cout << instr.result.value << std::endl;    
+        spillAllReg();
+        int reg1 = getReg(instr.arg1, 1, {}); // TODO: both can be made 0
+        // int reg2 = getReg(instr.result, 1, {reg1});
+        setParticularReg(EDX, instr.result);
+        emit_instr(x86_lib::movzx_reg_mem(reg_names[EDX], "byte" , reg_names[reg1]));
+        emit_instr(x86_lib::mov_mem_reg(getMem(instr.arg1),"dl"));
+        // emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], getMem(instr.result)));
+        // make sure ki reg2 jis mem addr ko point kar raha hai uska instack = 1 honi chahiye
+    }else{
+        setParticularReg(EDX, instr.arg1);
+        if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
+            emit_instr(x86_lib::mov_mem_reg(instr.result.value, "dl"));
+        else
+            emit_instr(x86_lib::mov_mem_reg(getMem(instr.result), "dl"));
+    }
 }
 
 void emit_intToChar(quad &instr)
