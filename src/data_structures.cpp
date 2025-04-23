@@ -870,23 +870,64 @@ int inheritFromClass(std::string childClassName, std::string parentClassName)
         return 0; // Parent class not found
     }
 
-    // Copy public members from parent to child class
+    std::vector<std::pair<std::string, sym_entry *>> inheritableMembers;
     for (auto it : (*parentClassTable))
     {
         std::string memberName = it.first;
         sym_entry *member = it.second;
+        inheritableMembers.push_back({memberName, member});
+    }
 
-        // Only inherit public and protected members
-        if (member->access == "public" || member->access == "protected")
+    // Sort members by offset
+    std::sort(inheritableMembers.begin(), inheritableMembers.end(),
+              [](const auto &a, const auto &b)
+              {
+                  return a.second->offset < b.second->offset;
+              });
+
+    // Insert members in sorted order
+    int n = inheritableMembers.size() - 1;
+    for (int i = n; i >= 0; i--)
+    {
+        std::string memberName = inheritableMembers[i].first;
+        sym_entry *member = inheritableMembers[i].second;
+
+        // std::cout << "Remooving private Member: " << memberName
+                //   << " with offset: " << member->offset << std::endl;
+        if (member->access == "private"){
+            inheritableMembers.pop_back();
+        }
+        else break;
+            
+    }
+    for (const auto &pair : inheritableMembers)
+    {
+        std::string memberName = pair.first;
+        sym_entry *member = pair.second;
+
+        // std::cout << "Inside inheritFromClass function Member: " << memberName
+                //   << " with offset: " << member->offset << std::endl;
+        // offset copy karna padega from parent class to child class
+        if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end())
         {
-
-            if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end())
+            // Only inherit public and protected members
+            if (member->access == "public" || member->access == "protected")
             {
-                insertClassAttr(memberName, member->type, member->size, member->init, member->access, member->isStatic, member->isArray, member->array_dims);
+                (*curr_class_structure).insert(std::make_pair(memberName, createEntry(member->type, member->size, member->init, member->offset, nullptr, member->access, member->isStatic, 0, member->isArray, 0, member->array_dims)));
             }
         }
     }
-
+    // add size of last member to class offset
+    if (inheritableMembers.size() > 0)
+    {
+        auto las = inheritableMembers[inheritableMembers.size() - 1].second;
+        class_offset +=las->offset + las->size;
+        if (!blockSz.empty())
+            blockSz.top() += las->offset + las->size;
+        if (!Goffset.empty())
+            Goffset.top() += las->offset + las->size;
+        //TODO: padding 
+    }
     return 1; // Success
 }
 void createParamList()
@@ -942,7 +983,7 @@ void paramInsert(sym_table &table, std::string id, std::string type, int size, b
     // 	array_dims.clear();
     // }
     param_offset -= size;
-    if(abs(param_offset) % 4 != 0)
+    if (abs(param_offset) % 4 != 0)
     {
         int padding = (4 - (abs(param_offset) % 4));
         param_offset -= padding;
