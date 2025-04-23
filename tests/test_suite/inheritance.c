@@ -1,8 +1,13 @@
+
 class Person { 
     private{
         int age;
     }; 
     public{ 
+        void setAge(int a)  
+        { 
+            this->age = a; 
+        }
         int getAge()  
         { 
             return this->age;
@@ -24,7 +29,12 @@ class Employee <- Person {
   
 int main()  { 
     class Employee emp1;
+    int age ;
     emp1.setEmployeeID(101);
-    emp1.getAge();
+    // Expected: empID set to 101
+
+    emp1.setAge(25);
+    age = emp1.getAge();
+
+    printf("[main] getAge() returned: %d\n", age);
 } 
- 

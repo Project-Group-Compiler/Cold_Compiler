@@ -906,26 +906,27 @@ void emit_fn_epilogue()
 }
 
 void emit_return(quad &instr)
-{ // TODO:handle &
-    // if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
-    //     int reg1 = getReg(instr.arg1,1,{EAX}); //add of x
-    //     emit_instr(x86_lib::mov_reg_mem(reg_names[reg1],reg_names[reg1]));
-    //     spillReg(EAX);
-    //     emit_instr(x86_lib::mov(reg_names[EAX],reg_names[reg1]));
-    //     updateRegDesc(EAX,instr.arg1);
-    // }
+{ // TODO:handle & for float and char...
     if (!block_regs_spilled)
     {
         spillAllReg();
         block_regs_spilled = true;
     }
-    if (instr.arg1.entry && instr.arg1.entry->type == "float")
-    {
-        emit_fload(instr.arg1);
-    }
-    else
-    {
-        setParticularReg(EAX, instr.arg1);
+    if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
+        int reg1 = getReg(instr.arg1,1,{EAX}); //add of x
+        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1],reg_names[reg1]));
+        spillReg(EAX);
+        emit_instr(x86_lib::mov(reg_names[EAX],reg_names[reg1]));
+        // updateRegDesc(EAX,instr.arg1); //TODO check once
+    }else{
+        if (instr.arg1.entry && instr.arg1.entry->type == "float")
+        {
+            emit_fload(instr.arg1);
+        }
+        else
+        {
+            setParticularReg(EAX, instr.arg1);
+        }
     }
 
     emit_fn_epilogue();
