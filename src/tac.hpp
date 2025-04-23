@@ -34,7 +34,7 @@ struct operand
     }
     bool operator!=(const operand &other) const
     {
-        return value != other.value || entry != other.entry;
+        return (value != other.value) || (entry != other.entry);
     }
     bool operator<(const operand &other) const
     {

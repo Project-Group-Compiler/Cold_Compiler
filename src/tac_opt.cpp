@@ -202,8 +202,6 @@ void build_function_cfg(FunctionCFG &func)
 
 void reconstruct_basic_blocks()
 {
-    if (function_cfgs.empty())
-        return;
     basic_blocks.clear();
     for (const auto &func : function_cfgs)
         for (const auto &block : func.blocks)
@@ -434,7 +432,7 @@ void constant_folding()
     tac_code = std::move(folded_tac_code);
     // std::cout << "CF pass : \n";
     // for (auto &instr : tac_code)
-    // std::cout << stringify(instr) << std::endl;
+        // std::cout << stringify(instr) << std::endl;
 }
 
 void dead_code_elimination()
@@ -543,11 +541,11 @@ void dead_code_elimination()
 
             if (!keep_label)
             {
-                tac_updated = true;
                 std::vector<quad> new_block; // add all except first (label)
                 for (auto j = 1; j < block.size(); j++)
                     new_block.push_back(std::move(block[j]));
                 func.blocks[i] = std::move(new_block);
+                tac_updated = true;
             }
         }
     }
@@ -558,7 +556,7 @@ void dead_code_elimination()
 
     // std::cout << "DCE pass : \n";
     // for (auto &instr : tac_code)
-    // std::cout << stringify(instr) << std::endl;
+        // std::cout << stringify(instr) << std::endl;
 }
 
 std::map<int, std::vector<std::pair<operand, std::string>>> instr_annotation;
@@ -611,10 +609,10 @@ std::vector<std::pair<operand, std::string>> meet(const FunctionCFG &graph, cons
     return in_copies;
 }
 
-void find_reaching_copies(const FunctionCFG &graph)
+int find_reaching_copies(const FunctionCFG &graph)
 {
     if (graph.blocks.empty())
-        return;
+        return 1;
     block_annotation.clear();
     instr_annotation.clear();
     exclude_operands.clear();
@@ -636,13 +634,14 @@ void find_reaching_copies(const FunctionCFG &graph)
     }
 
     std::deque<std::pair<std::vector<quad>, int>> worklist;
-    for (int blockId = 0; blockId < graph.blocks.size(); blockId++)
+    for (auto blockId = 0; blockId < graph.blocks.size(); blockId++)
     {
         worklist.push_back(make_pair(graph.blocks[blockId], blockId));
         block_annotation[blockId] = all_copies;
     }
 
-    while (!worklist.empty())
+    int abort_flag = 777;
+    while (!worklist.empty() && abort_flag > 0)
     {
         auto block = worklist.front().first;
         auto blockId = worklist.front().second;
@@ -686,7 +685,10 @@ void find_reaching_copies(const FunctionCFG &graph)
                 }
             }
         }
+        abort_flag--;
     }
+
+    return abort_flag;
 }
 
 void rewrite_instr(quad &instr)
@@ -694,6 +696,11 @@ void rewrite_instr(quad &instr)
     auto reaching_copies = instr_annotation[instr.Label];
     std::unordered_set<std::string> unary_ops = {"=", "!", "~", "unary-", "unary+", "intToChar", "intToFloat", "RETURN", "param"};
     std::unordered_set<std::string> binary_ops = {"+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", ">>", "<<", "&", "|", "^"};
+    // std::cout<<"Reaching copies for instr "<<stringify(instr)<<std::endl;
+    // for(auto &[arg, val] : reaching_copies)
+    // {
+    //     std::cout<<arg.value<<" = "<<val<<std::endl;
+    // }
     if (unary_ops.find(instr.op) != unary_ops.end())
     {
         for (auto &[arg, val] : reaching_copies)
@@ -703,6 +710,7 @@ void rewrite_instr(quad &instr)
                 sym_entry *newEntry = new sym_entry;
                 instr.arg1 = operand(val, newEntry);
                 tac_updated = true;
+                break;
             }
         }
     }
@@ -715,12 +723,14 @@ void rewrite_instr(quad &instr)
                 sym_entry *newEntry = new sym_entry;
                 instr.arg1 = operand(val, newEntry);
                 tac_updated = true;
+                break;
             }
             if (instr.arg2 == arg)
             {
                 sym_entry *newEntry = new sym_entry;
                 instr.arg2 = operand(val, newEntry);
                 tac_updated = true;
+                break;
             }
         }
     }
@@ -733,6 +743,7 @@ void rewrite_instr(quad &instr)
                 sym_entry *newEntry = new sym_entry;
                 instr.arg2 = operand(val, newEntry);
                 tac_updated = true;
+                break;
             }
         }
     }
@@ -745,21 +756,29 @@ void run_optimisations()
     int optimization_cnt = 77;
     do
     {
+        // std::cout << "----------------------------------------\n";
         tac_updated = false;
         constant_folding();
         dead_code_elimination();
         for (auto &graph : function_cfgs)
         {
-            find_reaching_copies(graph);
-            for (auto &block : graph.blocks)
-                for (auto &instr : block)
-                    rewrite_instr(instr);
+            if (graph.name == "global")
+                continue;
+            int ok = find_reaching_copies(graph);
+            if (ok > 0)
+            {
+                for (auto &block : graph.blocks)
+                    for (auto &instr : block)
+                        rewrite_instr(instr);
+            }
+            else
+                break;
         }
         reconstruct_basic_blocks();
         blocks_to_code();
         // std::cout << "Constant propagation pass : \n";
         // for (auto &instr : tac_code)
-        // std::cout << stringify(instr) << std::endl;
+            // std::cout << stringify(instr) << std::endl;
         optimization_cnt--;
     } while (tac_updated && optimization_cnt > 0);
 }
