@@ -1,0 +1,30 @@
+int target1()
+{
+    int x = 9;
+    if (1)
+        x++;
+    else
+        x--;
+    return 0;
+}
+
+int target2()
+{
+    int b;
+    do
+    {
+        b++;
+    } while (0);
+    return b;
+}
+
+
+int target3()
+{
+    int x = 9;
+    while (0)
+    {
+        x++;
+    }
+    return x;
+}
