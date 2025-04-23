@@ -166,6 +166,7 @@ postfix_expression
 		}
 		string temp = postfixExpression($1->type, 1);
 		debug($1->type,temp);
+		DBG("postfix_expression -> postfix_expression '[' expression ']' " + $1->tempName + " " + $3->tempName);
 		if(!temp.empty()){	
 			$$->type = temp;
 			//3AC
@@ -181,12 +182,13 @@ postfix_expression
 				emit("unary*", q3, {}, q4, -1);
 			}else{
 				std::cerr << $1->tempName << " " << $3->tempName << std::endl;
+				std::cerr << $1->place.value << " " << $3->tempName << std::endl;
 				std::vector<int>previDims;
-				if(lookup($1->tempName) == nullptr){
+				if(lookup($1->place.value) == nullptr){
 					DBG("Array " + $1->tempName + " not declared in this scope");
 					// semantic_error(("Array " + $1->tempName + " not declared in this scope").c_str(), "scope error");
 				}
-				else previDims = lookup($1->tempName)->array_dims;
+				else previDims = lookup($1->place.value)->array_dims;
 				for(auto it: previDims){
 					std::cerr << "it = " << it << std::endl;
 					if(it == 0){
@@ -221,7 +223,8 @@ postfix_expression
 				$$->arraydims = arraydims;
 				// emit("[ ]", $1->place, $3->place, q, -1);
 			}
-			$$->tempName = $$->place.value;
+			$$->tempName = $1->tempName;
+			DBG("DEBUG: Array type = " + $$->tempName);
 		}
 		else{
 			//semantic_error(("Array " + $1->tempName +  " Index out of bound").c_str(), "semantic error"); ->TODO
@@ -2472,7 +2475,7 @@ init_declarator
 					enum_decl = 0;
 				}
 				else
-					insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 0, NULL,"",isStaticDecl, false, is_arr,0,$1->arraydims);
+					insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 0, NULL,"",isStaticDecl, isConstDecl, is_arr,0,$1->arraydims);
 			}
 		}
 		if(flag3 && className.empty()){

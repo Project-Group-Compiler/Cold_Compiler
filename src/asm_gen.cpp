@@ -261,7 +261,6 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
 
     if (willYouModify == 0)
     {
-        std::cout << "use willYouModify = 0 carefully\n";
         for (auto reg : addrDesc.inRegs)
         {
             if (isResReg[reg])
@@ -1469,7 +1468,6 @@ void emit_assign(quad &instr)
         return;
 
     // Pointer ->
-    // TODO : is there any case of *ptr1 = *ptr2
 
     // _debug_(stringify(instr));
     if (instr.arg1.entry && instr.arg1.entry->isArray)
@@ -1500,7 +1498,7 @@ void emit_assign(quad &instr)
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {});
         int reg2 = getReg(instr.result, 1, {reg1});
-        emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg1]));
+        emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
         updateRegDesc(reg2, instr.result);
         // make sure ki reg1 jis mem addr ko point kar raha hai uska instack = 1 honi chahiye
     }
