@@ -181,7 +181,12 @@ postfix_expression
 				emit("unary*", q3, {}, q4, -1);
 			}else{
 				std::cerr << $1->tempName << " " << $3->tempName << std::endl;
-				std::vector<int>previDims = lookup($1->tempName)->array_dims;
+				std::vector<int>previDims;
+				if(lookup($1->tempName) == nullptr){
+					DBG("Array " + $1->tempName + " not declared in this scope");
+					// semantic_error(("Array " + $1->tempName + " not declared in this scope").c_str(), "scope error");
+				}
+				else previDims = lookup($1->tempName)->array_dims;
 				for(auto it: previDims){
 					std::cerr << "it = " << it << std::endl;
 					if(it == 0){
@@ -716,10 +721,10 @@ postfix_expression
 		//3AC
 		operand q = getTempVariable($1->type+'*'); 
 		emit("unary&", $1->place, {}, q, -1);
+		emit("param", q, {}, {}, -1); 
 		reverse(actualArgs.begin(), actualArgs.end());
 		for(auto&x : actualArgs)
 			emit("param", x, {}, {}, -1);
-		emit("param", q, {}, {}, -1); 
 		if($$->type != "void")
 		{
 			operand q2 = getTempVariable($$->type);
@@ -1074,10 +1079,10 @@ postfix_expression
 	        semantic_error("Cannot call method on non-class type", "type error");
 	    }
 		//3AC
+		emit("param", $1->place, {}, {}, -1); 
 		reverse(actualArgs.begin(), actualArgs.end());
 		for(auto&x : actualArgs)
 			emit("param", x, {}, {}, -1);
-		emit("param", $1->place, {}, {}, -1); 
 		if($$->type != "void")
 		{
 			operand q2 = getTempVariable($$->type);
@@ -2930,6 +2935,7 @@ class_member
 		    ));
 		}
 		manglemethod="FUNC_" + std::to_string(className.size()) + className + "_" + manglemethod.substr(5);
+		DBG("Function name: "+manglemethod);
         insertClassAttr(manglemethod, "FUNC_"+$1->type, classMethodSize, 0,currentAccess);
 		classMethodSize=0;
 		classMethodArgs.clear();
@@ -2939,6 +2945,7 @@ class_member
         DBG("class_member -> declaration");
         $1->strVal = currentAccess;
 		// Add declaration as a class member with proper access specifier
+		DBG("Inserting into symbol table: " + $1->tempName);
         insertClassAttr($1->tempName, $1->type, $1->size, 0,currentAccess,isStaticDecl,is_arr,$1->arraydims);
 		$$ = $1; 
 		is_arr = false;
@@ -3420,7 +3427,7 @@ direct_declarator
         		funcArgs = newFuncArgs;
 
         		// Insert 'this' parameter into symbol table
-        		insertSymbol(*curr_table, "this", thisType, 4, true, NULL);
+        		paramInsert(*curr_table, "this", thisType, 4, true, NULL);
         }
 		else mangledName = mangleFunctionName(baseName, funcArgs);
 		if($1->expType == 1) {
@@ -3502,7 +3509,7 @@ direct_declarator
         funcArgs.push_back(thisType);
         
         // Insert 'this' parameter into symbol table
-        insertSymbol(*curr_table, "this", thisType, 4, true, NULL);
+        paramInsert(*curr_table, "this", thisType, 4, true, NULL);
     	}
 		else mangledName = mangleFunctionName(baseName, funcArgs);
 		// Semantics

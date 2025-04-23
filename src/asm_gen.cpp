@@ -1486,6 +1486,10 @@ void emit_assign(quad &instr)
         // t0(&) = 5
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {}); // TODO: both can be made 0
+        if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+        {
+            emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+        }
         int reg2 = getReg(instr.result, 1, {reg1});
         emit_instr(x86_lib::mov_mem_reg(reg_names[reg2], reg_names[reg1]));
         // make sure ki reg2 jis mem addr ko point kar raha hai uska instack = 1 honi chahiye

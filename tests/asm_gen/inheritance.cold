@@ -1,30 +1,37 @@
-class Person { 
-    private{
+class Person
+{
+public
+    {
         int age;
-    }; 
-    public{ 
-        int getAge()  
-        { 
-            return this->age;
-        } 
     };
-}; 
-  
-class Employee <- Person { 
-    private{
+public
+    {
+        int getAge(){
+            printf("Age is %d\n", this->age);
+            return this->age; // offset = 0
+        }
+    };
+};
+
+class Employee <- Person
+{
+private
+    {
         int empID;
     };
-    public{
-        void setEmployeeID(int id)
-        { 
-            this->empID = id; 
+public
+    {
+        void setEmployeeID(int id){
+            this->empID = id;
+        printf("Employee ID set to %d\n", this->empID);
         }
-    }; 
-}; 
-  
-int main()  { 
+    };
+};
+
+int main()
+{
     class Employee emp1;
+    emp1.age = 8; // offset = 20
     emp1.setEmployeeID(101);
     emp1.getAge();
-} 
- 
+}
