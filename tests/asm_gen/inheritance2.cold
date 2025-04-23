@@ -54,16 +54,15 @@ class Person {
          int numCourses;
      }; 
      public{
-        char courses[10];
+        // int courses[10];
+        int courses[10][20][23];
          void printCourses(int x){ 
              int i;
-             this->numCourses=x;
-             for(i=0; i<(*this).numCourses;i++){//checking blocks
-                char y='c';
-                (*this).courses[i]=y;
-                // printf("%c", (*this).courses[i]);
+            //  this->numCourses=x;
+             for(i=0; i<x;i++){//checking blocks
+                (*this).courses[i][0][2]=i;
+                printf("%d ", (*this).courses[i][0][2]);
              }
-                 
          }
      };
  }; 
@@ -72,9 +71,14 @@ class Person {
      class Instructor inst1;
      class Student stud1;
      inst1.aadhar_number = 123456789; // offset = 20
-    //  inst1.printCourses(2); 
-    //  inst1.courses[0]='a'; 
-    //  printf("%c", inst1.courses[0]);
+     inst1.printCourses(2); 
+     printf("%d\n", inst1.courses[0][0]);
+     if(inst1.courses[1][0][2] == 1)
+        printf("Hello\n");
+     else
+        printf("World\n");
+    //  inst1.courses[0][0]=4; 
+     printf("%d\n", inst1.courses[0][0]);
     printf("aadhar number is %d\n", inst1.aadhar_number);
         inst1.getEmployeeID();
         inst1.returnName();
