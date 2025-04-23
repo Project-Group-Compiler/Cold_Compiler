@@ -1,0 +1,33 @@
+typedef int integer;
+typedef char character;
+
+typedef struct test{
+    integer n;
+} Test;
+
+void f()
+{
+    integer a;
+    character ch;
+    struct Test t;
+    struct test t2;
+    t.n=1;
+    t2.n=2;
+    printf("t.n: %d\n", t.n);
+    printf("t2.n: %d\n", t2.n);
+}
+
+void f2()
+{
+    int x = 5;
+    int *ptr = &x;
+    int **ptr2 = &ptr;
+    **ptr2 = 10;
+    printf("x: %d\n", x);
+}
+
+int main() 
+{
+    f();
+    f2();
+}

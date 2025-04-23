@@ -272,23 +272,23 @@
 //     // f12();
 // }
 
-void multiDim(){
-    int arr3d[2][2][3] = {{{10, 12, 13},
-                           {3, 5, 6}},
-                          {{7, 8, 9},
-                           {1, 2, 3}}};
-    int x;
-    x = arr3d[0][0][1];
-    printf("%d\n",x);
-    printf("%d\n",arr3d[0][0][0]);
-    arr3d[1][1][2] = 1;
-    printf("arr3d[0][0][0] = %d\n",arr3d[0][0][0]);
-    x = arr3d[1][1][2];
-    printf("%d\n",x);
-    x = arr3d[1][1][2];
-    printf("%d\n",arr3d[0][0][0]);
-    printf("%d\n",x);
-}
+// void multiDim(){
+//     int arr3d[2][2][3] = {{{10, 12, 13},
+//                            {3, 5, 6}},
+//                           {{7, 8, 9},
+//                            {1, 2, 3}}};
+//     int x;
+//     x = arr3d[0][0][1];
+//     printf("%d\n",x);
+//     printf("%d\n",arr3d[0][0][0]);
+//     arr3d[1][1][2] = 1;
+//     printf("arr3d[0][0][0] = %d\n",arr3d[0][0][0]);
+//     x = arr3d[1][1][2];
+//     printf("%d\n",x);
+//     x = arr3d[1][1][2];
+//     printf("%d\n",arr3d[0][0][0]);
+//     printf("%d\n",x);
+// }
 
 void multiDim2(){
     int matrix[3][4] = {

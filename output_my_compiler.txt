@@ -1,0 +1,12 @@
+[main] Testing global variables: glo = 7, count = 5, glos = 9
+[staticKywrd] x = 8, static count = 4
+[staticKywrd] x = 8, static count = 5
+[functionCall] Calling prntfScnf with (a+b=)21 and character 'c'
+[prntfScnf] Enter an integer and a character: [prntfScnf] Integer: 100
+[prntfScnf] Character: h
+[gotoBrkCont] Starting loop...
+[gotoBrkCont] i = 9
+[gotoBrkCont] i = 8
+Skip i = 7
+[gotoBrkCont] i = 6
+[gotoBrkCont] Goto landed here successfully.

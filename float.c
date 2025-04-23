@@ -8,6 +8,11 @@ int main()
     float* fp=&f;
     f=*fp+f;
     c=*cp+i;
+    /*
+        t0 <- add of f
+        *ptr = x => t0 = *ptr => t0 = x
+        x = *ptr => 
+    */
     i = *ip+i;
 
 
