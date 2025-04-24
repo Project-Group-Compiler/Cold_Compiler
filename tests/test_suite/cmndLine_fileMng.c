@@ -1,4 +1,4 @@
-
+// not working
 void fileMng() {
     FILE *file;
 
@@ -17,7 +17,7 @@ void fileMng() {
 
 int main(int argc, char* argv[]) {  // TODO: FIX 
     char *x;
-    
+    int a[2];
     printf("[main] argc = %d\n", argc);
     if (argc > 2) {
         x = argv[2];

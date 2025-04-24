@@ -44,12 +44,12 @@ void print_basic_blocks(bool modifygotoLabels)
     int block_no = 0;
     for (auto &block : basic_blocks)
     {
-        std::cout << "Block " << block_no++ << ":\n";
+        //std::cout << "Block " << block_no++ << ":\n";
         for (auto &instr : block)
         {
-            std::cout << stringify(instr, modifygotoLabels) << std::endl;
+            //std::cout << stringify(instr, modifygotoLabels) << std::endl;
         }
-        std::cout << "\n";
+        //std::cout << "\n";
     }
 }
 
@@ -108,14 +108,18 @@ void separate_functions()
             if (in_function && !current_function.blocks.empty())
                 function_cfgs.push_back(std::move(current_function));
 
+            std::vector<quad> entry_point = std::vector<quad>(1,quad(-1, "ENTRY", {}, {}, {}, -1));
             current_function = FunctionCFG();
             current_function.name = block[0].op.substr(0, block[0].op.length() - 7);
+            current_function.blocks.push_back(entry_point);
             current_function.blocks.push_back(block);
             in_function = true;
         }
         else if (block.back().op.substr(0, 5) == "FUNC_" && block.back().op.substr(block.back().op.length() - 3) == "end")
         {
             current_function.blocks.push_back(block);
+            std::vector<quad> exit = std::vector<quad>(1,quad(-1, "EXIT", {}, {}, {}, -1));
+            current_function.blocks.push_back(exit);
             function_cfgs.push_back(std::move(current_function));
             in_function = false;
         }
@@ -132,8 +136,11 @@ void separate_functions()
         }
     }
 
-    if (in_function && !current_function.blocks.empty())
+    if (in_function && !current_function.blocks.empty()){
+        std::vector<quad> exit = std::vector<quad>(1,quad(-1, "EXIT", {}, {}, {}, -1));
+        current_function.blocks.push_back(exit);
         function_cfgs.push_back(std::move(current_function));
+    }
 
     for (auto &func : function_cfgs)
         for (auto i = 0; i < func.blocks.size(); i++)
@@ -183,13 +190,13 @@ void build_function_cfg(FunctionCFG &func)
             if (func.blocks.back().empty())
                 continue;
             std::string back_op = func.blocks.back().back().op;
-            if (back_op.substr(0, 5) == "FUNC_" && back_op.substr(back_op.length() - 3) == "end")
+            if (back_op=="EXIT")
             {
                 func.adj[i].push_back(func.blocks.size() - 1);
                 func.rev_adj[func.blocks.size() - 1].push_back(i);
             }
         }
-        else if (last_op.substr(0, 5) != "FUNC_" || last_op.substr(last_op.length() - 3) != "end")
+        else 
         {
             if (i + 1 < func.blocks.size())
             {
@@ -205,7 +212,8 @@ void reconstruct_basic_blocks()
     basic_blocks.clear();
     for (const auto &func : function_cfgs)
         for (const auto &block : func.blocks)
-            basic_blocks.push_back(block);
+            if(block.size() > 0 && block[0].op!="ENTRY" && block[0].op!="EXIT") 
+                basic_blocks.push_back(block);
 }
 
 void build_cfg()
@@ -215,51 +223,51 @@ void build_cfg()
         build_function_cfg(func);
 }
 
-void print_function_cfg(const FunctionCFG &func)
-{
-    std::cout << "Control Flow Graph for function " << func.name << ":\n";
-    std::cout << "---------------------------------------\n";
-    for (auto i = 0; i < func.adj.size(); i++)
-    {
-        std::cout << "Block " << i << ":\n";
-        for (const auto &instr : func.blocks[i])
-            std::cout << "  " << stringify(instr) << "\n";
+// void print_function_cfg(const FunctionCFG &func)
+// {
+//     //std::cout << "Control Flow Graph for function " << func.name << ":\n";
+//     //std::cout << "---------------------------------------\n";
+//     for (auto i = 0; i < func.adj.size(); i++)
+//     {
+//         //std::cout << "Block " << i << ":\n";
+//         for (const auto &instr : func.blocks[i])
+//             //std::cout << "  " << stringify(instr) << "\n";
 
-        std::cout << "Successors: ";
-        if (func.adj[i].empty())
-            std::cout << "none";
-        else
-        {
-            for (auto j = 0; j < func.adj[i].size(); j++)
-            {
-                std::cout << func.adj[i][j];
-                if (j < func.adj[i].size() - 1)
-                    std::cout << ", ";
-            }
-        }
-        std::cout << "\n";
+//         //std::cout << "Successors: ";
+//         // if (func.adj[i].empty())
+//         //     //std::cout << "none";
+//         // else
+//         // {
+//         //     for (auto j = 0; j < func.adj[i].size(); j++)
+//         //     {
+//         //         //std::cout << func.adj[i][j];
+//         //         if (j < func.adj[i].size() - 1)
+//         //             //std::cout << ", ";
+//         //     }
+//         // }
+//         //std::cout << "\n";
 
-        std::cout << "Predecessors: ";
-        if (func.rev_adj[i].empty())
-            std::cout << "none";
-        else
-        {
-            for (auto j = 0; j < func.rev_adj[i].size(); j++)
-            {
-                std::cout << func.rev_adj[i][j];
-                if (j < func.rev_adj[i].size() - 1)
-                    std::cout << ", ";
-            }
-        }
-        std::cout << "\n\n";
-    }
-}
+//         //std::cout << "Predecessors: ";
+//         // if (func.rev_adj[i].empty())
+//             //std::cout << "none";
+//         // else
+//         // {
+//         //     for (auto j = 0; j < func.rev_adj[i].size(); j++)
+//         //     {
+//         //         //std::cout << func.rev_adj[i][j];
+//         //         if (j < func.rev_adj[i].size() - 1)
+//         //             //std::cout << ", ";
+//         //     }
+//         // }
+//         //std::cout << "\n\n";
+//     }
+// }
 
-void print_cfg()
-{
-    for (const auto &func : function_cfgs)
-        print_function_cfg(func);
-}
+// void print_cfg()
+// {
+//     for (const auto &func : function_cfgs)
+//         print_function_cfg(func);
+// }
 
 void constant_folding()
 {
@@ -430,9 +438,9 @@ void constant_folding()
             q.gotoLabel = id_map[q.gotoLabel];
     }
     tac_code = std::move(folded_tac_code);
-    std::cout << "CF pass : \n";
-    for (auto &instr : tac_code)
-        std::cout << stringify(instr) << std::endl;
+    //std::cout << "CF pass : \n";
+    // for (auto &instr : tac_code)
+        //std::cout << stringify(instr) << std::endl;
 }
 
 void dead_code_elimination()
@@ -554,76 +562,97 @@ void dead_code_elimination()
     compute_basic_blocks();
     build_cfg();
 
-    std::cout << "DCE pass : \n";
-    for (auto &instr : tac_code)
-        std::cout << stringify(instr) << std::endl;
+    //std::cout << "DCE pass : \n";
+    // for (auto &instr : tac_code)
+        //std::cout << stringify(instr) << std::endl;
 }
 
-std::map<int, std::vector<std::pair<operand, std::string>>> instr_annotation;
-std::map<int, std::vector<std::pair<operand, std::string>>> block_annotation;
+std::map<int, std::set<std::pair<operand, std::string>>> instr_annotation;
+std::map<int, std::set<std::pair<operand, std::string>>> block_annotation;
 
-void transfer(const std::vector<quad> &block, int blockId, const std::vector<std::pair<operand, std::string>> &initial_copies)
+// void transfer(const std::vector<quad> &block, int blockId, const std::vector<std::pair<operand, std::string>> &initial_copies)
+// {
+//     std::set<operand> exclude_operands;
+//     auto curr_copies = initial_copies;
+//     for (const auto &instr : block)
+//     {
+//         instr_annotation[instr.Label] = curr_copies;
+//         std::vector<std::pair<operand, std::string>> new_copies;
+//         for (const auto &copy : curr_copies)
+//         {
+//             if (instr.result == copy.first)
+//                 continue;
+//             if (instr.op == "unary&" && instr.arg1 == copy.first)
+//                 continue;
+//             new_copies.push_back(copy);
+//         }
+
+//         if (instr.op == "unary&")
+//             exclude_operands.insert(instr.arg1);
+//         else if (instr.op == "=" && is_int_constant(instr.arg1.value) && instr.result.entry && instr.result.entry->type == "int" && !instr.result.entry->isGlobal && instr.result.entry->isStatic == 0)
+//         {
+//             auto new_copy = make_pair(instr.result, instr.arg1.value);
+//             bool proceed = true;
+//             for (const auto &copy : new_copies)
+//             {
+//                 if (new_copy == copy)
+//                 {
+//                     proceed = false;
+//                     break;
+//                 }
+//             }
+//             if (proceed && exclude_operands.find(instr.result) == exclude_operands.end())
+//                 new_copies.push_back(new_copy);
+//         }
+//         curr_copies = std::move(new_copies);
+//     }
+//     block_annotation[blockId] = curr_copies;
+// }
+
+void transfer(const std::vector<quad> &block, int blockId, const std::set<std::pair<operand, std::string>> &initial_copies)
 {
     std::set<operand> exclude_operands;
     auto curr_copies = initial_copies;
     for (const auto &instr : block)
     {
         instr_annotation[instr.Label] = curr_copies;
-        std::vector<std::pair<operand, std::string>> new_copies;
-        for (const auto &copy : curr_copies)
+        std::set<std::pair<operand, std::string>> to_remove;
+        for (auto copy : curr_copies)
         {
-            if (instr.result == copy.first)
-                continue;
             if (instr.op == "unary&" && instr.arg1 == copy.first)
-                continue;
-            new_copies.push_back(copy);
+                to_remove.insert(copy);
+            else if (instr.result == copy.first)
+                to_remove.insert(copy);
         }
+        for (auto copy : to_remove)
+            curr_copies.erase(copy);
 
         if (instr.op == "unary&")
             exclude_operands.insert(instr.arg1);
-        else if (instr.op == "=" && is_int_constant(instr.arg1.value) && instr.result.entry && instr.result.entry->type == "int" && !instr.result.entry->isGlobal && instr.result.entry->isStatic == 0)
+        else if (instr.op == "=" && is_int_constant(instr.arg1.value) && instr.result.entry && (instr.result.entry->type == "int" || instr.result.entry->type == "bool") && !instr.result.entry->isGlobal && instr.result.entry->isStatic == 0)
         {
-            auto new_copy = make_pair(instr.result, instr.arg1.value);
-            bool proceed = true;
-            for (const auto &copy : new_copies)
-            {
-                if (new_copy == copy)
-                {
-                    proceed = false;
-                    break;
-                }
-            }
-            if (proceed && exclude_operands.find(instr.result) == exclude_operands.end())
-                new_copies.push_back(new_copy);
+            if (exclude_operands.find(instr.result) == exclude_operands.end())
+                curr_copies.insert(make_pair(instr.result, instr.arg1.value));
         }
-        curr_copies = std::move(new_copies);
     }
     block_annotation[blockId] = curr_copies;
 }
 
-std::vector<std::pair<operand, std::string>> meet(const FunctionCFG &graph, const int block_id, const std::vector<std::pair<operand, std::string>> &all_copies)
+std::set<std::pair<operand, std::string>> meet(const FunctionCFG &graph, const int block_id, std::set<std::pair<operand, std::string>> all_copies)
 {
-    std::vector<std::pair<operand, std::string>> in_copies;
     auto block_predecessors = graph.rev_adj[block_id];
     for (auto it : block_predecessors)
     {
-        in_copies.clear();
+        if(it == 0)
+            return std::set<std::pair<operand, std::string>>();
         auto pred_out_copies = block_annotation[it];
-        for (auto i : pred_out_copies)
-        {
-            for (auto j : all_copies)
-            {
-                if (i == j)
-                {
-                    in_copies.push_back(i);
-                    j.first = operand();
-                    j.second = "";
-                }
-            }
-        }
+        std::set<std::pair<operand, std::string>> intersection;
+        std::set_intersection(all_copies.begin(), all_copies.end(),
+                              pred_out_copies.begin(), pred_out_copies.end(),
+                              std::inserter(intersection, intersection.begin()));
+        all_copies = intersection;
     }
-
-    return in_copies;
+    return all_copies;
 }
 
 int find_reaching_copies(const FunctionCFG &graph)
@@ -632,7 +661,7 @@ int find_reaching_copies(const FunctionCFG &graph)
         return 1;
     block_annotation.clear();
     instr_annotation.clear();
-    std::vector<std::pair<operand, std::string>> all_copies;
+    std::set<std::pair<operand, std::string>> all_copies;
     std::set<operand> exclude_operands;
     for (const auto &block : graph.blocks)
     {
@@ -642,26 +671,16 @@ int find_reaching_copies(const FunctionCFG &graph)
         {
             if (instr.op == "unary&")
                 exclude_operands.insert(instr.arg1);
-            if (instr.op == "=" && is_int_constant(instr.arg1.value) && instr.result.entry && instr.result.entry->type == "int" && !instr.result.entry->isGlobal && instr.result.entry->isStatic == 0)
+            else if (instr.op == "=" && is_int_constant(instr.arg1.value) && instr.result.entry && (instr.result.entry->type == "int" || instr.result.entry->type == "bool") && !instr.result.entry->isGlobal && instr.result.entry->isStatic == 0)
             {
-                auto new_copy = make_pair(instr.result, instr.arg1.value);
-                bool proceed = true;
-                for (const auto &copy : all_copies)
-                {
-                    if (new_copy == copy)
-                    {
-                        proceed = false;
-                        break;
-                    }
-                }
-                if (proceed && exclude_operands.find(instr.result) == exclude_operands.end())
-                    all_copies.push_back(make_pair(instr.result, instr.arg1.value));
+                if (exclude_operands.find(instr.result) == exclude_operands.end())
+                    all_copies.insert(make_pair(instr.result, instr.arg1.value));
             }
         }
     }
 
     std::deque<std::pair<std::vector<quad>, int>> worklist;
-    for (auto blockId = 0; blockId < graph.blocks.size(); blockId++)
+    for (auto blockId = 1; blockId < graph.blocks.size()-1; blockId++)
     {
         worklist.push_back(make_pair(graph.blocks[blockId], blockId));
         block_annotation[blockId] = all_copies;
@@ -677,32 +696,12 @@ int find_reaching_copies(const FunctionCFG &graph)
         auto incoming_copies = meet(graph, blockId, all_copies);
         transfer(block, blockId, incoming_copies);
         auto new_annotation = block_annotation[blockId];
-        // sort(incoming_copies.begin(), incoming_copies.end());
-        // sort(old_annotation.begin(), old_annotation.end());
-        bool updateWorklistFlag = false;
-        for (const auto &i : new_annotation)
-        {
-            bool foundMatch = false;
-            for (const auto &j : old_annotation)
-            {
-                if (i == j)
-                {
-                    foundMatch = true;
-                    break;
-                }
-            }
-            if (!foundMatch)
-            {
-                updateWorklistFlag = true;
-                break;
-            }
-        }
-        if (old_annotation.size() != incoming_copies.size())
-            updateWorklistFlag = true;
-        if (updateWorklistFlag)
+        if (old_annotation != new_annotation)
         {
             for (auto it : graph.adj[blockId])
             {
+                if(it == graph.blocks.size()-1)
+                    continue;
                 bool isPresent = false;
                 auto successor = graph.blocks[it];
                 for (auto k : worklist)
@@ -730,10 +729,10 @@ void rewrite_instr(quad &instr)
     auto reaching_copies = instr_annotation[instr.Label];
     std::unordered_set<std::string> unary_ops = {"=", "!", "~", "unary-", "unary+", "intToChar", "intToFloat", "RETURN", "param"};
     std::unordered_set<std::string> binary_ops = {"+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", ">>", "<<", "&", "|", "^"};
-    std::cout << "Reaching copies for instr " << stringify(instr) << std::endl;
+    //std::cout << "Reaching copies for instr " << stringify(instr) << std::endl;
     for (auto &[arg, val] : reaching_copies)
     {
-        std::cout << arg.value << " = " << val << std::endl;
+        //std::cout << arg.value << " = " << val << std::endl;
     }
     if (unary_ops.find(instr.op) != unary_ops.end())
     {
@@ -790,7 +789,7 @@ void run_optimisations()
     int optimization_cnt = 77;
     do
     {
-        std::cout << "----------------------------------------\n";
+        //std::cout << "----------------------------------------\n";
         tac_updated = false;
         constant_folding();
         dead_code_elimination();
@@ -810,9 +809,9 @@ void run_optimisations()
         }
         reconstruct_basic_blocks();
         blocks_to_code();
-        std::cout << "Constant propagation pass : \n";
-        for (auto &instr : tac_code)
-            std::cout << stringify(instr) << std::endl;
+        //std::cout << "Constant propagation pass : \n";
+        //for (auto &instr : tac_code)
+            //std::cout << stringify(instr) << std::endl;
         optimization_cnt--;
     } while (tac_updated && optimization_cnt > 0);
 }

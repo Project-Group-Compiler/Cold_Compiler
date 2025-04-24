@@ -1,6 +1,6 @@
 // #include <stdio.h>
 // #include <stdlib.h>
-
+// not working
 void test() {
     int *ptr;
 

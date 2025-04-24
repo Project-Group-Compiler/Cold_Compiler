@@ -1,4 +1,4 @@
-
+// not working
 enum Color { RED, GREEN, BLUE };
 
 void test_enum() {

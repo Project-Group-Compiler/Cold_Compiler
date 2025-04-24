@@ -170,7 +170,7 @@ postfix_expression
 		if(!temp.empty()){	
 			$$->type = temp;
 			//3AC
-			if($$->type == "int" || $$->type == "char"  || $$->type == "float" || ($$->type.substr(0,7) == "STRUCT_" && $$->type.back() != '*') || ($$->type.substr(0,6) == "CLASS_" && $$->type.back() != '*')){
+			if($$->type == "int" || $$->type == "char"  || $$->type == "float" || $$->type.back()=='*' || ($$->type.substr(0,7) == "STRUCT_" && $$->type.back() != '*') || ($$->type.substr(0,6) == "CLASS_" && $$->type.back() != '*')){
 				operand q = getTempVariable($$->type + "*");
 				emit("=", $1->place,{}, q, -1); 
 				operand q2 = getTempVariable($$->type);
@@ -1711,9 +1711,11 @@ additive_expression
 			operand q = getTempVariable($$->type);//TODO not always int
 			$$->place = q;
 			$$->tempName = q.value;
-			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
+			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){
+			// if(($1->type).back() == '*'){  //int** + ... //TODOO
 				operand q2 = getTempVariable($3->type);
-				emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1); 
+				emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
+				// emit("*", $3->place, {std::to_string(4)}, q2, -1); 
 				emit("ptr+", $1->place, q2, q, -1);
 			}else{
 				//TODO : Handle float pointer 
