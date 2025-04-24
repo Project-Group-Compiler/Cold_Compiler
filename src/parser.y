@@ -1302,11 +1302,15 @@ unary_expression
 		$$->type = "int";
 		$$->isInit = 1;
 		$$->intVal = $2->size;
+		DBG("sizeof = " + $2->type);
 		//3AC
+		std::string sizez=std::to_string(getSize($2->type));
         operand q = getTempVariable("int");
         $$->place = q;
         $$->nextlist.clear();
-        emit("SIZEOF", $2->place, {}, q, -1);
+        // emit("SIZEOF", $2->place, {}, q, -1);
+        emit("=", {sizez}, {}, q, -1);
+
 	}
 	| SIZEOF '(' type_name ')' {
         DBG("unary_expression -> SIZEOF '(' type_name ')'");
@@ -1316,11 +1320,14 @@ unary_expression
 		$$->type = "int";
 		$$->isInit = 1;
 		$$->intVal = $3->size;
+		DBG("sizeof = " + $3->type);
 		//3AC
+		std::string sizez=std::to_string(getSize($3->type));
         operand q = getTempVariable("int");
         $$->place = q;
         $$->nextlist.clear();
-        emit("SIZEOF", {$3->type}, {}, q, -1);//TODO:
+        // emit("SIZEOF", {$3->type}, {}, q, -1);//TODO:
+		emit("=", {sizez}, {}, q, -1);
 	}
 	;
 

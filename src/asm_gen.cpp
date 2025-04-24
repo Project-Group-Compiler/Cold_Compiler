@@ -115,7 +115,7 @@ std::string getMem(operand &op)
     {
         std::string memAddr;
         int offset = op.entry->offset;
-        //emit_instr(";" + op.value + " = " + std::to_string(offset));
+        // emit_instr(";" + op.value + " = " + std::to_string(offset));
         if (offset < 0)
             memAddr = reg_names[EBP] + "+" + std::to_string(-offset);
         else
@@ -911,13 +911,16 @@ void emit_return(quad &instr)
         spillAllReg();
         block_regs_spilled = true;
     }
-    if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
-        int reg1 = getReg(instr.arg1,1,{EAX}); //add of x
-        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1],reg_names[reg1]));
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    {
+        int reg1 = getReg(instr.arg1, 1, {EAX}); // add of x
+        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
         spillReg(EAX);
-        emit_instr(x86_lib::mov(reg_names[EAX],reg_names[reg1]));
+        emit_instr(x86_lib::mov(reg_names[EAX], reg_names[reg1]));
         // updateRegDesc(EAX,instr.arg1); //TODO check once
-    }else{
+    }
+    else
+    {
         if (instr.arg1.entry && instr.arg1.entry->type == "float")
         {
             emit_fload(instr.arg1);
@@ -1533,9 +1536,8 @@ void emit_fload(operand &arg)
     {
         int reg = getReg(arg, 1, {});
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg], reg_names[reg]));
-        emit_instr(x86_lib::mov_mem_reg(getMem(arg),reg_names[reg]));
+        emit_instr(x86_lib::mov_mem_reg(getMem(arg), reg_names[reg]));
     }
-
 
     if ((arg.value).substr(0, 4) == "__f_")
     {
@@ -1601,16 +1603,18 @@ void emit_cassign(quad &instr)
     {
         // can Handle integer constant more optimally
         // t0(&) = 5
-        // std::cout << instr.result.value << std::endl;    
+        // std::cout << instr.result.value << std::endl;
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {}); // TODO: both can be made 0
         // int reg2 = getReg(instr.result, 1, {reg1});
         setParticularReg(EDX, instr.result);
-        emit_instr(x86_lib::movzx_reg_mem(reg_names[EDX], "byte" , reg_names[reg1]));
-        emit_instr(x86_lib::mov_mem_reg(getMem(instr.arg1),"dl"));
+        emit_instr(x86_lib::movzx_reg_mem(reg_names[EDX], "byte", reg_names[reg1]));
+        emit_instr(x86_lib::mov_mem_reg(getMem(instr.arg1), "dl"));
         // emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], getMem(instr.result)));
         // make sure ki reg2 jis mem addr ko point kar raha hai uska instack = 1 honi chahiye
-    }else{
+    }
+    else
+    {
         setParticularReg(EDX, instr.arg1);
         if (instr.result.entry && (instr.result.entry->isGlobal || instr.result.entry->isStatic > 0))
             emit_instr(x86_lib::mov_mem_reg(instr.result.value, "dl"));
