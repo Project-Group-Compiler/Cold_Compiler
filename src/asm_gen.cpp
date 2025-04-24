@@ -1502,7 +1502,12 @@ void emit_assign(quad &instr)
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {});
         int reg2 = getReg(instr.result, 1, {reg1});
-        emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
+        if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*')
+        {
+            emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
+        }else{
+            emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg1]));
+        }
         updateRegDesc(reg2, instr.result);
         // make sure ki reg1 jis mem addr ko point kar raha hai uska instack = 1 honi chahiye
     }
