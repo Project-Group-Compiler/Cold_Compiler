@@ -1171,7 +1171,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
     }
 }
 
-int getSize(std::string id)
+int getSize(std::string id)//need to add support for string literals
 {
     if (findStruct(id))
         return getStructsize(id);

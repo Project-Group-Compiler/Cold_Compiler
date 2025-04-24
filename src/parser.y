@@ -3309,6 +3309,7 @@ declarator
 			$$->size = 4;
 			$$->expType = 2;
 		}
+		$$->arraydims = $2->arraydims;
 		//3AC
 		$$->place = {$$->tempName};
 	}
