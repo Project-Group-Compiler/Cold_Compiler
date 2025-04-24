@@ -76,4 +76,8 @@
 - C++ style comments ( starting with `//` ) are supported.
 - `Cold` does not have a preprocessor, hence don't use preprocessor directives (`#include` etc).
 
+
+---
+- Static keyword with function not ok.
+- Declare ints on one line, int* in other line, 
 ----
