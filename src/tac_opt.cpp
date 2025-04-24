@@ -99,9 +99,11 @@ void separate_functions()
 
     for (auto i = 0; i < basic_blocks.size(); i++)
     {
-        const auto &block = basic_blocks[i];
+        auto block = basic_blocks[i];
         if (block.empty())
             continue;
+
+        bool added_block = false;
 
         if (block[0].op.substr(0, 5) == "FUNC_" && block[0].op.substr(block[0].op.length() - 7) == "start :")
         {
@@ -113,26 +115,37 @@ void separate_functions()
             current_function.name = block[0].op.substr(0, block[0].op.length() - 7);
             current_function.blocks.push_back(entry_point);
             current_function.blocks.push_back(block);
+            added_block = true;
             in_function = true;
         }
-        else if (block.back().op.substr(0, 5) == "FUNC_" && block.back().op.substr(block.back().op.length() - 3) == "end")
+
+        if (block.back().op.substr(0, 5) == "FUNC_" && block.back().op.substr(block.back().op.length() - 3) == "end")
         {
-            current_function.blocks.push_back(block);
-            std::vector<quad> exit = std::vector<quad>(1,quad(-1, "EXIT", {}, {}, {}, -1));
+            if (!added_block)
+            {
+                current_function.blocks.push_back(block);
+                added_block = true;
+            }
+            std::vector<quad> exit = std::vector<quad>(1, quad(-1, "EXIT", {}, {}, {}, -1));
             current_function.blocks.push_back(exit);
             function_cfgs.push_back(std::move(current_function));
             in_function = false;
         }
-        else if (in_function)
+
+        if (!added_block)
         {
-            current_function.blocks.push_back(block);
-        }
-        else // Global code outside function
-        {
-            FunctionCFG global_code;
-            global_code.name = "global";
-            global_code.blocks.push_back(block);
-            function_cfgs.push_back(std::move(global_code));
+            if (in_function)
+            {
+                current_function.blocks.push_back(block);
+                added_block = true;
+            }
+            else // Global code outside function
+            {
+                FunctionCFG global_code;
+                global_code.name = "global";
+                global_code.blocks.push_back(block);
+                function_cfgs.push_back(std::move(global_code));
+            }
         }
     }
 
@@ -196,7 +209,7 @@ void build_function_cfg(FunctionCFG &func)
                 func.rev_adj[func.blocks.size() - 1].push_back(i);
             }
         }
-        else 
+        else
         {
             if (i + 1 < func.blocks.size())
             {
@@ -756,14 +769,12 @@ void rewrite_instr(quad &instr)
                 sym_entry *newEntry = new sym_entry;
                 instr.arg1 = operand(val, newEntry);
                 tac_updated = true;
-                break;
             }
             if (instr.arg2 == arg)
             {
                 sym_entry *newEntry = new sym_entry;
                 instr.arg2 = operand(val, newEntry);
                 tac_updated = true;
-                break;
             }
         }
     }

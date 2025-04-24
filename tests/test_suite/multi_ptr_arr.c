@@ -1,4 +1,4 @@
-# not working
+// not working
 void multiLvlPtr() {
     int val;
     int *ptr;
