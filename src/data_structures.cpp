@@ -37,6 +37,7 @@ int class_count = 1;
 int struct_count = 1;
 int avl = 0;
 int blockCnt = 1;
+bool curr_structure_is_union = false;
 
 #define LIB_FUNC_LIST "scanf", "printf", "malloc", "calloc", "free",           \
                       "fopen", "fputs", "fgets", "fclose", "fprintf",          \
@@ -401,7 +402,7 @@ std::string getType(std::string id)
     return ret;
 }
 
-void createStructTable()
+void createStructTable(bool union_f)
 {
     sym_table *new_table = new (std::nothrow) sym_table;
     if (!new_table)
@@ -411,6 +412,7 @@ void createStructTable()
     }
     curr_structure = new_table;
     struct_offset = 0;
+    curr_structure_is_union = union_f;
 }
 
 // insert struct attributes in struct symbol table
@@ -423,29 +425,59 @@ int insertStructAttr(std::string attr, std::string type, int size, bool init, bo
     }
     if ((*curr_structure).find(attr) == (*curr_structure).end())
     {
-        if (!blockSz.empty())
-            blockSz.top() += size;
-        if (!Goffset.empty())
-            Goffset.top() += size;
-        if (type != "char")
+        // Handle unions differently than structs for sizing
+        if (curr_structure_is_union)
         {
-            if (struct_offset % 4 != 0)
+            // For unions, we need to track the maximum size
+            int old_size = struct_offset;
+            // Alignment for non-char types
+            if (type != "char")
             {
-                int padding = (4 - (struct_offset % 4));
-                struct_offset += padding;
+                // Union members still need alignment within their individual spaces
+                if (size % 4 != 0)
+                {
+                    int padding = (4 - (size % 4));
+                    size += padding;
+                }
+            }
+            // Insert the member with offset 0
+            (*curr_structure).insert(std::make_pair(attr, createEntry(type, size, init, 0, nullptr, "", 0, 0, isArray, 0, array_dims)));
+            // Update union size only if this member is larger
+            if (size > struct_offset)
+            {
+                // Remove the previous size contribution and add the new larger size
                 if (!blockSz.empty())
-                    blockSz.top() += padding;
+                    blockSz.top() = blockSz.top() - old_size + size;
                 if (!Goffset.empty())
-                    Goffset.top() += padding;
+                    Goffset.top() = Goffset.top() - old_size + size;
+                struct_offset = size;
             }
         }
-        (*curr_structure).insert(std::make_pair(attr, createEntry(type, size, init, struct_offset, nullptr, "", 0, 0, isArray, 0, array_dims)));
-        struct_offset += size;
+        else
+        {
+            if (!blockSz.empty())
+                blockSz.top() += size;
+            if (!Goffset.empty())
+                Goffset.top() += size;
+            if (type != "char")
+            {
+                if (struct_offset % 4 != 0)
+                {
+                    int padding = (4 - (struct_offset % 4));
+                    struct_offset += padding;
+                    if (!blockSz.empty())
+                        blockSz.top() += padding;
+                    if (!Goffset.empty())
+                        Goffset.top() += padding;
+                }
+            }
+            (*curr_structure).insert(std::make_pair(attr, createEntry(type, size, init, struct_offset, nullptr, "", 0, 0, isArray, 0, array_dims)));
+            struct_offset += size;
+        }
         return 1;
     }
     return 0;
 }
-
 int printStructTable(std::string struct_name)
 {
     if (!curr_struct_table)
@@ -874,12 +906,13 @@ int inheritFromClass(std::string childClassName, std::string parentClassName)
         sym_entry *member = inheritableMembers[i].second;
 
         // std::cout << "Remooving private Member: " << memberName
-                //   << " with offset: " << member->offset << std::endl;
-        if (member->access == "private"){
+        //   << " with offset: " << member->offset << std::endl;
+        if (member->access == "private")
+        {
             inheritableMembers.pop_back();
         }
-        else break;
-            
+        else
+            break;
     }
     for (const auto &pair : inheritableMembers)
     {
@@ -887,7 +920,7 @@ int inheritFromClass(std::string childClassName, std::string parentClassName)
         sym_entry *member = pair.second;
 
         // std::cout << "Inside inheritFromClass function Member: " << memberName
-                //   << " with offset: " << member->offset << std::endl;
+        //   << " with offset: " << member->offset << std::endl;
         // offset copy karna padega from parent class to child class
         if ((*curr_class_structure).find(memberName) == (*curr_class_structure).end())
         {
@@ -902,12 +935,12 @@ int inheritFromClass(std::string childClassName, std::string parentClassName)
     if (inheritableMembers.size() > 0)
     {
         auto las = inheritableMembers[inheritableMembers.size() - 1].second;
-        class_offset +=las->offset + las->size;
+        class_offset += las->offset + las->size;
         if (!blockSz.empty())
             blockSz.top() += las->offset + las->size;
         if (!Goffset.empty())
             Goffset.top() += las->offset + las->size;
-        //TODO: padding 
+        // TODO: padding
     }
     return 1; // Success
 }
@@ -1171,7 +1204,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
     }
 }
 
-int getSize(std::string id)//need to add support for string literals
+int getSize(std::string id) // need to add support for string literals
 {
     if (findStruct(id))
         return getStructsize(id);

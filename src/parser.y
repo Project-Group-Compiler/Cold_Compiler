@@ -3109,7 +3109,9 @@ ID_STRUCT
 TABLE_STRUCT 
 	: %empty {
         DBG("TABLE_STRUCT -> %empty");
-		createStructTable();
+		if(currentDataType=="union")
+			createStructTable(1);
+		else createStructTable();
 	}
 	;
 
@@ -3310,6 +3312,13 @@ declarator
 			$$->expType = 2;
 		}
 		$$->arraydims = $2->arraydims;
+		if($$->arraydims.size() > 0){
+			$$->size = 4;
+			for(auto dim : $$->arraydims){
+				$$->size *= dim;
+			}
+		}
+
 		//3AC
 		$$->place = {$$->tempName};
 	}

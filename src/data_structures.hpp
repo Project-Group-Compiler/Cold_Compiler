@@ -101,7 +101,7 @@ sym_entry *currLookup(std::string id);
 void insertKeywords();
 void insert_std_func(std::string func_name, std::vector<std::string> type, std::string ret_type);
 std::string getType(std::string id);
-void createStructTable();
+void createStructTable(bool union_f=false);
 int insertStructAttr(std::string attr, std::string type, int size, bool init, bool isArray = false,std::vector<int> array_dims = {});
 int printStructTable(std::string struct_name);
 std::string StructAttrType(std::string struct_name, std::string id);
