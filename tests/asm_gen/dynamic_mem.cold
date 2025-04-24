@@ -1,8 +1,18 @@
-void test() 
-{
+int* fun(){
     int *ptr = (int *)malloc(sizeof(int));
-    if (ptr) {
-        *ptr = 42;
+    *ptr = 42;
+    return ptr;
+}
+
+
+void main() 
+{
+    int *ptr = fun();
+    if (ptr) {       
+        printf("%d \n", *ptr);
+        *ptr = 67;
+        printf("%d \n", *ptr);
         free(ptr);
+        printf("%d \n", *ptr);
     }
 }

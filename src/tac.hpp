@@ -154,7 +154,7 @@ inline std::string stringify(const quad &instr, bool modifygotoLabels = false)
     else if (curr_op == "intToFloat" || curr_op == "floatToInt" || curr_op == "charToInt" || curr_op == "intToChar" || curr_op == "SIZEOF")
         s += instr.result.value + " = " + curr_op + "(" + instr.arg1.value + ")";
     else if (curr_op.substr(0, 5) == "CAST_")
-        s += instr.result.value + " = CAST " + instr.arg1.value + " to " + curr_op.substr(5);
+        s += "CAST " + instr.arg1.value + " to " + curr_op.substr(5);
     return s;
 }
 

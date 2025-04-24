@@ -4,12 +4,18 @@ class Person {
     // data members of person 
      public{
          int aadhar_number;
+         int c0;
      };  
      private{
          int name;
+         int c1;
      }; 
      public{ 
          char * returnName()  {
+            (*this).c0=0;
+            (*this).c1=1;
+            printf("c0 :%d\n", this->c0);
+            printf("c1 :%d\n", this->c1);
             (*this).name=2;
                 printf("%d\n", (*this).name);
                 return (*this).name; 
@@ -22,8 +28,17 @@ class Person {
      protected{
          int employeeID;
      };  
+     private{
+        int c4;
+     };
      public{
+        int c3;
+
          int getEmployeeID(){ 
+            (*this).c0=0;
+            this->c4=4;
+            printf("c0 :%d\n", (*this).c0);
+            printf("c4 :%d\n", (*this).c4);
             this->returnName();
           return (*this).employeeID; 
          }
@@ -82,6 +97,8 @@ class Person {
     printf("aadhar number is %d\n", inst1.aadhar_number);
         inst1.getEmployeeID();
         inst1.returnName();
+        inst1.c3=3;
+        printf("c3 : %d\n", inst1.c3);
         stud1.aadhar_number = 234; // offset = 20
         stud1.getRollNo(5);
         printf("%d\n", inst1.aadhar_number);

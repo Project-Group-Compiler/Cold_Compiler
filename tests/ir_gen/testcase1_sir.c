@@ -11,7 +11,7 @@ struct foo
     struct foo *next;
 };
 
-static int bar(int a, float b) // no need to comment static
+int bar(int a, float b) // no need to comment static
 {
     static int lcl = 10;
     while (b)
@@ -26,8 +26,8 @@ static int bar(int a, float b) // no need to comment static
 
 int main()
 {
-    int a = 100, b[20], ret;
-    int i; // declarations must come before function call in a scope as per Cold grammar
+    int a = 100, b[20];
+    int i, ret; // declarations must come before function call in a scope as per Cold grammar
     int *c;
     struct foo newS[5];
     for (i = 0; i < a; i++)
@@ -52,10 +52,16 @@ int main()
         ret = i;
         // b[19] = i; // can't be inside loop since b is int inside
     }
+    b[0]=0;
+    b[2]=2;
     b[19] = i; // no need to comment ... if put outside loop since b is array outside not inside
     // c = b * ret; // error since incompatible multiplication of int* with int
-jump:
-    printf("Final = %d", newS[3].b + ret);
+    printf("%d\n", b[19]);
+    printf("%d\n", i);
+    jump:
+    printf("%d\n", b[19]);
+    printf("%d\n", i);
+    printf("Final = %d",ret);
     if (*(b + 2) == 0)
         goto jump;
     bar(1, (float)*b); // need to explicitly typecase function arguments

@@ -211,7 +211,7 @@ inline std::string checkExplicitType(std::string a, std::string b)
     if (isAChar && isBFloat)
         return "ok";
 
-    if (isBFloat && isAChar)
+    if (isAFloat && isBChar)
         return "ok";
 
     bool isAVoidPtr = (a == "void*");

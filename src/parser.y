@@ -1304,11 +1304,16 @@ unary_expression
 		$$->intVal = $2->size;
 		DBG("sizeof = " + $2->type);
 		//3AC
-		std::string sizez=std::to_string(getSize($2->type));
+		std::string sizez;
+		if(!($2->strVal.empty()))
+			sizez = std::to_string($2->strVal.length() - 1);
+		else
+			sizez = std::to_string(getSize($2->type));
         operand q = getTempVariable("int");
         $$->place = q;
         $$->nextlist.clear();
         // emit("SIZEOF", $2->place, {}, q, -1);
+
         emit("=", {sizez}, {}, q, -1);
 
 	}
@@ -1393,10 +1398,62 @@ cast_expression
 		// if(checkType($2->type, $4->type) == ""){
 		// 	semantic_error(("Incompatible conversion of " + $4->type + " to type " + $2->type).c_str(), "type error");
 		// }
-		operand q = getTempVariable($2->type);
-        $$->place = q;
 		$4->nextlist.clear();
-        emit("CAST_" +$2->type, $4->place, {}, q, -1);
+		if(isFloat($2->type)){
+			operand q = getTempVariable($2->type);
+			if(checkInt($4->type)){
+				// operand q1 = getTempVariable($2->type);
+				emit("intToFloat", $4->place, {}, q, -1);
+				// emit("=", q1, {}, q, -1);
+			}
+			else if(isChar($4->type)){
+				operand q1 = getTempVariable($2->type);
+				emit("charToInt", $4->place, {}, q1, -1);
+				emit("intToFloat", q1, {}, q, -1);
+			}
+			else{
+				emit("=", $4->place, {}, q, -1);
+			}
+			$$->place=q;
+		}
+		else if(checkInt($2->type)){
+			operand q = getTempVariable($2->type);
+			if(isFloat($4->type)){
+				// operand q1 = getTempVariable($2->type);
+				emit("floatToInt", $4->place, {}, q, -1);
+				// emit("=", q1, {}, q, -1);
+			}
+			else if(isChar($4->type)){
+				// operand q1 = getTempVariable($2->type);
+				emit("charToInt", $4->place, {}, q, -1);
+				// emit("=", q1, {}, q, -1);
+			}
+			else{
+				emit("=", $4->place, {}, q, -1);
+			}
+			$$->place=q;
+		}
+		else if(isChar($2->type)){
+			operand q = getTempVariable($2->type);
+			if(checkInt($4->type)){
+				// operand q1 = getTempVariable($2->type);
+				emit("intToChar", $4->place, {}, q, -1);
+				// emit("=", q1, {}, q, -1);
+			}
+			else if(isFloat($4->type)){
+				operand q1 = getTempVariable($2->type);
+				emit("floatToInt", $4->place, {}, q1, -1);
+				emit("intToChar", q1, {}, q, -1);
+			}
+			else{
+				emit("=", $4->place, {}, q, -1);
+			}
+			$$->place=q;
+		}
+		else{
+			emit("CAST_" +$2->type, $4->place, {}, {}, -1);
+			$$->place=$4->place;
+		}
 	}
 	;
 
@@ -3665,12 +3722,14 @@ parameter_declaration
 			debug($2->type);
 			funcArgs.push_back($2->type);
 		}
+		isStaticDecl = 0;
 	}
 	| declaration_specifiers abstract_declarator {
 		DBG("parameter_declaration -> declaration_specifiers abstract_declarator");
 		$$ = getNode("parameter_declaration", mergeAttrs($1, $2));
 		// Semantics
 		type = "";
+		isStaticDecl = 0;
 	}
 	| declaration_specifiers {
 		DBG("parameter_declaration -> declaration_specifiers");
@@ -3678,6 +3737,7 @@ parameter_declaration
 		// Semantics
 		funcArgs.push_back(type);
 		type = "";
+		isStaticDecl = 0;
 	}
 	;
 
