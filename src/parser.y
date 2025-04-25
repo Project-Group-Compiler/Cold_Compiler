@@ -169,8 +169,11 @@ postfix_expression
 		DBG("postfix_expression -> postfix_expression '[' expression ']' " + $1->tempName + " " + $3->tempName);
 		if(!temp.empty()){	
 			$$->type = temp;
+			std::cerr << $1->tempName << " " << $3->tempName << std::endl;
+				std::cerr << $1->place.value << " " << $3->tempName << std::endl;
+		
 			//3AC
-			if($$->type == "int" || $$->type == "char"  || $$->type == "float" || $$->type.back()=='*' || ($$->type.substr(0,7) == "STRUCT_" && $$->type.back() != '*') || ($$->type.substr(0,6) == "CLASS_" && $$->type.back() != '*')){
+			if($$->type == "int" || $$->type == "char"  || $$->type == "float" || ($$->type.substr(0,7) == "STRUCT_" && $$->type.back() != '*') || ($$->type.substr(0,6) == "CLASS_" && $$->type.back() != '*')){
 				operand q = getTempVariable($$->type + "*");
 				emit("=", $1->place,{}, q, -1); 
 				operand q2 = getTempVariable($$->type);
@@ -181,14 +184,19 @@ postfix_expression
 				$$->place = q4;
 				emit("unary*", q3, {}, q4, -1);
 			}else{
+				std::cerr << $$->type << " " << $1->isArray << std::endl;
 				std::cerr << $1->tempName << " " << $3->tempName << std::endl;
 				std::cerr << $1->place.value << " " << $3->tempName << std::endl;
 				std::vector<int>previDims;
-				if(lookup($1->place.value) == nullptr){
-					DBG("Array " + $1->tempName + " not declared in this scope");
-					// semantic_error(("Array " + $1->tempName + " not declared in this scope").c_str(), "scope error");
+				if($1->isArray){
+					previDims = $1->arraydims;
+				}else if(lookup($1->place.value)){
+					previDims = lookup($1->place.value)->array_dims;
 				}
-				else previDims = lookup($1->place.value)->array_dims;
+				else{
+					// semantic_error(("Array " + $1->tempName + " not declared in this scope").c_str(), "scope error");
+					DBG("Array " + $1->tempName + " not declared in this scope");
+				} 
 				for(auto it: previDims){
 					std::cerr << "it = " << it << std::endl;
 					if(it == 0){
@@ -415,7 +423,9 @@ postfix_expression
         	if (curr_class_structure && (*curr_class_structure).find(temp) != (*curr_class_structure).end()) {
         	    $$->type = (*curr_class_structure)[temp]->type;
         	    $$->tempName = $1->tempName + "." + temp;
-				member_offset = (*curr_class_structure)[temp]->offset;						
+				member_offset = (*curr_class_structure)[temp]->offset;
+				$$->arraydims=(*curr_class_structure)[temp]->array_dims;						
+				$$->isArray=(*curr_class_structure)[temp]->isArray;						
         	} else {
         	    semantic_error(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
         	}
@@ -436,6 +446,9 @@ postfix_expression
         		    $$->type = ClassAttrType(type, temp);
         		    $$->tempName = $1->tempName + "." + temp;
 					member_offset = ClassAttrOffset(type, temp);
+					sym_entry* te=lookupClass_entry(type,temp);
+					$$->arraydims=te->array_dims;
+					$$->isArray=te->isArray;
         		}
     	    }
     	    else if (ret == 0) {
@@ -458,6 +471,9 @@ postfix_expression
     	        $$->type = StructAttrType($1->type, temp);
     	        $$->tempName = $1->tempName + "." + temp;
 				member_offset = StructAttrOffset($1->type, temp);
+				sym_entry* te=lookupStruct_entry(type,temp);
+				$$->arraydims=te->array_dims;
+				$$->isArray=te->isArray;
     	    }
     	}
 		//3AC
@@ -767,6 +783,8 @@ postfix_expression
         	    $$->type = (*curr_class_structure)[temp]->type;
         	    $$->tempName = $1->tempName + "->" + temp;
 				member_offset = (*curr_class_structure)[temp]->offset;
+				$$->arraydims=(*curr_class_structure)[temp]->array_dims;						
+				$$->isArray=(*curr_class_structure)[temp]->isArray;	
         	} else {
         	    semantic_error(("Member '" + temp + "' not found in class '" + className + "'").c_str(), "scope error");
         	}
@@ -787,6 +805,9 @@ postfix_expression
         		    $$->type = ClassAttrType(type, temp);
         		    $$->tempName = $1->tempName + "->" + temp;
 					member_offset = ClassAttrOffset(type, temp);
+					sym_entry* te=lookupClass_entry(type,temp);
+					$$->arraydims=te->array_dims;
+					$$->isArray=te->isArray;
         		}
     	    }
     	    else if (ret == 0) {
@@ -809,6 +830,9 @@ postfix_expression
     	        $$->type = StructAttrType(type, temp);
     	        $$->tempName = $1->tempName + "->" + temp;
 				member_offset = StructAttrOffset(type, temp);
+				sym_entry* te=lookupStruct_entry(type,temp);
+				$$->arraydims=te->array_dims;
+				$$->isArray=te->isArray;
     	    }
     	}
 		//3AC
@@ -1713,11 +1737,47 @@ additive_expression
 			$$->tempName = q.value;
 			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){
 			// if(($1->type).back() == '*'){  //int** + ... //TODOO
-				operand q2 = getTempVariable($3->type);
-				emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
-				// emit("*", $3->place, {std::to_string(4)}, q2, -1); 
-				emit("ptr+", $1->place, q2, q, -1);
-			}else{
+				//if arr then convert to ptr first
+				bool array_flag = 0;
+
+				if($1->isArray) {
+					array_flag = 1;
+				}else if(lookup($1->tempName)){
+					array_flag = lookup($1->tempName)->isArray;
+				}
+				if(array_flag){
+					operand q0 = getTempVariable($$->type);
+					emit("=",$1->place,{},q0,-1);
+					operand q2 = getTempVariable($3->type);
+					emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
+					emit("ptr+", q0, q2, q, -1);
+				}else{
+					operand q2 = getTempVariable($3->type);
+					emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
+					emit("ptr+", $1->place, q2, q, -1);
+				}
+			}else if(($3->type).back() == '*' && (($1->type == "int") || ($1->type == "Integer Constant"))){
+				bool array_flag = 0;
+
+				if($3->isArray) {
+					array_flag = 1;
+				}else if(lookup($3->tempName)){
+					array_flag = lookup($3->tempName)->isArray;
+				}
+				
+				if(array_flag){
+					operand q0 = getTempVariable($$->type);
+					emit("=",$3->place,{},q0,-1);
+					operand q2 = getTempVariable($1->type);
+					emit("*", $1->place, {std::to_string(getSize($3->type.substr(0, $3->type.size()-1)))}, q2, -1);
+					emit("ptr+", q0, q2, q, -1);
+				}else{
+					operand q2 = getTempVariable($1->type);
+					emit("*", $1->place, {std::to_string(getSize($3->type.substr(0, $3->type.size()-1)))}, q2, -1);
+					emit("ptr+", $3->place, q2, q, -1);
+				}
+			}
+			else{
 				//TODO : Handle float pointer 
 				if(isFloat(temp)){
 					operand q = getTempVariable($$->type);
@@ -2575,6 +2635,7 @@ init_declarator
 					enum_decl = 0;
 			} else
 				insertSymbol(*curr_table, $1->tempName, $1->type, $1->size, 1, NULL,"",isStaticDecl,isConstDecl, is_arr,0,$1->arraydims);
+			
 			std::string type = $1->type;
 			DBG("Type of variable: " + $1->type);
 			DBG("Type of initializer: " + $5->type);
