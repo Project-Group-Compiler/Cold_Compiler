@@ -248,6 +248,13 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
         isResReg[it] = 1;
     }
 
+    if(op.value.size()>=6 && op.value.substr(0,6)=="__str_")
+    {
+        int bestReg = getBestReg(resReg);
+        emit_instr(x86_lib::mov(reg_names[bestReg], op.value));
+        return bestReg;
+    }
+
     if (is_int_constant(op.value))
     {
         int bestReg = getBestReg(resReg);
@@ -341,6 +348,13 @@ void setParticularReg(int reg, operand &op)
         emit_instr(x86_lib::mov_reg_imm(reg_names[reg], op.value));
         return;
     }
+    if(op.value.size()>=6 && op.value.substr(0,6)=="__str_")
+    {
+        spillReg(reg);
+        emit_instr(x86_lib::mov(reg_names[reg], op.value));
+        return;
+    }
+
     bool isPresent = 0;
     for (auto treg : op.entry->addrDesc.inRegs)
     {
@@ -584,6 +598,7 @@ void emit_asm(const std::string &inputFile)
 
 void emit_copy_to_offset(quad &instr)
 {
+    // char* ch[5] = {}
     spillAllReg();
     int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
     if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
@@ -1691,6 +1706,7 @@ void get_constants()
                 instr.result.value = "__f_" + std::to_string(float_constants[instr.arg1.value]);
                 instr.result.entry->size = 4;
                 instr.result.entry->type = "float";
+                instr.result.entry->isGlobal = true;
             }
             if (is_float_constant(instr.arg1.value))
             {
@@ -1892,7 +1908,6 @@ void emit_data_section()
                     emit_data(name + ": dd " + init_val);
                 }
             }
-            // Initialized structs, unions and classes pending as of now
         }
     }
 
@@ -1935,7 +1950,6 @@ void emit_data_section()
                     emit_data(act_name + ": dd " + init_val);
                 }
             }
-            // Initialized structs, unions and classes pending as of now
         }
     }
     for (auto i = 0; i < string_literals.size(); i++)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 EXECUTABLE="bin/compiler"
-TEST_DIR="original_tests/"
+TEST_DIR="tests/asm_gen"
 OUTPUT_DIR="outputs"
 # OUTPUT_DIR_OPT="outputs/opt"
 
