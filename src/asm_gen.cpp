@@ -1523,13 +1523,22 @@ void emit_assign(quad &instr)
     else if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         // y = to(&)
+        _debug_(stringify(instr));
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {});
         int reg2 = getReg(instr.result, 1, {reg1});
-        if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*')
+        _debug_(instr.result.value, instr.arg1.value);
+        bool flag = false;
+        if(instr.result.entry->type == (instr.arg1.entry->type.substr(0, instr.arg1.entry->type.size() - 1))){
+            flag = true;
+        }
+        _debug_(flag);
+        if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*' && (!flag))
         {
+            _debug_("here");
             emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
         }else{
+            _debug_("here2");
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg1]));
         }
         updateRegDesc(reg2, instr.result);
