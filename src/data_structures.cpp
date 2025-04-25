@@ -752,6 +752,74 @@ int findClass(std::string class_name)
     }
     return 0;
 }
+
+//Use this function at you own risk
+sym_entry* lookupStruct_entry(std::string struct_name, std::string id)
+{
+    struct_sym_table *temp = curr_struct_table;
+    while (temp)
+    {
+        if ((*temp).find(struct_name) != (*temp).end())
+        {
+            sym_table *table = (*temp)[struct_name].second;
+            if (table && (*table).find(id) != (*table).end())
+                return (*table)[id]; // found
+            else
+                return nullptr; // struct doesn't contain id
+        }
+        if (struct_parent_table.find(temp) == struct_parent_table.end())
+            break;
+        temp = struct_parent_table[temp];
+    }
+    return nullptr; // struct table not found
+}
+
+
+
+sym_entry* lookupClass_entry(std::string class_name, std::string &id)
+{
+    class_sym_table *temp = curr_class_table;
+    while (temp)
+    {
+        if ((*temp).find(class_name) != (*temp).end())
+        {
+            sym_table *table = (*temp)[class_name].second;
+            if (table && (*table).find(id) != (*table).end())
+                return (*table)[id]; // found
+            else
+            {
+                // check if id is in parent class
+                if (id.find("FUNC_") == 0)
+                {
+                    // for example FUNC_6Person_6getAge_v change this to 6getAge_v
+                    id = id.substr(5);
+                    id = id.substr(id.find("_") + 1);
+                    // check if id is in this class as suffix of entry
+                    for (auto it : (*table))
+                    {
+                        std::string key = it.first;
+                        if (key.length() >= id.length() &&
+                            key.substr(key.length() - id.length()) == id)
+                        {
+                            id = it.first; // to pass parent class name function to parser.y
+                            return (*table)[key];//We don't need this
+                        }
+                    }
+                    return nullptr;
+                }
+                else
+                {
+                    return nullptr;
+                }
+            }
+        }
+        if (class_parent_table.find(temp) == class_parent_table.end())
+            break;
+        temp = class_parent_table[temp];
+    }
+    return nullptr; // class table not found
+}
+
 int lookupClass(std::string class_name, std::string &id)
 {
     class_sym_table *temp = curr_class_table;
