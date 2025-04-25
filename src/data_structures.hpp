@@ -141,5 +141,6 @@ extern std::map<std::string, std::string> global_init;
 
 void paramInsert(sym_table &table, std::string id, std::string type, int size, bool is_init, sym_table *ptr,int isStatic = 0, bool isConst = false, bool isArray = false,std::vector<int> array_dims = {});
 void clear_paramoffset();
-
+sym_entry* lookupStruct_entry(std::string struct_name, std::string id);
+sym_entry* lookupClass_entry(std::string class_name, std::string &id);
 #endif // SYMBOL_TABLE_H

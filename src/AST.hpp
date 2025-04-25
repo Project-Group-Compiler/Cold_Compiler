@@ -30,6 +30,7 @@ struct Node
     std::vector<int> nextlist;
     std::vector<int> caselist;
     std::vector<int> arraydims;
+    bool isArray = false;
 };
 
 struct Data
