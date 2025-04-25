@@ -791,12 +791,25 @@ void emit_param(quad &instr)
         params_size += 4;
         return;
     }
+    
+    if (instr.arg1.value.substr(0, 6) == "__str_"){
+        emit_instr(x86_lib::push(instr.arg1.value));
+        params_size += 4;
+        return;
+    }
+
+    if(instr.arg1.entry && instr.arg1.entry->isArray){
+        std::string mem = getMem(instr.arg1);
+        int reg1 = getReg(instr.arg1, 1, {});
+        emit_instr(x86_lib::lea(reg_names[reg1], mem));
+        emit_instr(x86_lib::push(reg_names[reg1]));
+        params_size += 4;
+        return;
+    }
 
     if (instr.arg1.entry)
-    {
-        if (instr.arg1.value.substr(0, 6) == "__str_")
-            emit_instr(x86_lib::push(instr.arg1.value));
-        else if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0 || instr.arg1.value.substr(0, 4) == "__f_") // TODO;handle & wala case
+    {   
+        if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0 || instr.arg1.value.substr(0, 4) == "__f_") // TODO;handle & wala case
         {
             if (instr.arg1.entry->type == "float" && instr.arg2.value == "lea")
             {
