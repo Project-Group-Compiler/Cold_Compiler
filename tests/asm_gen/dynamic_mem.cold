@@ -13,6 +13,5 @@ void main()
         *ptr = 67;
         printf("%d \n", *ptr);
         free(ptr);
-        printf("%d \n", *ptr);
     }
 }

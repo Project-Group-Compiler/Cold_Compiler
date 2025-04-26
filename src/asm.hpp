@@ -100,6 +100,7 @@ void emit_cassign(quad &instr);
 void emit_logical_ptr_add(quad &instr);
 void emit_logical_ptr_sub(quad &instr);
 void emit_copy_to_offset(quad &instr);
+void emit_va_instr(quad &instr);
 
 void next_use_analysis(std::vector<quad> &block);
 void print_next_use();

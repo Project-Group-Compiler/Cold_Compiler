@@ -22,6 +22,7 @@ extern std::string outputDir;
 std::ofstream asm_file;
 std::map<std::string, int> string_literals;
 std::map<std::string, int> float_constants;
+std::map<std::string, std::vector<std::string>> global_array_init;
 bool block_regs_spilled = false;
 bool inside_fn = false;
 bool main_no_ret = false;
@@ -248,7 +249,7 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
         isResReg[it] = 1;
     }
 
-    if(op.value.size()>=6 && op.value.substr(0,6)=="__str_")
+    if (op.value.size() >= 6 && op.value.substr(0, 6) == "__str_")
     {
         int bestReg = getBestReg(resReg);
         emit_instr(x86_lib::mov(reg_names[bestReg], op.value));
@@ -348,7 +349,7 @@ void setParticularReg(int reg, operand &op)
         emit_instr(x86_lib::mov_reg_imm(reg_names[reg], op.value));
         return;
     }
-    if(op.value.size()>=6 && op.value.substr(0,6)=="__str_")
+    if (op.value.size() >= 6 && op.value.substr(0, 6) == "__str_")
     {
         spillReg(reg);
         emit_instr(x86_lib::mov(reg_names[reg], op.value));
@@ -581,6 +582,8 @@ void emit_asm(const std::string &inputFile)
                 emit_logical_ptr_sub(instr);
             else if (curr_op == "CopyToOffset")
                 emit_copy_to_offset(instr);
+            else if (curr_op.substr(0, 3) == "va_")
+                emit_va_instr(instr);
 
             printReg_addr_Desc(instr.Label);
         }
@@ -598,6 +601,10 @@ void emit_asm(const std::string &inputFile)
 
 void emit_copy_to_offset(quad &instr)
 {
+    if (!inside_fn)
+        return;
+    if (instr.result.entry && instr.result.entry->isStatic > 0)
+        return;
     // char* ch[5] = {}
     spillAllReg();
     int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
@@ -684,18 +691,20 @@ void emit_unary_star(quad &instr)
     if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         // to = * ptr => to is a reference
-        //to = *arr
+        // to = *arr
         // emit_instr(x86_lib::mov(reg_names[reg1], reg_names[reg1]));
-        if(instr.arg1.entry && instr.arg1.entry->isArray){
+        if (instr.arg1.entry && instr.arg1.entry->isArray)
+        {
             std::string mem = getMem(instr.arg1);
             int reg1 = getReg(instr.result, 1, {});
             emit_instr(x86_lib::lea(reg_names[reg1], mem));
             updateRegDesc(reg1, instr.result);
-        }else{
+        }
+        else
+        {
             int reg1 = getReg(instr.arg1, 1, {});
             updateRegDesc(reg1, instr.result);
         }
-
     }
     else
     {
@@ -1501,10 +1510,18 @@ void emit_assign(quad &instr)
     if (instr.arg1.entry && instr.arg1.entry->isArray)
     { // t0 = arr
         // spillAllReg();
-        std::string mem = getMem(instr.arg1);
-        int reg1 = getReg(instr.result, 1, {});
-        emit_instr(x86_lib::lea(reg_names[reg1], mem));
-        updateRegDesc(reg1, instr.result);
+        if(instr.arg1.entry->isGlobal||instr.arg1.entry->isStatic>0)
+        {
+            int reg1 = getReg(instr.result, 1, {});
+            emit_instr(x86_lib::lea(reg_names[reg1], instr.arg1.value));
+            updateRegDesc(reg1, instr.result);
+        }
+        else{
+            std::string mem = getMem(instr.arg1);
+            int reg1 = getReg(instr.result, 1, {});
+            emit_instr(x86_lib::lea(reg_names[reg1], mem));
+            updateRegDesc(reg1, instr.result);
+        }
     }
     else if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
@@ -1529,15 +1546,18 @@ void emit_assign(quad &instr)
         int reg2 = getReg(instr.result, 1, {reg1});
         _debug_(instr.result.value, instr.arg1.value);
         bool flag = false;
-        if(instr.result.entry->type == (instr.arg1.entry->type.substr(0, instr.arg1.entry->type.size() - 1))){
+        if (instr.result.entry->type == (instr.arg1.entry->type.substr(0, instr.arg1.entry->type.size() - 1)))
+        {
             flag = true;
         }
         _debug_(flag);
-        if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*' && (!flag))
+        if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*' && (!flag))
         {
             _debug_("here");
             emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
-        }else{
+        }
+        else
+        {
             _debug_("here2");
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg1]));
         }
@@ -1677,6 +1697,28 @@ void emit_charToInt(quad &instr)
         emit_instr(x86_lib::mov_mem_reg(instr.result.value, reg_names[EDX]));
     else
         emit_instr(x86_lib::mov_mem_reg(getMem(instr.result), reg_names[EDX]));
+}
+
+void emit_va_instr(quad &instr)
+{
+    if (instr.op == "va_start")
+    {
+        std::string mem = getMem(instr.arg2);
+        int offset = std::stoi(mem.substr(4)) + instr.arg2.entry->size;
+        mem = mem.substr(0, 4) + std::to_string(offset);
+        int reg1 = getReg(instr.arg1, 1, {});
+        emit_instr(x86_lib::lea(reg_names[reg1], mem));
+        updateRegDesc(reg1, instr.arg1);
+    }
+    else
+    {
+        int reg1 = getReg(instr.arg1, 1, {});
+        int reg2 = getReg(instr.arg1, 1, {reg1});
+        emit_instr(x86_lib::lea(reg_names[reg2], reg_names[reg1] + "+4"));
+        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+        updateRegDesc(reg2, instr.arg1);
+        updateRegDesc(reg1, instr.result);
+    }
 }
 
 void get_constants()
@@ -1883,6 +1925,39 @@ void global_init_pass()
             }
         }
     }
+
+    size_t i = 0;
+    while (i < tac_code.size())
+    {
+        auto instr = tac_code[i];
+        if (instr.op == "CopyToOffset")
+        {
+            auto curr_array = instr.result;
+            std::vector<std::string> array_init_values;
+            while (i < tac_code.size())
+            {
+                instr = tac_code[i];
+                if (instr.op != "CopyToOffset" || instr.result.value != curr_array.value)
+                {
+                    if (curr_array.entry)
+                    {
+                        int num_elements = curr_array.entry->size / 4;
+                        if (curr_array.entry->type == "char*")
+                            num_elements = curr_array.entry->size;
+                        int missing_cnt = num_elements - array_init_values.size();
+                        for (int j = 0; j < missing_cnt; j++)
+                            array_init_values.push_back("0");
+                    }
+                    global_array_init[curr_array.value] = array_init_values;
+                    break;
+                }
+                array_init_values.push_back(instr.arg1.value);
+                i++;
+            }
+        }
+        else
+            i++;
+    }
 }
 
 void update_ir()
@@ -1906,7 +1981,14 @@ void emit_data_section()
             {
                 if (entry->isArray)
                 {
-                    // Initialized array pending as of now
+                    std::string data_string;
+                    for (auto i = 0; i < global_array_init[name].size(); i++)
+                    {
+                        data_string += global_array_init[name][i];
+                        if (i != global_array_init[name].size() - 1)
+                            data_string += ", ";
+                    }
+                    emit_data(name + ": db " + data_string);
                 }
                 else
                 {
@@ -1918,13 +2000,20 @@ void emit_data_section()
             {
                 if (entry->isArray)
                 {
-                    // Initialized array pending as of now
+                    std::string data_string;
+                    for (auto i = 0; i < global_array_init[name].size(); i++)
+                    {
+                        data_string += global_array_init[name][i];
+                        if (i != global_array_init[name].size() - 1)
+                            data_string += ", ";
+                    }
+                    emit_data(name + ": dd " + data_string);
                 }
-                else
-                {
-                    std::string init_val = global_init[name];
-                    emit_data(name + ": dd " + init_val);
-                }
+            }
+            else
+            {
+                std::string init_val = global_init[name];
+                emit_data(name + ": dd " + init_val);
             }
         }
     }
@@ -1948,7 +2037,17 @@ void emit_data_section()
             {
                 if (entry->isArray)
                 {
-                    // Initialized array pending as of now
+                    std::string name = act_name;
+                    if (entry->isGlobal)
+                        name = op.value;
+                    std::string data_string;
+                    for (auto i = 0; i < global_array_init[name].size(); i++)
+                    {
+                        data_string += global_array_init[name][i];
+                        if (i != global_array_init[name].size() - 1)
+                            data_string += ", ";
+                    }
+                    emit_data(act_name + ": db " + data_string);
                 }
                 else
                 {
@@ -1960,7 +2059,17 @@ void emit_data_section()
             {
                 if (entry->isArray)
                 {
-                    // Initialized array pending as of now
+                    std::string name = act_name;
+                    if (entry->isGlobal)
+                        name = op.value;
+                    std::string data_string;
+                    for (auto i = 0; i < global_array_init[name].size(); i++)
+                    {
+                        data_string += global_array_init[name][i];
+                        if (i != global_array_init[name].size() - 1)
+                            data_string += ", ";
+                    }
+                    emit_data(act_name + ": dd " + data_string);
                 }
                 else
                 {
@@ -1986,7 +2095,7 @@ void emit_data_section()
             if (cnt == i)
             {
                 if (is_float_constant(str))
-                    emit_data("__f_" + std::to_string(cnt) + ": dd " + str);
+                    emit_data("__f_" + std::to_string(cnt) + ": dd " + std::to_string(std::stof(str, nullptr)));
                 else if (is_int_constant(str))
                     emit_data("__f_" + std::to_string(cnt) + ": dd " + std::to_string(std::stoi(str, nullptr, 0)) + ".0");
             }

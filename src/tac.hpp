@@ -155,6 +155,10 @@ inline std::string stringify(const quad &instr, bool modifygotoLabels = false)
         s += instr.result.value + " = " + curr_op + "(" + instr.arg1.value + ")";
     else if (curr_op.substr(0, 5) == "CAST_")
         s += "CAST " + instr.arg1.value + " to " + curr_op.substr(5);
+    else if (curr_op == "va_start")
+        s += "va_start " + instr.arg1.value + " " + instr.arg2.value;
+    else if (curr_op == "va_arg")
+        s += instr.result.value + " = va_arg " + instr.arg1.value + " " + instr.arg2.value;
     return s;
 }
 

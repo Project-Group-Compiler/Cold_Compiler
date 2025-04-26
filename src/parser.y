@@ -364,37 +364,53 @@ postfix_expression
 				//3AC
 				$$->tempName = $1->tempName;
 				bool check = false;
+				bool var_start = false, var_arg = false, var_end = false;
 				for (auto it : lib_funcs)
 				{
-					if (mangledName == it){
+					if (mangledName == it)
 						check = true;
-						break;
-					}
+					if(mangledName == "va_start")
+						var_start = true;
+					if(mangledName == "va_arg")
+						var_arg = true;
+					if(mangledName == "va_end")
+						var_end = true;
 				}
 				reverse(actualArgs.begin(), actualArgs.end());
-				if(check){
-					for(auto&x : actualArgs){
-						emit("param", x, {"lea"}, {}, -1);
-					}
+				if(var_start){
+					emit("va_start", actualArgs[1], actualArgs[0], {}, -1);
 				}
-				else{
-					for(auto&x : actualArgs)
-						emit("param", x, {}, {}, -1);
-				}
-				if($$->type != "void")
-				{
-					operand q2 = getTempVariable($$->type);
-					emit("CALL", {mangledName}, {std::to_string(currArgs.size())}, q2, -1);
+				else if(var_arg){
+					operand q2 = getTempVariable("int");
+					emit("va_arg", actualArgs[1], actualArgs[0], q2, -1);
 					$$->place = q2;
 				}
-				else
-				{
-					emit("CALL", {mangledName}, {std::to_string(currArgs.size())}, {}, -1);
-				}
-				for(auto&lib_f : lib_funcs)
-				{
-					if(mangledName == lib_f)
-						called_lib_funcs.insert(mangledName);
+				else if(var_end){}
+				else{
+					if(check){
+						for(auto&x : actualArgs){
+							emit("param", x, {"lea"}, {}, -1);
+						}
+					}
+					else{
+						for(auto&x : actualArgs)
+							emit("param", x, {}, {}, -1);
+					}
+					if($$->type != "void")
+					{
+						operand q2 = getTempVariable($$->type);
+						emit("CALL", {mangledName}, {std::to_string(currArgs.size())}, q2, -1);
+						$$->place = q2;
+					}
+					else
+					{
+						emit("CALL", {mangledName}, {std::to_string(currArgs.size())}, {}, -1);
+					}
+					for(auto&lib_f : lib_funcs)
+					{
+						if(mangledName == lib_f)
+							called_lib_funcs.insert(mangledName);
+					}
 				}
 				$$->nextlist.clear();
 			}
@@ -2656,6 +2672,9 @@ init_declarator
 				for(int i = 0; i<list_values.size();i++){
 					// std::cerr << $$->ty
 					emit("CopyToOffset", list_values[i], {std::to_string(i*getSize(baseType))}, $$->place, -1);//TODO $1->place 
+				}
+				if(isStaticDecl){
+					static_vars.push_back($1->place);
 				}
 				array_decl = 0;
 				is_arr = false;
