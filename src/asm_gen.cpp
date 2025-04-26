@@ -20,6 +20,8 @@ void print_error(const std::string &message);
 /* Variable declaration */
 extern std::string outputDir;
 std::ofstream asm_file;
+std::vector<x86_instr> asm_instr;
+
 std::map<std::string, int> string_literals;
 std::map<std::string, int> float_constants;
 bool block_regs_spilled = false;

@@ -6,9 +6,20 @@
 #include <vector>
 #include "tac.hpp"
 
+class x86_instr{
+    public:
+    std::string op;
+    std::string size;//dword, byte, qword etc
+    std::string arg1;
+    std::string arg2;
+    std::string arg3;
+    std::string comment;
+    std::string label;//jump label
+    std::string printing;
+};
 extern std::ofstream asm_file;
 extern bool print_comments;
-
+extern std::vector<x86_instr> asm_instr;
 inline void emit_instr(const std::string &instr)
 {
     asm_file << "\t" << instr << std::endl;
@@ -16,28 +27,50 @@ inline void emit_instr(const std::string &instr)
 
 inline void emit_label(const std::string &label)
 {
+    x86_instr instr;
+    instr.label = label;
+    instr.printing = label + " :";
+    asm_instr.push_back(instr);
     asm_file << label << " :\n";
 }
 
 inline void emit_data(const std::string &data)
 {
+    x86_instr instr;
+    instr.comment = data;
+    instr.printing = "\t" + data;
+    asm_instr.push_back(instr);
     asm_file << "\t" << data << "\n";
 }
 
 inline void emit_section(const std::string &section)
 {
+    x86_instr instr;
+    instr.comment = section;
+    instr.printing = "\nsection " + section;
+    asm_instr.push_back(instr);
     asm_file << "\nsection " << section << "\n";
 }
 
 inline void emit_comment(const std::string &comment)
 {
+    x86_instr instr;
+    instr.comment = comment;
+    instr.printing = "\t\t\t; " + comment;
+    asm_instr.push_back(instr);
     asm_file << "\t\t\t; " << comment << "\n";
 }
 
 inline void add_extern_funcs()
 {
-    for (auto &func : called_lib_funcs)
+    for (auto &func : called_lib_funcs){
+        x86_instr instr;
+        instr.comment = "extern " + func;
+        instr.printing = "extern " + func;
+        asm_instr.push_back(instr);
         asm_file << "extern " << func << "\n";
+    }
+        
 }
 
 template <typename T>
@@ -54,7 +87,6 @@ inline void __print__(const T &x, const Args &...rest){
     std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; \
     __print__(x);                                                 \
     std::cerr << std::endl;
-
 
 void emit_asm(const std::string &);
 void emit_fload(operand &op);
@@ -111,5 +143,10 @@ void update_ir();
 void fixgotoLabels();
 void emit_data_section();
 void emit_bss_section();
+
+//Optimization functions
+void optimize_asm(const std::string &inputFile);
+void print_asm_instr();
+
 
 #endif
