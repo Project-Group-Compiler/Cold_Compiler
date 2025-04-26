@@ -779,10 +779,13 @@ void emit_param(quad &instr)
                 std::cout << instr.arg1.entry->type << " " << instr.arg1.value << std::endl;
                 emit_fparam(instr.arg1);
             }
-            else if (instr.arg1.entry->type == "char")
+            else if (instr.arg1.entry->type == "char" || instr.arg1.entry->type == "char&")
             {
                 setParticularReg(EBX, instr.arg1);
                 // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", instr.arg1.value));
+                if(instr.arg1.entry->type == "char&"){
+                    emit_instr(x86_lib::mov_reg_mem(reg_names[EBX], reg_names[EBX]));
+                }
                 emit_instr(x86_lib::push(reg_names[EBX]));
             }
             else
@@ -790,12 +793,21 @@ void emit_param(quad &instr)
                 emit_instr(x86_lib::push_mem("dword", instr.arg1.value));
             }
         }
-        else if (instr.arg1.entry->addrDesc.inRegs.size() && !(instr.arg1.entry->type == "char" || instr.arg1.entry->type == "char&"))
+        else if (instr.arg1.entry->addrDesc.inRegs.size())
         {
             if ((instr.arg1.entry->type == "float" || instr.arg1.entry->type == "float&") && instr.arg2.value == "lea")
             {
-                std::cout << instr.arg1.entry->type << " " << instr.arg1.value << std::endl;
+                std::cout << instr.arg1.entry->type << " haaaaaaa " << instr.arg1.value << std::endl;
                 emit_fparam(instr.arg1);
+            }
+            else if (instr.arg1.entry->type == "char" || instr.arg1.entry->type == "char&")
+            {
+                setParticularReg(EBX, instr.arg1);
+                // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", instr.arg1.value));
+                if(instr.arg1.entry->type == "char&"){
+                    emit_instr(x86_lib::mov_reg_mem(reg_names[EBX], reg_names[EBX]));
+                }
+                emit_instr(x86_lib::push(reg_names[EBX]));
             }
             else if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
             {
@@ -814,7 +826,7 @@ void emit_param(quad &instr)
 
         else if (instr.arg1.entry->addrDesc.inStack == 1 || instr.arg1.entry->addrDesc.inStack == 0) // initially at start of program inStack == 0 for local vars as well as args
         {
-            if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+            if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type == "int&")
             {                                         // TODO:check once for float and char
                 int reg1 = getReg(instr.arg1, 1, {}); // add of x
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
@@ -827,11 +839,14 @@ void emit_param(quad &instr)
                     std::cout << instr.arg1.entry->type << " " << instr.arg1.value << std::endl;
                     emit_fparam(instr.arg1);
                 }
-
-                else if (instr.arg1.entry->type == "char")
+                else if (instr.arg1.entry->type == "char" || instr.arg1.entry->type == "char&")
                 {
                     setParticularReg(EBX, instr.arg1);
-                    // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", getMem(instr.arg1)));
+                    std::cout << instr.arg1.entry->type << " charrrrrrrrrrrrrrrrrrr mem    " << instr.arg1.value << std::endl;
+                    // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", instr.arg1.value));
+                    if(instr.arg1.entry->type == "char&"){
+                        emit_instr(x86_lib::mov_reg_mem(reg_names[EBX], reg_names[EBX]));
+                    }
                     emit_instr(x86_lib::push(reg_names[EBX]));
                 }
                 else
@@ -839,6 +854,11 @@ void emit_param(quad &instr)
                     emit_instr(x86_lib::push_mem("dword", getMem(instr.arg1))); // TODO : Check
                 }
             }
+        }
+        else
+        {
+            std::cerr << instr.arg1.value << " : Param not found anywhere\n";
+            exit(1);
         }
         int sz = instr.arg1.entry->size;
         // if (sz % 4 != 0)
@@ -1638,6 +1658,9 @@ void emit_fassign(quad &instr)
         spillAllReg();
         int reg1 = getReg(instr.result, 1, {}); // TODO: both can be made 0
         int reg2 = getReg(instr.arg1, 1, {reg1});
+        if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
+            emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
+        }
         emit_instr(x86_lib::mov_mem_reg(reg_names[reg1], reg_names[reg2]));
     }
     else  
@@ -1687,17 +1710,32 @@ void emit_floatToInt(quad &instr)
 void emit_cassign(quad &instr)
 {
 
-    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         // can Handle integer constant more optimally
         // t0(&) = 5
+        spillAllReg();
+        setParticularReg(EDX, instr.arg1); // TODO: both can be made 0
+        if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+        {
+            // emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+            emit_instr(x86_lib::movzx_reg_mem(reg_names[EDX], "byte", reg_names[EDX]));
+        }
+        int reg2 = getReg(instr.result, 1, {EDX});
+        emit_instr(x86_lib::mov_mem_reg(reg_names[reg2], "dl"));
+        // make sure ki reg2 jis mem addr ko point kar raha hai uska instack = 1 honi chahiye
+    }
+    else if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    {
+        // can Handle integer constant more optimally
+        // x = t0(&)
         // std::cout << instr.result.value << std::endl;
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {}); // TODO: both can be made 0
         // int reg2 = getReg(instr.result, 1, {reg1});
         setParticularReg(EDX, instr.result);
         emit_instr(x86_lib::movzx_reg_mem(reg_names[EDX], "byte", reg_names[reg1]));
-        emit_instr(x86_lib::mov_mem_reg(getMem(instr.arg1), "dl"));
+        emit_instr(x86_lib::mov_mem_reg(getMem(instr.result), "dl"));
         // emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], getMem(instr.result)));
         // make sure ki reg2 jis mem addr ko point kar raha hai uska instack = 1 honi chahiye
     }
