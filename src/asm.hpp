@@ -20,9 +20,14 @@ class x86_instr{
 extern std::ofstream asm_file;
 extern bool print_comments;
 extern std::vector<x86_instr> asm_instr;
+/* optimization */
+extern std::vector<std::vector<std::string>> blocks_asm;
+extern std::vector<std::string> curr_block_asm;
+
 inline void emit_instr(const std::string &instr)
 {
     asm_file << "\t" << instr << std::endl;
+    curr_block_asm.push_back("\t" + instr); //opt
 }
 
 inline void emit_label(const std::string &label)
@@ -32,6 +37,7 @@ inline void emit_label(const std::string &label)
     instr.printing = label + " :";
     asm_instr.push_back(instr);
     asm_file << label << " :\n";
+    curr_block_asm.push_back(label + " :"); //opt
 }
 
 inline void emit_data(const std::string &data)
@@ -41,6 +47,7 @@ inline void emit_data(const std::string &data)
     instr.printing = "\t" + data;
     asm_instr.push_back(instr);
     asm_file << "\t" << data << "\n";
+    curr_block_asm.push_back("\t" + data); //opt
 }
 
 inline void emit_section(const std::string &section)
@@ -50,6 +57,7 @@ inline void emit_section(const std::string &section)
     instr.printing = "\nsection " + section;
     asm_instr.push_back(instr);
     asm_file << "\nsection " << section << "\n";
+    curr_block_asm.push_back("\nsection " + section); //opt
 }
 
 inline void emit_comment(const std::string &comment)
@@ -69,6 +77,7 @@ inline void add_extern_funcs()
         instr.printing = "extern " + func;
         asm_instr.push_back(instr);
         asm_file << "extern " << func << "\n";
+        curr_block_asm.push_back("extern " + func); //opt
     }
         
 }
