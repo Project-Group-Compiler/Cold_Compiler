@@ -585,16 +585,28 @@ void emit_asm(const std::string &inputFile)
 void emit_copy_to_offset(quad &instr)
 {
     spillAllReg();
-    int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
-    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
-    {
-        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+    if(instr.result.entry && instr.result.entry->type == "float*" && instr.arg1.value.substr(0,4) == "__f_"){
+        int reg2 = getReg(instr.arg2, 1,{}); //->reg2 -> offset
+        int reg3 = getReg(instr.result, 1, {reg2});
+        std::string mem = getMem(instr.result); // arr
+        emit_instr(x86_lib::lea(reg_names[reg3], mem));
+        // emit_instr(x86_lib::add(reg_names[reg3], reg_names[reg2]));
+        //move arg1 in address of reg3
+        int reg1 = getReg(instr.arg2,1,{reg2,reg3});
+        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1],instr.arg1.value));
+        emit_instr(x86_lib::mov_mem_reg(reg_names[reg3] + "+" + reg_names[reg2], reg_names[reg1]));
+    }else{
+        int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
+        if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+        {
+            emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+        }
+        int reg2 = getReg(instr.arg2, 0, {reg1}); //->reg2 -> offset
+        int reg3 = getReg(instr.result, 1, {reg1, reg2});
+        std::string mem = getMem(instr.result); // arr
+        emit_instr(x86_lib::lea(reg_names[reg3], mem));
+        emit_instr(x86_lib::mov_mem_reg(reg_names[reg3] + "+" + reg_names[reg2], reg_names[reg1]));
     }
-    int reg2 = getReg(instr.arg2, 0, {reg1}); //->reg2 -> offset
-    int reg3 = getReg(instr.result, 1, {reg1, reg2});
-    std::string mem = getMem(instr.result); // arr
-    emit_instr(x86_lib::lea(reg_names[reg3], mem));
-    emit_instr(x86_lib::mov_mem_reg(reg_names[reg3] + "+" + reg_names[reg2], reg_names[reg1]));
 }
 
 void emit_logical_ptr_add(quad &instr)
@@ -1657,11 +1669,17 @@ void emit_fassign(quad &instr)
     {
         spillAllReg();
         int reg1 = getReg(instr.result, 1, {}); // TODO: both can be made 0
-        int reg2 = getReg(instr.arg1, 1, {reg1});
-        if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
-            emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
+        if ((instr.arg1.value).substr(0, 4) == "__f_"){
+            int reg2 = getReg(instr.result, 1, {reg1});
+            emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], instr.arg1.value));
+            emit_instr(x86_lib::mov_mem_reg(reg_names[reg1], reg_names[reg2]));
+        }else{
+            int reg2 = getReg(instr.arg1, 1, {reg1});
+            if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
+                emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
+            }
+            emit_instr(x86_lib::mov_mem_reg(reg_names[reg1], reg_names[reg2]));
         }
-        emit_instr(x86_lib::mov_mem_reg(reg_names[reg1], reg_names[reg2]));
     }
     else  
         emit_fload(instr.arg1);      
