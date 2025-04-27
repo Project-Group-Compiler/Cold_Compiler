@@ -8,25 +8,32 @@
 
 extern std::ofstream asm_file;
 extern bool print_comments;
+/* optimization */
+extern std::vector<std::vector<std::string>> blocks_asm;
+extern std::vector<std::string> curr_block_asm;
 
 inline void emit_instr(const std::string &instr)
 {
     asm_file << "\t" << instr << std::endl;
+    curr_block_asm.push_back("\t" + instr); //opt
 }
 
 inline void emit_label(const std::string &label)
 {
     asm_file << label << " :\n";
+    curr_block_asm.push_back(label + " :"); //opt
 }
 
 inline void emit_data(const std::string &data)
 {
     asm_file << "\t" << data << "\n";
+    curr_block_asm.push_back("\t" + data); //opt
 }
 
 inline void emit_section(const std::string &section)
 {
     asm_file << "\nsection " << section << "\n";
+    curr_block_asm.push_back("\nsection " + section); //opt
 }
 
 inline void emit_comment(const std::string &comment)
@@ -36,8 +43,10 @@ inline void emit_comment(const std::string &comment)
 
 inline void add_extern_funcs()
 {
-    for (auto &func : called_lib_funcs)
+    for (auto &func : called_lib_funcs){
         asm_file << "extern " << func << "\n";
+        curr_block_asm.push_back("extern " + func); //opt
+    }
 }
 
 template <typename T>
@@ -54,7 +63,6 @@ inline void __print__(const T &x, const Args &...rest){
     std::cerr << "(Line " << __LINE__ << "): [" << #x << "] => "; \
     __print__(x);                                                 \
     std::cerr << std::endl;
-
 
 void emit_asm(const std::string &);
 void emit_fload(operand &op);
@@ -112,5 +120,10 @@ void update_ir();
 void fixgotoLabels();
 void emit_data_section();
 void emit_bss_section();
+
+//Optimization functions
+void optimize_asm(const std::string &inputFile);
+void print_asm_instr();
+
 
 #endif

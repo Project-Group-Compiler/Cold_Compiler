@@ -20,6 +20,7 @@ TAC_OPT_CPP = $(SRC_DIR)/tac_opt.cpp
 X86_32_LIB_HPP = $(SRC_DIR)/x86_32_lib.hpp
 ASM_HPP = $(SRC_DIR)/asm.hpp
 ASM_GEN_CPP = $(SRC_DIR)/asm_gen.cpp
+ASM_OPT_CPP = $(SRC_DIR)/asm_opt.cpp
 DRIVER = $(SRC_DIR)/driver.cpp
 
 
@@ -35,6 +36,7 @@ OBJS = \
 	$(BUILD_DIR)/tac_gen.o \
 	$(BUILD_DIR)/tac_opt.o \
 	$(BUILD_DIR)/asm_gen.o \
+	$(BUILD_DIR)/asm_opt.o \
 	$(BUILD_DIR)/driver.o
 
 # Compiler and tools
@@ -86,6 +88,10 @@ $(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP)
 # Compile assembly generator object file
 $(BUILD_DIR)/asm_gen.o: $(ASM_GEN_CPP) $(ASM_HPP) $(TAC_HPP) $(DS_HPP) $(X86_32_LIB_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(ASM_GEN_CPP)
+
+# Compile assembly optimizer object file
+$(BUILD_DIR)/asm_opt.o: $(ASM_OPT_CPP) $(ASM_HPP)
+	@$(CXX) $(CXXFLAGS) -c -o $@ $(ASM_OPT_CPP)
 
 # Compile driver object file
 $(BUILD_DIR)/driver.o: $(DRIVER) $(DS_HPP) $(TAC_HPP) $(ASM_HPP)

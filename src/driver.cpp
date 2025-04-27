@@ -132,6 +132,8 @@ int main(int argc, char *argv[])
                 print_tac_code(inputFileString);
 
             emit_asm(inputFileString);
+
+            optimize_asm(inputFileString);
         }
         else
             std::cerr << "\nsyntax or semantic errors present, use -f to forcefully continue\n";
