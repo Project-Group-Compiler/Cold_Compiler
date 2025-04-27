@@ -49,7 +49,6 @@ std::set<operand> seenOperand;
 std::map<std::string, operand> mem_operand;
 
 /* Optimization Related */
-std::vector<x86_instr> asm_instr;
 std::vector<std::vector<std::string>> blocks_asm;
 std::vector<std::string> curr_block_asm;
 

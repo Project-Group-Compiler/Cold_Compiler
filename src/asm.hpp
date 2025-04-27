@@ -6,20 +6,8 @@
 #include <vector>
 #include "tac.hpp"
 
-class x86_instr{
-    public:
-    std::string op;
-    std::string size;//dword, byte, qword etc
-    std::string arg1;
-    std::string arg2;
-    std::string arg3;
-    std::string comment;
-    std::string label;//jump label
-    std::string printing;
-};
 extern std::ofstream asm_file;
 extern bool print_comments;
-extern std::vector<x86_instr> asm_instr;
 /* optimization */
 extern std::vector<std::vector<std::string>> blocks_asm;
 extern std::vector<std::string> curr_block_asm;
@@ -32,54 +20,33 @@ inline void emit_instr(const std::string &instr)
 
 inline void emit_label(const std::string &label)
 {
-    x86_instr instr;
-    instr.label = label;
-    instr.printing = label + " :";
-    asm_instr.push_back(instr);
     asm_file << label << " :\n";
     curr_block_asm.push_back(label + " :"); //opt
 }
 
 inline void emit_data(const std::string &data)
 {
-    x86_instr instr;
-    instr.comment = data;
-    instr.printing = "\t" + data;
-    asm_instr.push_back(instr);
     asm_file << "\t" << data << "\n";
     curr_block_asm.push_back("\t" + data); //opt
 }
 
 inline void emit_section(const std::string &section)
 {
-    x86_instr instr;
-    instr.comment = section;
-    instr.printing = "\nsection " + section;
-    asm_instr.push_back(instr);
     asm_file << "\nsection " << section << "\n";
     curr_block_asm.push_back("\nsection " + section); //opt
 }
 
 inline void emit_comment(const std::string &comment)
 {
-    x86_instr instr;
-    instr.comment = comment;
-    instr.printing = "\t\t\t; " + comment;
-    asm_instr.push_back(instr);
     asm_file << "\t\t\t; " << comment << "\n";
 }
 
 inline void add_extern_funcs()
 {
     for (auto &func : called_lib_funcs){
-        x86_instr instr;
-        instr.comment = "extern " + func;
-        instr.printing = "extern " + func;
-        asm_instr.push_back(instr);
         asm_file << "extern " << func << "\n";
         curr_block_asm.push_back("extern " + func); //opt
     }
-        
 }
 
 template <typename T>

@@ -2,7 +2,6 @@
 #include <regex>
 #include <sstream>
 
-std::vector<x86_instr> optim_asm_instr;
 std::vector<std::vector<std::string>> opt_blocks_asm;
 std::vector<std::string> opt_curr_block_asm;
 
@@ -68,10 +67,6 @@ void pattern_two_opt(std::vector<std::string> &opt){
     
     mov ecx, eax
     */
-
-    
-
-
 }
 
 void check_pattern_and_optimize(std::vector<std::string> &opt){
@@ -109,40 +104,19 @@ void optimize_asm(const std::string &inputFile)
         }
     }
     
-    std::cout << "---------Optimized ASM-------------" << std::endl;
+    // std::cout << "---------Optimized ASM-------------" << std::endl;
     print_block_wise_asm(opt_blocks_asm);
     asm_file.close();
 }
 
-void register_move_coalescing(){
-    for(auto &instr : asm_instr)
-    {
-        if(instr.op == "mov" )
-        {
-            continue;
-        }
-        else optim_asm_instr.push_back(instr);
-    }
-}
-
-void print_asm_instr(const std::string &inputFile)
-{
-        // Close the current file
-    asm_file.close();
-
-    // Reopen with truncation to clear contents
-    asm_file.open( inputFile + "_optimized.asm", std::ios::trunc);
-    
-    // Check if file opened successfully
-    if (!asm_file) {
-        std::cerr << "Error: Unable to reopen assembly file for writing" << std::endl;
-        return;
-    }
-
-    for(x86_instr &instr : optim_asm_instr)
-    {
-        asm_file << instr.printing << "\n";
-    }
-
-}
+// void register_move_coalescing(){
+//     for(auto &instr : asm_instr)
+//     {
+//         if(instr.op == "mov" )
+//         {
+//             continue;
+//         }
+//         else optim_asm_instr.push_back(instr);
+//     }
+// }
 
