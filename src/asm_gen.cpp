@@ -622,7 +622,19 @@ void emit_copy_to_offset(quad &instr)
         return;
     // char* ch[5] = {}
     spillAllReg();
-    if(instr.result.entry && instr.result.entry->type == "float*" && instr.arg1.value.substr(0,4) == "__f_"){
+    if(instr.result.entry && instr.result.entry->type.substr(0,4) == "char"){
+        // int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
+        setParticularReg(EDX,instr.arg1);
+        if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+        {
+            emit_instr(x86_lib::movzx_reg_mem(reg_names[EDX], "byte", reg_names[EDX]));
+        }
+        int reg2 = getReg(instr.arg2, 0, {EDX}); //->reg2 -> offset
+        int reg3 = getReg(instr.result, 1, {EDX, reg2});
+        std::string mem = getMem(instr.result); // arr
+        emit_instr(x86_lib::lea(reg_names[reg3], mem));
+        emit_instr(x86_lib::mov_mem_reg(reg_names[reg3] + "+" + reg_names[reg2], "dl"));
+    }else if(instr.result.entry && instr.result.entry->type.substr(0,5) == "float" && instr.arg1.value.substr(0,4) == "__f_"){
         int reg2 = getReg(instr.arg2, 1,{}); //->reg2 -> offset
         int reg3 = getReg(instr.result, 1, {reg2});
         std::string mem = getMem(instr.result); // arr
