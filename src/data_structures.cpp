@@ -44,7 +44,7 @@ bool curr_structure_is_union = false;
                       "fscanf", "fgetc", "fputc", "strlen", "strcmp",          \
                       "strncmp", "strcpy", "strcat", "va_start", "va_arg",     \
                       "va_end", "fread", "fwrite", "fseek", "ftell", "rewind", \
-                      "memcpy", "memset", "atoi", "atof", "abs", "sin", "cos", \
+                      "memcpy", "memset", "atoi", "atof", "sin", "cos", \
                       "tan", "exp", "log", "log10", "pow", "sqrt", "ceil",     \
                       "floor", "fmod", "round", "fabs", "fmax", "fmin"
 
@@ -364,7 +364,6 @@ void insertKeywords()
     insert_std_func("atof", {"char*"}, "float");
 
     // math functions
-    insert_std_func("abs", {"int"}, "int");
     insert_std_func("fabs", {"float"}, "float");
     insert_std_func("sin", {"float"}, "float");
     insert_std_func("cos", {"float"}, "float");

@@ -65,7 +65,7 @@
 - Function overloading is being supported through name mangling.
 - Following C library functions are supported by default (no header files need to included) :
 
-    `scanf`, `printf`, `malloc`, `calloc`, `free`, `fopen`, `fputs`, `fgets`, `fclose`, `fprintf`, `fscanf`, `fgetc`, `fputc`, `fread`, `fwrite`, `fseek`, `ftell`, `rewind`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strcat`, `memcpy`, `memset`, `atoi`, `atof`, `abs`, `fabs`, `sin`, `cos`, `tan`, `exp`, `log`, `log10`, `pow`, `sqrt`, `ceil`, `floor`, `round`, `fmod`, `fmax`, `fmin`, `va_start`, `va_arg`, `va_end`
+    `scanf`, `printf`, `malloc`, `calloc`, `free`, `fopen`, `fputs`, `fgets`, `fclose`, `fprintf`, `fscanf`, `fgetc`, `fputc`, `fread`, `fwrite`, `fseek`, `ftell`, `rewind`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strcat`, `memcpy`, `memset`, `atoi`, `atof`, `fabs`, `sin`, `cos`, `tan`, `exp`, `log`, `log10`, `pow`, `sqrt`, `ceil`, `floor`, `round`, `fmod`, `fmax`, `fmin`, `va_start`, `va_arg`, `va_end`
 
 - typedef works only for unqualified types (that is, works for int but not const int). Also typedef for struct is supported but keyword 'struct' needs to be written with the type alias as well. Example in tests/asm_gen/typedef.cold
 - Global variables behaviour pending :
