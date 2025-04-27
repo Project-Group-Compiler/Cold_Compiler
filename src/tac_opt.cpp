@@ -793,6 +793,38 @@ void rewrite_instr(quad &instr)
     }
 }
 
+void strength_reduction(){
+    for(auto &instr:tac_code){
+        if(instr.op == "*"){
+            if(is_int_constant(instr.arg2.value)){
+                int val = std::stoi(instr.arg2.value);
+                int lg = log2(val);
+                if((1<<lg) == val){
+                    instr.op = "<<";
+                    instr.arg2 = {std::to_string(lg)};
+                }
+            }else if(is_int_constant(instr.arg1.value)){
+                int val = std::stoi(instr.arg1.value);
+                int lg = log2(val);
+                if((1<<lg) == val){
+                    instr.op = "<<";
+                    std::swap(instr.arg1,instr.arg2);
+                    instr.arg2 = {std::to_string(lg)};
+                }
+            }
+        }else if(instr.op == "/"){
+            if(is_int_constant(instr.arg2.value)){
+                int val = std::stoi(instr.arg2.value);
+                int lg = log2(val);
+                if((1<<lg) == val){
+                    instr.op = ">>";
+                    instr.arg2 = {std::to_string(lg)};
+                }
+            }
+        }
+    }
+}
+
 void run_optimisations()
 {
     if (tac_code.empty())
@@ -825,4 +857,6 @@ void run_optimisations()
             //std::cout << stringify(instr) << std::endl;
         optimization_cnt--;
     } while (tac_updated && optimization_cnt > 0);
+
+    strength_reduction();
 }
