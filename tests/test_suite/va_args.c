@@ -1,27 +1,28 @@
 
-// TODO: Not working yet
-// #include <stdarg.h>
-int find_sum(int count, ...) {
+int find_sum(int count, ...)
+{
     va_list args;
     int sum = 0;
     int value;
 
     va_start(args, count);
     printf("[find_sum] Counting %d numbers...\n", count);
-    
-    while (count) {
+
+    while (count)
+    {
         value = va_arg(args, "int");
         printf("[find_sum] Got value: %d\n", value);
         sum += value;
         count -= 1;
     }
-    
+
     va_end(args);
     printf("[find_sum] Final sum = %d\n", sum);
     return sum;
 }
 
-int main() {
+int main()
+{
     int ans1;
     int ans2;
 
