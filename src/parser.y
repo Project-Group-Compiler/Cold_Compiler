@@ -173,7 +173,13 @@ postfix_expression
 				std::cerr << $1->place.value << " " << $3->tempName << std::endl;
 		
 			//3AC
-			if($$->type == "int" || $$->type == "char" || $1->type == "char**" || $$->type == "float"  || ($$->type.substr(0,7) == "STRUCT_" && $$->type.back() != '*') || ($$->type.substr(0,6) == "CLASS_" && $$->type.back() != '*')){
+			int isDim = 0;
+			if($1->isArray){
+				isDim = $1->arraydims.size();
+			}else if(lookup($1->place.value)){
+				isDim = lookup($1->place.value)->array_dims.size();
+			}
+			if($$->type == "int" || $$->type == "char" || ($1->type == "char**" && isDim == 0) || $$->type == "float"  || ($$->type.substr(0,7) == "STRUCT_" && $$->type.back() != '*') || ($$->type.substr(0,6) == "CLASS_" && $$->type.back() != '*')){
 				operand q = getTempVariable($$->type + "*");
 				emit("=", $1->place,{}, q, -1); 
 				operand q2 = getTempVariable($$->type);
