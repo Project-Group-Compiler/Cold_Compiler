@@ -1667,6 +1667,7 @@ void emit_fassign(quad &instr)
     
     if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
+        std::cout << "in & fassign" << std::endl;
         spillAllReg();
         int reg1 = getReg(instr.result, 1, {}); // TODO: both can be made 0
         if ((instr.arg1.value).substr(0, 4) == "__f_"){
@@ -1681,9 +1682,10 @@ void emit_fassign(quad &instr)
             emit_instr(x86_lib::mov_mem_reg(reg_names[reg1], reg_names[reg2]));
         }
     }
-    else  
+    else{  
         emit_fload(instr.arg1);      
         emit_fstore(instr.result);
+    }
 }
 
 void emit_intToFloat(quad &instr)
