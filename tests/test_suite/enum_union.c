@@ -1,4 +1,3 @@
-// not working
 enum Color { RED, GREEN, BLUE };
 
 void test_enum() {
@@ -14,8 +13,8 @@ void test_enum() {
 
 union Data {
     int i;
-    char ch; // TODO: FIX
-    float f; // TODO: FIX
+    char ch; 
+    float f; 
 };
 
 int test_union() {

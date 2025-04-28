@@ -714,14 +714,30 @@ void emit_logical_ptr_sub(quad &instr)
 
 void emit_unary_star(quad &instr)
 {
-    // _debug_(stringify(instr));
-    if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
+    _debug_(stringify(instr));
+    if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
+        // if(instr.result.entry->type.end()[-2] != '*'){
+        _debug_("idhar hi aana aa");
+        spillAllReg();
+        // if (instr.arg1.entry && instr.arg1.entry->isArray){
+        //     std::string mem = getMem(instr.arg1);
+        //     int reg1 = getReg(instr.result, 1, {});
+        //     emit_instr(x86_lib::lea(reg_names[reg1], mem));
+        //     updateRegDesc(reg1, instr.result);
+        // }else{
+            int reg1 = getReg(instr.arg1, 1, {});
+            emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+            updateRegDesc(reg1, instr.result);
+        // }
+    }else if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         // to = * ptr => to is a reference
         // to = *arr
         // emit_instr(x86_lib::mov(reg_names[reg1], reg_names[reg1]));
+        _debug_("idhar ---");
         if (instr.arg1.entry && instr.arg1.entry->isArray)
         {
+            _debug_("idhar kabhi nhi aa");
             std::string mem = getMem(instr.arg1);
             int reg1 = getReg(instr.result, 1, {});
             emit_instr(x86_lib::lea(reg_names[reg1], mem));
@@ -729,6 +745,7 @@ void emit_unary_star(quad &instr)
         }
         else
         {
+            _debug_("idhar kabhi aa rha hai ?");
             int reg1 = getReg(instr.arg1, 1, {});
             updateRegDesc(reg1, instr.result);
         }
