@@ -1,7 +1,7 @@
 #!/bin/bash
 
 EXECUTABLE="bin/compiler"
-TEST_DIR="tests/asm_gen"
+TEST_DIR="tests/test_suite"
 OUTPUT_DIR="outputs"
 
 # Ensure test directory exists
@@ -52,6 +52,8 @@ for test_case in "$TEST_DIR"/*.cold; do
 
   # Link with gcc
   gcc -m32 -no-pie -z noexecstack "$OUTPUT_DIR/${test_name}.o" -o "$OUTPUT_DIR/exec_${test_name}" -lm
+
+  # "$OUTPUT_DIR/exec_${test_name}"
 
   if [ $? -ne 0 ]; then
     echo "Test $test_name failed during linking."

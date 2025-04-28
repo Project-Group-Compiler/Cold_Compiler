@@ -73,6 +73,10 @@ void pattern_two_opt(std::vector<x86_instr> &opt){
     if(mp.find(last_instr.arg1) != mp.end()){ //dest is reg
         std::string destReg = last_instr.arg1;
         std::string subReg = mp[destReg];
+        if(last_instr.arg2.find(destReg) != std::string::npos || last_instr.arg3.find(destReg) != std::string::npos)
+            return;
+        if(last_instr.arg2.find(subReg) != std::string::npos || last_instr.arg3.find(subReg) != std::string::npos)
+            return;
         int j = -1;
         for(int i = sz-2;i>=0;i--){
             if(opt[i].label != "" || stops.find(opt[i].op) != stops.end()){
