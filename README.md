@@ -9,7 +9,7 @@ Regarding the name of our language, since it is C-like but based on an older ver
 - Source language : `Cold`
 - Implementation language : `C++`
 - Intermediate Representaion : `3AC`
-- Target Language : `x86_32` assembly
+- Target Language : `x86 32-bit`
 
 For learning ANSI C syntax, the perfect book obviously is K&R C Book.
 
@@ -19,33 +19,44 @@ The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-
 
 Syntax reference for x86 assembly has been mainly taken from [here](https://www.cs.virginia.edu/~evans/cs216/guides/x86.html). For floating-point operations, x87 instruction set has been used whose reference has taken mainly from [here](https://people.hsc.edu/faculty-staff/robbk/Coms480/Lectures/Spring%202009/Lecture%2018%20-%20The%20x87%20FPU.pdf).
 
-<!-- All basic features required have been supported (*including structs, library functions and static*). -->
+All basic features required have been supported (*including structs, library functions and static*).
 
-<!-- **List of advanced features supported apart from basic features** : -->
+**Advanced features** :
 
-<!-- - recursive function call
-- classes and objects
+- recursive function call
+- classes and objects *(including '.' and '->' access)*
 - inheritance
-- function call with variable arguments
-- dynamic memory allocation
+- function call with variable arguments *(including va_list, va_start, va_end)*
+- dynamic memory allocation *(and other standard library functions)*
 - command line input
 - public, private and protected keywords
 - typedef
+- reference
 - enum, union
 - file manipulation
 - until loop
 - multi-level pointers
-- multi-dimensional arrays -->
+- multi-dimensional arrays
 
-<!-- **Extra advanced features** : -->
+**Extra Advanced Features** :
 
-<!-- - function overloading 
+- function overloading 
 - const type qualifier
 - multi-level inheritance
 - modified operator precedence (more details in `docs/operator_precedence.md`.)
-- *machine-independent optimizations* implemented (at this point) :
-  1. constant folding -->
-<!--  2. dead code elimination -->
+
+**Extra Optimizations** :
+
+- *Machine-independent optimizations* :
+  1. Constant folding
+  2. Dead code elimination
+  3. Constant propagation
+  4. Strength reduction 
+- *Machine-dependent optimizations*:
+  1. Efficient register allocation using next use information and register descriptors
+  2. Peephole optimizations (like strength reduction and algebraic simplification)
+  3. Removing redundant stores and assignments
+  4. Efficient spilling of registers (via minimum number of live variable heuristic)
 
 Some syntax changes and implementation related details have been documented in `docs/lang_details.md`.
 
@@ -56,7 +67,7 @@ Some syntax changes and implementation related details have been documented in `
 Run for Ubuntu/Linux. Make sure you have `g++` installed.
 
 ```bash
-sudo apt install flex bison build-essential graphviz
+sudo apt install flex bison build-essential nasm
 git clone https://github.com/Project-Group-Compiler/Cold_Compiler.git
 cd Cold_Compiler
 ```
@@ -71,64 +82,43 @@ cd Cold_Compiler
     make
     ```
 
-2. Run script for executing testcases. run.sh saves only unoptimised (-O0) assembly for time being.
+2. Run script for executing testcases. The generated assembly code will get saved in `outputs` directory.
 
     ```bash
     chmod +x run.sh
     ./run.sh
     ```
 
-**Having int main() is mandatory.**
-
-Alternatively, generate assembly for a single input file using:
+Alternatively, generate assembly for a single input file using (specify input file as the first argument):
 
 ```bash
 bin/compiler <input_file> [options]
 ```
 
-**Specify input file as the first argument.**
-
 ```markdown
 Extra Options:
     -h, --help       Show this help message and exit
-    -O0              Generate unoptimized IR
+    -O, --opt        Enable optimizations
     -l, --lex        Print lexical analysis table
     -a, --ast        Print abstract syntax tree as dot file
     -s, --symtab     Print symbol tables
     -d, --debug      Print debug trace
     -t, --tac        Print three address code
-    -c, --comments   Print comments in the generated asm
     -f, --force      Forcefully continue even if errors are present
 ```
 
 ## To create executable : 
 
-Install nasm if not already installed.
-
 ```bash
-nasm -f elf32 <file_name>.asm # to assemble
-gcc -m32 -no-pie -z noexecstack <file_name>.o -o <some_name> # to create object file
+nasm -f elf32 <file_name>.asm                                # for assembling
+gcc -m32 -no-pie -z noexecstack <file_name>.o -o <some_name> # for linking
 ```
-
--o flag is optional ofcourse.
-
-this will create binary "some_name"
-run using ./some_name.
-
 
 **Shortcut** : 
 
 ```bash
 chmod +x coldc.sh
-./coldc.sh <input_file> <any_other_cold_compiler_flags>
-```
-
-**Specify input file as the first argument.**
-
-Optionally, convert AST DOT file into image using:
-
-```bash
-dot -Tpng <dot_file> -o <png_file> 
+./coldc.sh <input_file> [cold-compiler-options]
 ```
    
 ## Team Members

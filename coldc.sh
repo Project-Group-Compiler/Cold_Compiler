@@ -2,10 +2,7 @@
 
 # Specify input file as the first argument
 
-make files_clean
-
 # Check if the compiler exists
-make
 
 if [ ! -f "bin/compiler" ]; then
     echo "Error: Compiler not found in bin/compiler."
@@ -45,7 +42,7 @@ if [ ! -f "$filename_noext.asm" ]; then
 fi
 
 # Step 2: Assemble with nasm and link with gcc in a pipeline
-nasm -g -f elf32 "$filename_noext.asm" -o "$filename_noext.o"
+nasm -f elf32 "$filename_noext.asm" -o "$filename_noext.o"
 
 if [ $? -ne 0 ]; then
     echo "Assembling failed. Exiting."

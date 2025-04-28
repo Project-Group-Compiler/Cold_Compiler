@@ -43,8 +43,8 @@ OBJS = \
 FLEX = flex
 BISON = bison
 CXX = g++ 
-# CXXFLAGS = -I$(SRC_DIR)
-CXXFLAGS = -std=c++17 -I$(SRC_DIR) -g -O0 # For debug
+CXXFLAGS = -std=c++17 -I$(SRC_DIR)
+# CXXFLAGS = -std=c++17 -I$(SRC_DIR) -O0 # For debug
 
 # Default target
 all: $(OUTPUT)
@@ -86,7 +86,7 @@ $(BUILD_DIR)/tac_opt.o: $(TAC_OPT_CPP) $(TAC_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(TAC_OPT_CPP)
 
 # Compile assembly generator object file
-$(BUILD_DIR)/asm_gen.o: $(ASM_GEN_CPP) $(ASM_HPP) $(TAC_HPP) $(DS_HPP) $(X86_32_LIB_HPP)
+$(BUILD_DIR)/asm_gen.o: $(ASM_GEN_CPP) $(ASM_HPP) $(TAC_HPP) $(DS_HPP) $(TYPES_HPP) $(X86_32_LIB_HPP)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $(ASM_GEN_CPP)
 
 # Compile assembly optimizer object file
