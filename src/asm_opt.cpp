@@ -16,6 +16,10 @@ void print_instr_asm(std::vector<x86_instr> &v){
     }
 }
 
+/**
+ * Optimizes simple arithmetic instructions with neutral elements
+ * Removes instructions like "add reg, 0", "sub reg, 0", "xor reg, 0", etc.
+*/
 void pattern_one_opt(std::vector<x86_instr> &opt){
     if(opt.size() == 0) return;
     /*add rg 0 
@@ -44,6 +48,19 @@ void pattern_one_opt(std::vector<x86_instr> &opt){
     }
 }
 
+/**
+ * Performs pattern-based optimization to eliminate redundant register/memory moves
+ *
+ * This function optimizes code by eliminating redundant move instructions. It analyzes
+ * the instruction sequence to find cases where:
+ * 1. A register is loaded with a value but is overwritten before being used
+ * 2. A memory location is written to and then overwritten before being read
+ *
+ * The function preserves program semantics by:
+ * - Checking for any intervening instructions that might use the register or memory location
+ * - Avoiding optimization across labels, jumps, or function calls
+ * - Handling special cases like partial register usage (e.g., al vs eax)
+ */
 void pattern_two_opt(std::vector<x86_instr> &opt){
     if(opt.size() <= 1) return;
     
@@ -147,4 +164,3 @@ void opt_asm(const std::string &inputFile)
 //         else optim_asm_instr.push_back(instr);
 //     }
 // }
-

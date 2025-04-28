@@ -45,7 +45,7 @@ enum
 std::string reg_names[] = {"eax", "ebx", "ecx", "edx", "esi", "edi", "esp", "ebp"};
 int uRegCnt = 6; // usableRegCnt
 std::vector<std::vector<operand>> regDesc(uRegCnt);
-std::ofstream des_out("Descriptor.txt");
+// std::ofstream des_out("Descriptor.txt");
 std::set<operand> seenOperand;
 std::map<std::string, operand> mem_operand;
 
@@ -68,52 +68,52 @@ void updateSeenOperand(quad &instr)
     }
 }
 
-void printReg_addr_Desc(int currInstrLabel)
-{
-    des_out << "Instruction Label: " << currInstrLabel << "\n\n";
+// void printReg_addr_Desc(int currInstrLabel)
+// {
+//     des_out << "Instruction Label: " << currInstrLabel << "\n\n";
 
-    des_out << "REGISTER DESCRIPTOR\n";
-    des_out << std::left << std::setw(12) << "Register" << "Operands\n";
-    des_out << std::string(40, '-') << "\n";
+//     des_out << "REGISTER DESCRIPTOR\n";
+//     des_out << std::left << std::setw(12) << "Register" << "Operands\n";
+//     des_out << std::string(40, '-') << "\n";
 
-    std::map<std::string, std::vector<int>> ops;
-    std::map<std::string, bool> opsinmem;
-    for (int reg = 0; reg < uRegCnt; reg++)
-    {
-        des_out << std::left << std::setw(12) << reg_names[reg];
-        for (auto &op : regDesc[reg])
-        {
-            des_out << op.value << ' ';
-            ops[op.value].push_back(reg);
-            if (op.entry && op.entry->addrDesc.inStack == 1)
-            {
-                opsinmem[op.value] = 1;
-            }
-        }
-        des_out << '\n';
-    }
+//     std::map<std::string, std::vector<int>> ops;
+//     std::map<std::string, bool> opsinmem;
+//     for (int reg = 0; reg < uRegCnt; reg++)
+//     {
+//         des_out << std::left << std::setw(12) << reg_names[reg];
+//         for (auto &op : regDesc[reg])
+//         {
+//             des_out << op.value << ' ';
+//             ops[op.value].push_back(reg);
+//             if (op.entry && op.entry->addrDesc.inStack == 1)
+//             {
+//                 opsinmem[op.value] = 1;
+//             }
+//         }
+//         des_out << '\n';
+//     }
 
-    des_out << "\nADDRESS DESCRIPTOR\n";
-    des_out << std::left << std::setw(20) << "Operand" << "Locations\n";
-    des_out << std::string(40, '-') << "\n";
+//     des_out << "\nADDRESS DESCRIPTOR\n";
+//     des_out << std::left << std::setw(20) << "Operand" << "Locations\n";
+//     des_out << std::string(40, '-') << "\n";
 
-    for (auto &it : seenOperand)
-    {
-        des_out << std::left << std::setw(20) << it.value;
-        if (it.entry)
-        {
-            for (auto reg : it.entry->addrDesc.inRegs)
-            {
-                des_out << reg_names[reg] << ' ';
-            }
-            if (it.entry->addrDesc.inStack == 1)
-            {
-                des_out << "| In Memory";
-            }
-        }
-        des_out << '\n';
-    }
-}
+//     for (auto &it : seenOperand)
+//     {
+//         des_out << std::left << std::setw(20) << it.value;
+//         if (it.entry)
+//         {
+//             for (auto reg : it.entry->addrDesc.inRegs)
+//             {
+//                 des_out << reg_names[reg] << ' ';
+//             }
+//             if (it.entry->addrDesc.inStack == 1)
+//             {
+//                 des_out << "| In Memory";
+//             }
+//         }
+//         des_out << '\n';
+//     }
+// }
 std::string getMem(operand &op)
 {
     if (op.entry)
@@ -198,7 +198,9 @@ void spillAllReg()
         spillReg(reg);
     }
 }
-
+    // This function selects the best register to use when no free registers are available.
+    // It prioritizes registers that hold dead variables or variables that are also in memory.
+    // If all registers hold live variables, it spills the register with the fewest live variables.
 int getBestReg(std::vector<int> resReg)
 {
     std::vector<int> isResReg(uRegCnt);
@@ -240,7 +242,9 @@ int getBestReg(std::vector<int> resReg)
     spillReg(bestReg);
     return bestReg;
 }
-
+    // This function retrieves a register for the given operand.
+    // It checks if the operand is already in a register, and if not, allocates one.
+    // It considers whether the register will be modified and avoids certain registers if specified.
 // Check reference
 // Warning : make sure that addrDesc and regDesc contain unique entry
 int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
@@ -344,7 +348,9 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
     // TODO: Handle __str_
     return bestReg;
 }
-
+// This function assigns a specific register to a given operand.
+    // It spills the register's current content and loads the operand's value into it.
+    // It handles constants, string literals, and memory locations.
 void setParticularReg(int reg, operand &op)
 {
     if (is_int_constant(op.value))
@@ -442,7 +448,9 @@ void updateRegDesc(int reg, operand &op)
         op.entry->addrDesc.inHeap = 0;
     }
 }
-
+    // This function is the main entry point for assembly code generation.
+    // It takes the input file name, generates assembly code, and writes it to a file.
+    // It orchestrates various steps like basic block computation, next-use analysis, and instruction emission.
 void emit_asm(const std::string &inputFile)
 {
     asm_file = std::ofstream(outputDir + inputFile + ".asm");
@@ -587,7 +595,7 @@ void emit_asm(const std::string &inputFile)
             else if (curr_op.substr(0, 3) == "va_")
                 emit_va_instr(instr);
 
-            printReg_addr_Desc(instr.Label);
+            // printReg_addr_Desc(instr.Label);
         }
         if (!block_regs_spilled)
             spillAllReg();
@@ -600,7 +608,9 @@ void emit_asm(const std::string &inputFile)
     emit_section(".bss");
     emit_bss_section(); // add uninitialized data
 }
-
+// This function handles the "CopyToOffset" operation, typically used for array assignments.
+    // It copies a value to a specific offset within an array.
+    // It spills all registers to ensure safety and uses appropriate addressing modes.
 void emit_copy_to_offset(quad &instr)
 {
     if (!inside_fn)
@@ -652,7 +662,6 @@ void emit_logical_ptr_add(quad &instr)
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
     }
-    // emit_instr(";" + stringify(instr));
     if (is_int_constant(instr.arg2.value))
     {
         emit_instr(x86_lib::add_reg_imm(reg_names[reg1], instr.arg2.value));
@@ -675,7 +684,6 @@ void emit_logical_ptr_add(quad &instr)
         }
         emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
     }
-    // emit_instr("; khatam");
     updateRegDesc(reg1, instr.result);
 }
 
@@ -710,7 +718,9 @@ void emit_logical_ptr_sub(quad &instr)
     }
     updateRegDesc(reg1, instr.result);
 }
-
+    // This function handles the unary star operator (*), used for dereferencing pointers.
+    // It generates assembly code to load the value pointed to by the operand.
+    // It spills all registers to ensure safety and uses appropriate addressing modes.
 void emit_unary_star(quad &instr)
 {
     // _debug_(stringify(instr));
@@ -781,7 +791,9 @@ void emit_unary_and(quad &instr)
         updateRegDesc(reg1, instr.result);
     }
 }
-
+    // This function emits the assembly code for the definition of a function.
+    // It sets up the function label, stack frame, and saves callee-saved registers.
+    // It also handles the special case for the main function.
 void emit_fn_defn(quad &instr)
 {
     if (instr.op.substr(5, 5) == "4main")
@@ -829,7 +841,9 @@ void emit_fn_defn(quad &instr)
 
     fn_epilogue_emitted = false;
 }
-
+    // This function handles the "param" operation, used for passing parameters to functions.
+    // It pushes the parameter onto the stack, handling different data types and addressing modes.
+    // It also updates the parameter size for proper stack management during function calls.
 void emit_param(quad &instr)
 {
     if (!fn_prologue_emitted)
@@ -976,7 +990,9 @@ void emit_fparam(operand op)
     emit_fload(op);
     emit_instr(x86_lib::fstp_mem("qword", reg_names[ESP]));
 }
-
+    // This function handles the "CALL" operation, used for function calls.
+    // It pushes necessary registers, emits the call instruction, and adjusts the stack.
+    // It also handles retrieving the return value and resetting the function prologue flag.
 void emit_fn_call(quad &instr)
 {
     if (!fn_prologue_emitted)
@@ -1027,9 +1043,11 @@ void emit_fn_epilogue()
     emit_instr(x86_lib::ret());
     fn_epilogue_emitted = true;
 }
-
+    // This function handles the "RETURN" operation, used for returning from a function.
+    // It moves the return value to EAX, emits the function epilogue, and resets the main_no_ret flag.
+    // It spills all registers to ensure safety.
 void emit_return(quad &instr)
-{ // TODO:handle & for float and char...
+{
     if (!block_regs_spilled)
     {
         spillAllReg();
@@ -1119,7 +1137,9 @@ void emit_logical_and(quad &instr)
 
     updateRegDesc(reg1, instr.result);
 }
-
+    // This function handles the "||" operation, used for logical OR.
+    // It generates assembly code to perform the logical OR operation.
+    // It uses short-circuit evaluation by jumping to a label if the first operand is true.
 void emit_logical_or(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
@@ -1174,7 +1194,9 @@ void emit_logical_not(quad &instr)
 
     updateRegDesc(reg1, instr.result);
 }
-
+    // This function handles the comparison operations (==, !=, <, >, <=, >=).
+    // It generates assembly code to compare two operands and set the result based on the comparison.
+    // It uses jump instructions to conditionally set the result to 1 or 0.
 void emit_cmp(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
@@ -1227,7 +1249,9 @@ void emit_cmp(quad &instr)
     emit_label(label2);
     updateRegDesc(reg1, instr.result);
 }
-
+    // This function handles floating-point comparison operations.
+    // It loads the operands, performs the comparison, and sets the result based on the condition.
+    // It uses floating-point specific instructions and jump labels.
 void emit_fcmp(quad &instr)
 {
     emit_fload(instr.arg2);
@@ -1505,7 +1529,9 @@ void emit_mod(quad &instr)
     emit_instr(x86_lib::idiv(reg_names[reg2]));
     updateRegDesc(EDX, instr.result);
 }
-
+    // This function handles the multiplication operation (*).
+    // It generates assembly code to perform the multiplication.
+    // It handles constants, global/static variables, and register operands.
 void emit_mul(quad &instr)
 {
     // x = y * z
@@ -1548,7 +1574,7 @@ void emit_fmul(quad &instr)
     emit_instr(x86_lib::fmulp());
     emit_fstore(instr.result);
 }
-
+//similar to emit_add
 void emit_sub(quad &instr)
 {
     if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
@@ -1677,7 +1703,9 @@ void emit_fadd(quad &instr)
     emit_instr(x86_lib::faddp());
     emit_fstore(instr.result);
 }
-
+    // This function handles the assignment operation (=).
+    // It generates assembly code to assign the value of one operand to another.
+    // It handles different data types, arrays, and references.
 void emit_assign(quad &instr)
 {
     if (!inside_fn) // global
@@ -1943,7 +1971,7 @@ void emit_floatToInt(quad &instr)
     else
         emit_instr(x86_lib::fisttp("dword", getMem(instr.result)));
 }
-
+//Handle the assignment of char
 void emit_cassign(quad &instr)
 {
 
@@ -2038,7 +2066,9 @@ void emit_va_instr(quad &instr)
         updateRegDesc(reg1, instr.result);
     }
 }
-
+// This function handles the generation of assembly code for constants.
+// It replaces string literals and float constants with modified names.
+// It also updates the size and type of the operands accordingly.
 void get_constants()
 {
     bool in_fn = false;
@@ -2151,7 +2181,9 @@ void fixgotoLabels()
             instr.gotoLabel = label_map[instr.gotoLabel];
     }
 }
-
+// This function initializes the global variables and handles the initialization of static variables.
+// It replaces static variables with modified names and updates the global initialization map.
+// It also handles the initialization of arrays and replaces enums with their corresponding values.
 void global_init_pass()
 {
     bool in_fn = false;
@@ -2284,7 +2316,10 @@ void update_ir()
     get_constants();
     global_init_pass();
 }
-
+// This function emits the data section of the assembly code.
+// It handles the initialization of global and static variables, string literals,
+// float constants, and arrays. It generates the appropriate assembly instructions
+// for each type of variable and stores them in the data section.
 void emit_data_section()
 {
     for (auto &[name, entry] : gst)
@@ -2420,7 +2455,10 @@ void emit_data_section()
         }
     }
 }
-
+// This function emits the BSS section of the assembly code.
+// It handles the allocation of uninitialized global and static variables.
+// It generates the appropriate assembly instructions for each type of variable
+// and stores them in the BSS section.
 void emit_bss_section()
 {
     for (auto &[name, entry] : gst)

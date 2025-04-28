@@ -19,7 +19,9 @@ The C Yacc specification is taken from [here](https://www.lysator.liu.se/c/ANSI-
 
 Syntax reference for x86 assembly has been mainly taken from [here](https://www.cs.virginia.edu/~evans/cs216/guides/x86.html). For floating-point operations, x87 instruction set has been used whose reference has taken mainly from [here](https://people.hsc.edu/faculty-staff/robbk/Coms480/Lectures/Spring%202009/Lecture%2018%20-%20The%20x87%20FPU.pdf).
 
-All basic features required have been supported (*including structs, library functions and static*).
+All basic features required have been supported (*including structs, library functions and static*). 
+
+Also pointers and arrays work for all data types including char and float as well as for structs and classes.
 
 **Advanced features** :
 
@@ -37,6 +39,7 @@ All basic features required have been supported (*including structs, library fun
 - until loop
 - multi-level pointers
 - multi-dimensional arrays
+- backpatching and short-circuit evaluation
 
 **Extra Advanced Features** :
 
