@@ -50,8 +50,7 @@ std::set<operand> seenOperand;
 std::map<std::string, operand> mem_operand;
 
 /* Optimization Related */
-std::vector<std::vector<std::string>> blocks_asm;
-std::vector<std::string> curr_block_asm;
+std::vector<x86_instr> asm_instr;
 
 void updateSeenOperand(quad &instr)
 {
@@ -459,16 +458,12 @@ void emit_asm(const std::string &inputFile)
     compute_basic_blocks();
 
     print_tac_code(inputFile, true); // only for debugging
-    curr_block_asm.clear(); //opt
     add_extern_funcs();
     emit_section(".text");
     emit_data("global main");
-    blocks_asm.push_back(curr_block_asm);
-    curr_block_asm.clear(); //opt
 
     for (auto &block : basic_blocks)
     {
-        curr_block_asm.clear(); //opt
         next_use_analysis(block);
         if (print_comments)
             emit_comment("Block begins");
@@ -599,19 +594,12 @@ void emit_asm(const std::string &inputFile)
             spillAllReg();
 
         block_regs_spilled = false; // reset for next block
-        //opt
-        if(curr_block_asm.size()){
-            blocks_asm.push_back(curr_block_asm);
-            curr_block_asm.clear();
-        }
     }
 
     emit_section(".data");
     emit_data_section(); // add initialized data
     emit_section(".bss");
     emit_bss_section(); // add uninitialized data
-    blocks_asm.push_back(curr_block_asm);
-    curr_block_asm.clear(); //opt
 }
 
 void emit_copy_to_offset(quad &instr)
@@ -622,7 +610,19 @@ void emit_copy_to_offset(quad &instr)
         return;
     // char* ch[5] = {}
     spillAllReg();
-    if(instr.result.entry && instr.result.entry->type == "float*" && instr.arg1.value.substr(0,4) == "__f_"){
+    if(instr.result.entry && instr.result.entry->type.substr(0,4) == "char"){
+        // int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
+        setParticularReg(EDX,instr.arg1);
+        if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+        {
+            emit_instr(x86_lib::movzx_reg_mem(reg_names[EDX], "byte", reg_names[EDX]));
+        }
+        int reg2 = getReg(instr.arg2, 0, {EDX}); //->reg2 -> offset
+        int reg3 = getReg(instr.result, 1, {EDX, reg2});
+        std::string mem = getMem(instr.result); // arr
+        emit_instr(x86_lib::lea(reg_names[reg3], mem));
+        emit_instr(x86_lib::mov_mem_reg(reg_names[reg3] + "+" + reg_names[reg2], "dl"));
+    }else if(instr.result.entry && instr.result.entry->type.substr(0,5) == "float" && instr.arg1.value.substr(0,4) == "__f_"){
         int reg2 = getReg(instr.arg2, 1,{}); //->reg2 -> offset
         int reg3 = getReg(instr.result, 1, {reg2});
         std::string mem = getMem(instr.result); // arr
@@ -1711,6 +1711,7 @@ void emit_assign(quad &instr)
         _debug_(flag);
         if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*' && (!flag))
         {
+            //ptr = t0(&)
             _debug_("here");
             emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
         }
