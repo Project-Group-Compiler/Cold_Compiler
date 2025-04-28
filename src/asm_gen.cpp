@@ -714,8 +714,21 @@ void emit_logical_ptr_sub(quad &instr)
 
 void emit_unary_star(quad &instr)
 {
-    // _debug_(stringify(instr));
-    if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
+    _debug_(stringify(instr));
+    if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
+        // if(instr.result.entry->type.end()[-2] != '*'){
+        spillAllReg();
+        // if (instr.arg1.entry && instr.arg1.entry->isArray){
+        //     std::string mem = getMem(instr.arg1);
+        //     int reg1 = getReg(instr.result, 1, {});
+        //     emit_instr(x86_lib::lea(reg_names[reg1], mem));
+        //     updateRegDesc(reg1, instr.result);
+        // }else{
+            int reg1 = getReg(instr.arg1, 1, {});
+            emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+            updateRegDesc(reg1, instr.result);
+        // }
+    }else if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         // to = * ptr => to is a reference
         // to = *arr
@@ -1661,7 +1674,74 @@ void emit_assign(quad &instr)
     if (!inside_fn) // global
         return;
 
-    // Pointer ->
+    if(instr.result.entry && instr.result.entry->type.substr(0,7) == "STRUCT_" && instr.result.entry->type.back() != '*'){
+        // d1 = d2(&) -> d1 = *ptr
+        // d1(&) = d2 -> 
+        // d1 = d2
+        spillAllReg(); //Just for safety
+        if(instr.result.entry->type.back() != '&' && instr.arg1.entry->type.back()!= '&'){
+            int sz = instr.result.entry->size;
+            std::string mem_arg1 = getMem(instr.arg1);
+            std::string mem_result = getMem(instr.result);
+            int reg1 = getBestReg({});
+            int reg2 = getBestReg({reg1});
+            int reg3 = getBestReg({reg1,reg2});
+            emit_instr(x86_lib::lea(reg_names[reg2], mem_arg1));
+            emit_instr(x86_lib::lea(reg_names[reg3], mem_result));
+
+            for(int i = 0;i<sz;i+=4){
+                emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg2]));
+                emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
+
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg2],"4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg3],"4"));
+            }
+        }else if(instr.result.entry->type.back() != '&' && instr.arg1.entry->type.back() == '&'){
+            int sz = instr.result.entry->size;
+            std::string mem_arg1 = getMem(instr.arg1);
+            std::string mem_result = getMem(instr.result);
+            int reg1 = getBestReg({});
+            int reg2 = getReg(instr.arg1, 1, {reg1});
+            int reg3 = getBestReg({reg1,reg2});
+            emit_instr(x86_lib::lea(reg_names[reg3], mem_result));
+
+            for(int i = 0;i<sz;i+=4){
+                emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg2]));
+                emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
+
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg2],"4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg3],"4"));
+            }
+        }else if(instr.result.entry->type.back() == '&' && instr.arg1.entry->type.back() != '&'){
+            int sz = instr.arg1.entry->size;
+            std::string mem_arg1 = getMem(instr.arg1);
+            int reg1 = getBestReg({});
+            int reg2 = getBestReg({reg1});
+            int reg3 = getReg(instr.result, 1, {reg1,reg2});
+            emit_instr(x86_lib::lea(reg_names[reg2], mem_arg1));
+
+            for(int i = 0;i<sz;i+=4){
+                emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg2]));
+                emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
+
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg2],"4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg3],"4"));
+            }
+        }else{
+            int sz = getSize(instr.result.entry->type.substr(0,(int)instr.result.entry->type.size()-1));
+            int reg1 = getBestReg({});
+            int reg2 = getReg(instr.arg1, 1, {reg1});
+            int reg3 = getReg(instr.result, 1, {reg1,reg2});
+            for(int i = 0;i<sz;i+=4){
+                emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg2]));
+                emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
+
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg2],"4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg3],"4"));
+            }
+        }
+        return;
+    }
 
     // _debug_(stringify(instr));
     if (instr.arg1.entry && instr.arg1.entry->isArray)
@@ -1712,12 +1792,10 @@ void emit_assign(quad &instr)
         if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*' && (!flag))
         {
             //ptr = t0(&)
-            _debug_("here");
             emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
         }
         else
         {
-            _debug_("here2");
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg1]));
         }
         updateRegDesc(reg2, instr.result);

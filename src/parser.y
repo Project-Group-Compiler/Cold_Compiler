@@ -506,9 +506,13 @@ postfix_expression
 			sym_entry* newEntry = new sym_entry;
 			emit("ptr+", q, {std::to_string(member_offset), newEntry}, q, -1);
 		}
-		operand q1 = getTempVariable($1->type+'&');
+		operand q1;
+		q1 = getTempVariable($$->type+'&');
+		// q1.entry->isArray = $$->isArray;
 		emit("unary*", q, {}, q1, -1);
 		// q.value = "*" + q.value;
+
+		std::cerr << "513 " << $$->type << '\n';
         $$->place = q1;
 		$$->nextlist.clear();
 	}
@@ -864,9 +868,9 @@ postfix_expression
 			sym_entry* newEntry = new sym_entry;
 			emit("ptr+", $1->place, {std::to_string(member_offset), newEntry}, q, -1);
 		}
-		std::string q1Type = $1->type;
-		q1Type.pop_back();
-		operand q1 = getTempVariable(q1Type+'&');
+		// std::string q1Type = $1->type;
+		// q1Type.pop_back();
+		operand q1 = getTempVariable($$->type+'&');
 		emit("unary*", q, {}, q1, -1);
         $$->place = q1;
         // $$->place = q;
@@ -1315,6 +1319,18 @@ unary_expression
 			// TODO : Handle char*, ...
 			$$->tempName = $2->tempName;
 			//rvalue == 0 
+
+		if(temp == "float" && $1->place.value == "unary-")
+		{
+			operand q = getTempVariable(temp);
+			sym_entry* newEntry = new sym_entry;
+			newEntry->type = "float";
+			operand q1{"-1.0", newEntry};
+			emit("(f)*", q1, $2->place, q, -1);
+			$$->place = q;
+		}
+		else
+		{
 			int cntStar = 0;
 			for(int i=(int)$2->type.size()-1;i>=0;i--){ //TODO: Is there any other case
 				if($2->type[i] == '*')
@@ -1322,7 +1338,6 @@ unary_expression
 				else
 					break;
 			}
-			
 			if($1->place.value == "unary*" && cntStar == 1){ 
 				// (*ptr) = 10 -> ptr store 10 
 				operand q = getTempVariable(temp+"&"); //TODO: Handle offset for this in symbol table
@@ -1334,6 +1349,7 @@ unary_expression
 				$$->place = q;
 				emit($1->place.value, $2->place, {}, q, -1);
 			}
+		}
 			$$->nextlist.clear();
     	}
     	else{

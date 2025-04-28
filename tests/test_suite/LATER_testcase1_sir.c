@@ -26,7 +26,9 @@ static int bar(int a, float b) // no need to comment static
 
 int main()
 {
-    int a = 100, b[20], ret;
+    int a = 100;
+    int b[20];
+    int ret;
     int i; // declarations must come before function call in a scope as per Cold grammar
     int *c;
     struct foo newS[5];
