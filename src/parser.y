@@ -507,9 +507,14 @@ postfix_expression
 			emit("ptr+", q, {std::to_string(member_offset), newEntry}, q, -1);
 		}
 		operand q1;
-		q1 = getTempVariable($$->type+'&');
-		// q1.entry->isArray = $$->isArray;
-		emit("unary*", q, {}, q1, -1);
+		if($$->isArray){
+			q1=getTempVariable($$->type);
+			emit("=",q,{},q1,-1);
+		}else{
+			q1 = getTempVariable($$->type+'&');
+			// q1.entry->isArray = $$->isArray;
+			emit("unary*", q, {}, q1, -1);
+		}
 		// q.value = "*" + q.value;
 
 		// std::cerr << "513 " << $$->type << '\n';
@@ -1412,9 +1417,26 @@ unary_expression
 				emit($1->place.value, $2->place, {}, q, -1);
 			}
 			else{
-				operand q = getTempVariable(temp);
+				// std::cerr << "1348 tempname " << $2->tempName << std::endl; 
+				bool array_flag = 0;
+				std::vector<int>array_dims, new_dims;
+				if($2->isArray) {
+					array_flag = 1;
+					array_dims = $2->arraydims;
+				}else if(lookup($2->place.value)){
+					array_flag = lookup($2->place.value)->isArray;
+					array_dims = lookup($2->place.value)->array_dims;
+				}
+				for(int i= 1;i<array_dims.size();i++){
+					new_dims.push_back(array_dims[i]);
+				}
+				operand q = getTempVariableForArray(temp,new_dims);
 				$$->place = q;
-				emit($1->place.value, $2->place, {}, q, -1);
+				if(new_dims.size()){
+					emit("=", $2->place, {}, q, -1);
+				}else{
+					emit($1->place.value, $2->place, {}, q, -1);
+				}
 			}
 		}
 			$$->nextlist.clear();
@@ -1837,20 +1859,42 @@ additive_expression
 			else if(temp == "real") $$->type = "float";
 			else $$->type = temp;
 			//3AC
-			operand q = getTempVariable($$->type);//TODO not always int
+			operand q = getTempVariable($$->type);
 			$$->place = q;
 			$$->tempName = q.value;
 			if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){
 			// if(($1->type).back() == '*'){  //int** + ... //TODOO
 				//if arr then convert to ptr first
 				bool array_flag = 0;
-
+				std::vector<int>array_dims;
 				if($1->isArray) {
 					array_flag = 1;
+					array_dims = $1->arraydims;
 				}else if(lookup($1->tempName)){
-					array_flag = lookup($1->tempName)->isArray;
+					array_flag = lookup($1->place.value)->isArray;
+					array_dims = lookup($1->place.value)->array_dims;
 				}
-				if(array_flag){
+				// std::cout << "1788 " << $1->tempName << '\n';
+				// std::cout << "1789 " << array_dims.size() << '\n';
+				// for(auto it:array_dims){
+				// 	// std::cout << "1791 " << it << ' ';
+				// }
+				// std::cout << endl;
+				//TODO: Handle for (-) and 2 + ptr also -> 
+				if(array_dims.size()){
+					q.entry->array_dims = array_dims;
+					operand q0 = getTempVariableForArray($$->type, array_dims);
+					// std::cerr << "1816 $$ " << q0.value << '\n';
+					emit("=",$1->place,{},q0,-1);
+					operand q2 = getTempVariable($3->type);
+					int off = getSize($1->type.substr(0, $1->type.size()-1));
+					for(int j = 1;j<array_dims.size();j++){
+						off *= array_dims[j];
+					}
+					// std::cout << "1799 off = " << off << '\n';
+					emit("*", $3->place, {std::to_string(off)}, q2, -1);
+					emit("ptr+", q0, q2, q, -1);
+				}else if(array_flag){
 					operand q0 = getTempVariable($$->type);
 					emit("=",$1->place,{},q0,-1);
 					operand q2 = getTempVariable($3->type);
@@ -1861,6 +1905,17 @@ additive_expression
 					emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
 					emit("ptr+", $1->place, q2, q, -1);
 				}
+				// if(array_flag){
+				// 	operand q0 = getTempVariable($$->type);
+				// 	emit("=",$1->place,{},q0,-1);
+				// 	operand q2 = getTempVariable($3->type);
+				// 	emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
+				// 	emit("ptr+", q0, q2, q, -1);
+				// }else{
+				// 	operand q2 = getTempVariable($3->type);
+				// 	emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
+				// 	emit("ptr+", $1->place, q2, q, -1);
+				// }
 			}else if(($3->type).back() == '*' && (($1->type == "int") || ($1->type == "Integer Constant"))){
 				bool array_flag = 0;
 

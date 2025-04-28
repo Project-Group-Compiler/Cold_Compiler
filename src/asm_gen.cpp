@@ -748,9 +748,18 @@ void emit_unary_star(quad &instr)
     else
     {
         spillAllReg();
-        int reg1 = getReg(instr.arg1, 1, {});
-        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
-        updateRegDesc(reg1, instr.result);
+        if (instr.arg1.entry && instr.arg1.entry->isArray)
+        {
+            std::string mem = getMem(instr.arg1);
+            int reg1 = getReg(instr.result, 1, {});
+            emit_instr(x86_lib::lea(reg_names[reg1], mem));
+            updateRegDesc(reg1, instr.result);
+        }else{
+            int reg1 = getReg(instr.arg1, 1, {});
+            emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+            updateRegDesc(reg1, instr.result);
+        }
+
     }
 }
 
