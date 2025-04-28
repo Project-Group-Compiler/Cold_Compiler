@@ -65,10 +65,12 @@ void pattern_two_opt(std::vector<x86_instr> &opt){
                 j = i;
                 break;
             }
-            if(opt[i].arg1 == destReg || opt[i].arg2 == destReg || opt[i].arg3 == destReg){
+            if(opt[i].arg1.find(destReg) != std::string::npos || opt[i].arg2.find(destReg) != std::string::npos || opt[i].arg3.find(destReg) != std::string::npos)
+            {
                 return;
             }
-            if(opt[i].arg1 == subReg || opt[i].arg2 == subReg || opt[i].arg3 == subReg){
+            if(opt[i].arg1.find(subReg) != std::string::npos || opt[i].arg2.find(subReg) != std::string::npos || opt[i].arg3.find(subReg) != std::string::npos)
+            {
                 return;
             }
         }
