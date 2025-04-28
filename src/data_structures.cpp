@@ -1225,7 +1225,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
                     << (it.second->isConst ? "const" : "") << ", "
                     << (it.second->isArray ? "array" : "");
             // print array dims
-            if (it.second->isArray)
+            if (it.second->isArray || it.second->array_dims.size())
             {
                 outFile << ",[";
                 for (int i = 0; i < it.second->array_dims.size(); i++)
@@ -1255,7 +1255,7 @@ void printSymbolTable(sym_table *table, std::string file_name)
                     << (it.second->isConst ? "const" : "") << ", "
                     << (it.second->isArray ? "array" : "") << ", "
                     << (it.second->isEnum ? "enum const" : "");
-            if (it.second->isArray)
+            if (it.second->isArray || it.second->array_dims.size())
             {
                 outFile << ",[";
                 for (int i = 0; i < it.second->array_dims.size(); i++)
