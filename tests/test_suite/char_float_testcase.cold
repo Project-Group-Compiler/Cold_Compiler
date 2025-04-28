@@ -1,0 +1,25 @@
+//Done
+
+void charMultiDim(){
+    char arr[2][2] = {{'a','b'},{'c','d'}};
+    char x = arr[1][0];
+    printf("%c\n",x);
+    return;
+}
+void f12(){
+    char c = 'a';
+    char d = 'b';
+    char *ptr = &c;
+    char *ptr2 = &d;
+    printf("%c\n",c);
+    printf("%c\n",*ptr);
+    printf("%c\n",*ptr2);
+    *ptr = 'c';
+    printf("%c\n",c);
+    return;
+}
+
+int main(){
+    charMultiDim();
+    f12();
+}

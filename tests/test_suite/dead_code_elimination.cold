@@ -1,3 +1,4 @@
+//Done
 int target1()
 {
     int x = 9;
@@ -27,4 +28,8 @@ int target3()
         x++;
     }
     return x;
+}
+
+int main(){
+
 }

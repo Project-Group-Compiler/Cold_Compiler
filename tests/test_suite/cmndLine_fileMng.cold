@@ -1,10 +1,10 @@
-// not working
+// Done
 void fileMng() {
     FILE *file;
 
     file = fopen("test.txt", "w");
     if (file) {
-        fprintf(file, "Hello, File!");
+        fprintf(file, "Hello, Meet here!");
         printf("[fileMng] Wrote to test.txt\n");
         fclose(file);
         printf("[fileMng] File closed.\n");

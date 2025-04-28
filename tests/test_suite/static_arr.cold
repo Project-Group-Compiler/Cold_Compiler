@@ -1,4 +1,4 @@
-
+//Done
 void foo()
 {
     static int arr[3] = {0, 1, 2};
