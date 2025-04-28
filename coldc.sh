@@ -15,6 +15,10 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
+make
+
+make files_clean
+
 # Extract filename without extension for output name
 input_file="$1"
 filename=$(basename -- "$input_file")
@@ -42,7 +46,7 @@ if [ ! -f "$filename_noext.asm" ]; then
 fi
 
 # Step 2: Assemble with nasm and link with gcc in a pipeline
-nasm -g -f elf32 "$filename_noext.asm" -o "$filename_noext.o"
+nasm -f elf32 "$filename_noext.asm" -o "$filename_noext.o"
 
 if [ $? -ne 0 ]; then
     echo "Assembling failed. Exiting."

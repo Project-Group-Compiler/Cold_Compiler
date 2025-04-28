@@ -71,6 +71,7 @@
 - Compound initialization of arrays is supported. For example, `int a[3] = {1, 2, 3};`.
 - Global variables (and arrays) can be initialized only using constant values. For example, `int a = 5;` is OK but `int a = b + c;` is not OK.
 - No type casting is allowed when passing arguments to functions. Function arguments must match exactly with the parameter types. That is, for `int` parameter only int variable or int constant is allowed. Similarly for float and char.
+- Take care to write `return` statement in all functions at the end (including those with void return type).
 - `int`, `float` and `char` can be implicitly and explicitly converted into each other.
 - Pointer types can only be converted to and from `void*`. Apart from that, a pointer type can't be converted to another pointer or non-pointer type implicitly or explicitly. Neither can a non-pointer type converted to a pointer type implicitly or explicitly.
 - `static` keyword should not be used with functions. It can only be used with variables (including arrays).

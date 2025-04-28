@@ -82,7 +82,7 @@ cd Cold_Compiler
     make
     ```
 
-2. Run script for executing testcases. The generated assembly code will get saved in `outputs` directory.
+2. Run script for executing testcases. The generated assembly code and executables will get saved in `outputs` directory.
 
     ```bash
     chmod +x run.sh

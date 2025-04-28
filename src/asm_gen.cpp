@@ -1041,9 +1041,10 @@ void emit_return(quad &instr)
         {
             emit_fload(instr.arg1);
         }
-        else
+        else if(instr.arg1.value.size())
         {
             spillAllReg();
+            block_regs_spilled = true;
             setParticularReg(EAX, instr.arg1);
         }
     }

@@ -5113,7 +5113,7 @@ void performParsing(const std::string &inputFile)
     yyparse();
 	for (auto &[name, entry] : gst) // mark globals
     {
-        if (entry->type != "class" && entry->type != "struct" && entry->type.substr(0, 5) != "FUNC_")
+        if (entry->type != "class" && entry->type != "struct" && entry->type != "union" && entry->type.substr(0, 5) != "FUNC_")
             entry->isGlobal = true;
     }
     endAST();
