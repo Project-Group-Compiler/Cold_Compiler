@@ -1,5 +1,5 @@
 // int printf(char *, ...); // not needed
- 
+
 int glb;
 int glb1 = 10;
 
@@ -11,7 +11,7 @@ struct foo
     struct foo *next;
 };
 
-static int bar(int a, float b) // no need to comment static
+int bar(int a, float b) // no need to comment static
 {
     static int lcl = 10;
     while (b)
@@ -57,6 +57,7 @@ int main()
     b[19] = i; // no need to comment ... if put outside loop since b is array outside not inside
     // c = b * ret; // error since incompatible multiplication of int* with int
 jump:
+    newS[3].b=100;
     printf("Final = %d", newS[3].b + ret);
     if (*(b + 2) == 0)
         goto jump;
