@@ -1,4 +1,4 @@
-
+//Done
 int glo = 7;
 int count = 5;
 static int glos = 9;
@@ -8,6 +8,7 @@ void staticKywrd() {
     static int count = 3;
     count += 1;
     printf("[staticKywrd] x = %d, static count = %d\n", x, count);
+    return ;
 }
 
 int prntfScnf(int i, char c) {
@@ -26,6 +27,7 @@ void functionCall() {
     int a = 10, b = 11;
     printf("[functionCall] Calling prntfScnf with (a+b=)%d and character 'c'\n", a + b);
     prntfScnf(a + b, 'c');
+    return;
 }
 
 void gotoBrkCont() {
@@ -51,6 +53,7 @@ void gotoBrkCont() {
 
 skip:
     printf("[gotoBrkCont] Goto landed here successfully.\n");
+    return;
 }
 
 int main() {

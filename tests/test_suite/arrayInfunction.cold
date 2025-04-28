@@ -1,0 +1,17 @@
+//Done
+int f(int **a){//Working
+    int x = a[1][1];
+    a[0][0] = 10;
+    printf("%d\n",x);
+    return 0;
+}
+
+int main(){
+    int a[2][2] = {{1,2},{3,4}};
+    f(a);
+    printf("%d\n",a[0][0]);
+    return 0;
+}
+
+
+

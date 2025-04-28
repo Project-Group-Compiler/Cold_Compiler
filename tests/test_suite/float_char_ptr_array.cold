@@ -1,3 +1,5 @@
+//Done
+
 void f(){
     float f =  1.5;
     float g = 1.4;
@@ -9,6 +11,7 @@ void f(){
     printf("%f\n", g);
     *q = *p;
     printf("%f\n", g);
+    return;
 }
 
 void f4(){
@@ -22,6 +25,7 @@ void f4(){
     printf("%c\n", g);
     *q = *p;
     printf("%c\n", g);
+    return ;
 }
 
 void f2(){
@@ -33,12 +37,13 @@ void f2(){
     g = f[1];
     printf("%f\n", g);
     printf("%f\n", f[2]);
+    return;
 }
 
 
 int main() {
     f();
-    // f2();
-    // f4();
+    f2();
+    f4();
     return 0;
 }

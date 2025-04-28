@@ -56,7 +56,7 @@ int main()
     class newType *temp2 = (class newType *)malloc(sizeof(class newType));
 
     union Data *temp3 = (union Data *)malloc(sizeof(union Data));//not sir's code
-    int *temp4 = (struct foo *)malloc(sizeof(struct foo));//not sir's code ->gives error
+    // int *temp4 = (struct foo *)malloc(sizeof(struct foo));//not sir's code ->gives error
     // temp->b = 6;
 
     // void (*func_ptr)(int); // func_ptr not implemented

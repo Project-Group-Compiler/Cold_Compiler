@@ -1,4 +1,4 @@
-
+//Done
 int find_sum(int count, ...)
 {
     va_list args;

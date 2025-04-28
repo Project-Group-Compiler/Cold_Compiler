@@ -1,0 +1,95 @@
+// Done
+
+int switchCase() {
+    int op = 2;
+    int a = 5, b = 3, c;
+
+    switch (op) {
+        case 1:
+            c = a + b;
+            c = 10;
+            break;
+        case 2:
+            c = b;
+            c = 11;
+        case 3:
+            c = a;
+            c = 12;
+            break;
+        default:
+            c = 13;
+    }
+
+    printf("Result of switchCase: c = %d\n", c);
+    return c;
+}
+
+void arrayIntChar() {
+    int arr[5] = {1, 2, 3, 4, 5};
+    char carr[5] = {'a', 'b', 'c', '\0', '\0'};
+    char c;
+    int z;
+
+    z = arr[0];
+    arr[0] = 10;
+
+    c = carr[0]; 
+    carr[1] = '1';
+
+    printf("Result of arrayIntChar: arr[0] = %d, z = %d, carr[0] = %c, carr[1] = %c\n", arr[0], z, c, carr[1]);
+
+}
+
+void pntr() {
+    int a = 5;
+    int b = 10;
+    int *p;
+
+    p = &a;
+    printf("Initially: a = %d, *p = %d\n", a, *p);
+
+    *p = 15;  // change value of a through p
+    printf("After modifying *p: a = %d, *p = %d\n", a, *p);
+
+    p = &b;
+    printf("After pointing to b: b = %d, *p = %d\n", b, *p);
+
+    *p += 5;  // increment b through p
+    printf("After modifying *p again: b = %d, *p = %d\n", b, *p);
+}
+
+struct node {
+    int x;
+    int y;
+    struct node* next;
+};
+
+void testStruct() {
+    struct node head;
+    struct node temp;
+
+    head.x = 1;
+    head.next = &temp;
+    head.x = 4;
+
+    printf("Result of testStruct: head.x = %d\n", head.x);
+}
+
+int main() {
+    printf("Testing switchCase:\n");
+    switchCase();
+
+    printf("\nTesting arrayIntChar:\n");
+    arrayIntChar();
+
+    printf("\nTesting pntr:\n");
+    pntr();
+
+    printf("\nTesting testStruct:\n");
+    testStruct();
+
+    return 0;
+}
+
+
+
