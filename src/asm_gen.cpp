@@ -457,7 +457,6 @@ void emit_asm(const std::string &inputFile)
     fixgotoLabels();
     compute_basic_blocks();
 
-    print_tac_code(inputFile, true); // only for debugging
     add_extern_funcs();
     emit_section(".text");
     emit_data("global main");
@@ -714,7 +713,7 @@ void emit_logical_ptr_sub(quad &instr)
 
 void emit_unary_star(quad &instr)
 {
-    _debug_(stringify(instr));
+    // _debug_(stringify(instr));
     if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
         // if(instr.result.entry->type.end()[-2] != '*'){
         spillAllReg();
@@ -862,7 +861,7 @@ void emit_param(quad &instr)
         {
             if ((instr.arg1.entry->type == "float" || instr.arg1.entry->type == "float&") && instr.arg2.value == "lea")
             {
-                std::cout << instr.arg1.entry->type << " " << instr.arg1.value << std::endl;
+                // std::cout << instr.arg1.entry->type << " " << instr.arg1.value << std::endl;
                 emit_fparam(instr.arg1);
             }
             else if (instr.arg1.entry->type == "char" || instr.arg1.entry->type == "char&")
@@ -883,7 +882,7 @@ void emit_param(quad &instr)
         {
             if ((instr.arg1.entry->type == "float" || instr.arg1.entry->type == "float&") && instr.arg2.value == "lea")
             {
-                std::cout << instr.arg1.entry->type << " haaaaaaa " << instr.arg1.value << std::endl;
+                // std::cout << instr.arg1.entry->type << " haaaaaaa " << instr.arg1.value << std::endl;
                 emit_fparam(instr.arg1);
             }
             else if (instr.arg1.entry->type == "char" || instr.arg1.entry->type == "char&")
@@ -897,14 +896,14 @@ void emit_param(quad &instr)
             }
             else if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
             {
-                std::cout << instr.arg1.entry->type << " 111 " << instr.arg1.value << std::endl;
+                // std::cout << instr.arg1.entry->type << " 111 " << instr.arg1.value << std::endl;
                 int reg1 = getReg(instr.arg1, 1, {}); // add of x
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
                 emit_instr(x86_lib::push(reg_names[reg1]));
             }
             else
             {
-                std::cout << instr.arg1.entry->type << " 2222 " << instr.arg1.value << std::endl;
+                // std::cout << instr.arg1.entry->type << " 2222 " << instr.arg1.value << std::endl;
 
                 emit_instr(x86_lib::push(reg_names[instr.arg1.entry->addrDesc.inRegs[0]]));
             }
@@ -922,13 +921,13 @@ void emit_param(quad &instr)
             {
                 if ((instr.arg1.entry->type == "float" || instr.arg1.entry->type == "float&") && instr.arg2.value == "lea")
                 {
-                    std::cout << instr.arg1.entry->type << " " << instr.arg1.value << std::endl;
+                    // std::cout << instr.arg1.entry->type << " " << instr.arg1.value << std::endl;
                     emit_fparam(instr.arg1);
                 }
                 else if (instr.arg1.entry->type == "char" || instr.arg1.entry->type == "char&")
                 {
                     setParticularReg(EBX, instr.arg1);
-                    std::cout << instr.arg1.entry->type << " charrrrrrrrrrrrrrrrrrr mem    " << instr.arg1.value << std::endl;
+                    // std::cout << instr.arg1.entry->type << " charrrrrrrrrrrrrrrrrrr mem    " << instr.arg1.value << std::endl;
                     // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", instr.arg1.value));
                     if(instr.arg1.entry->type == "char&"){
                         emit_instr(x86_lib::mov_reg_mem(reg_names[EBX], reg_names[EBX]));
@@ -1779,17 +1778,17 @@ void emit_assign(quad &instr)
     else if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         // y = to(&)
-        _debug_(stringify(instr));
+        // _debug_(stringify(instr));
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {});
         int reg2 = getReg(instr.result, 1, {reg1});
-        _debug_(instr.result.value, instr.arg1.value);
+        // _debug_(instr.result.value, instr.arg1.value);
         bool flag = false;
         if (instr.result.entry->type == (instr.arg1.entry->type.substr(0, instr.arg1.entry->type.size() - 1)))
         {
             flag = true;
         }
-        _debug_(flag);
+        // _debug_(flag);
         if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*' && (!flag))
         {
             //ptr = t0(&)
@@ -1876,7 +1875,7 @@ void emit_fassign(quad &instr)
     
     if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
-        std::cout << "in & fassign" << std::endl;
+        // std::cout << "in & fassign" << std::endl;
         spillAllReg();
         int reg1 = getReg(instr.result, 1, {}); // TODO: both can be made 0
         if ((instr.arg1.value).substr(0, 4) == "__f_"){

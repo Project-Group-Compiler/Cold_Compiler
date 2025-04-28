@@ -5,7 +5,7 @@
 #include <queue>
 #include <cmath>
 
-bool optimize_ir = true;
+bool optimize_ir = false;
 bool tac_updated = false;
 
 std::vector<std::vector<quad>> basic_blocks;
@@ -44,12 +44,12 @@ void print_basic_blocks(bool modifygotoLabels)
     int block_no = 0;
     for (auto &block : basic_blocks)
     {
-        //std::cout << "Block " << block_no++ << ":\n";
+        std::cout << "Block " << block_no++ << ":\n";
         for (auto &instr : block)
         {
-            //std::cout << stringify(instr, modifygotoLabels) << std::endl;
+            std::cout << stringify(instr, modifygotoLabels) << std::endl;
         }
-        //std::cout << "\n";
+        std::cout << "\n";
     }
 }
 
@@ -236,51 +236,51 @@ void build_cfg()
         build_function_cfg(func);
 }
 
-// void print_function_cfg(const FunctionCFG &func)
-// {
-//     //std::cout << "Control Flow Graph for function " << func.name << ":\n";
-//     //std::cout << "---------------------------------------\n";
-//     for (auto i = 0; i < func.adj.size(); i++)
-//     {
-//         //std::cout << "Block " << i << ":\n";
-//         for (const auto &instr : func.blocks[i])
-//             //std::cout << "  " << stringify(instr) << "\n";
+void print_function_cfg(const FunctionCFG &func)
+{
+    std::cout << "Control Flow Graph for function " << func.name << ":\n";
+    std::cout << "---------------------------------------\n";
+    for (auto i = 0; i < func.adj.size(); i++)
+    {
+        std::cout << "Block " << i << ":\n";
+        for (const auto &instr : func.blocks[i])
+            std::cout << "  " << stringify(instr) << "\n";
 
-//         //std::cout << "Successors: ";
-//         // if (func.adj[i].empty())
-//         //     //std::cout << "none";
-//         // else
-//         // {
-//         //     for (auto j = 0; j < func.adj[i].size(); j++)
-//         //     {
-//         //         //std::cout << func.adj[i][j];
-//         //         if (j < func.adj[i].size() - 1)
-//         //             //std::cout << ", ";
-//         //     }
-//         // }
-//         //std::cout << "\n";
+        std::cout << "Successors: ";
+        if (func.adj[i].empty())
+            std::cout << "none";
+        else
+        {
+            for (auto j = 0; j < func.adj[i].size(); j++)
+            {
+                std::cout << func.adj[i][j];
+                if (j < func.adj[i].size() - 1)
+                    std::cout << ", ";
+            }
+        }
+        std::cout << "\n";
 
-//         //std::cout << "Predecessors: ";
-//         // if (func.rev_adj[i].empty())
-//             //std::cout << "none";
-//         // else
-//         // {
-//         //     for (auto j = 0; j < func.rev_adj[i].size(); j++)
-//         //     {
-//         //         //std::cout << func.rev_adj[i][j];
-//         //         if (j < func.rev_adj[i].size() - 1)
-//         //             //std::cout << ", ";
-//         //     }
-//         // }
-//         //std::cout << "\n\n";
-//     }
-// }
+        std::cout << "Predecessors: ";
+        if (func.rev_adj[i].empty())
+            std::cout << "none";
+        else
+        {
+            for (auto j = 0; j < func.rev_adj[i].size(); j++)
+            {
+                std::cout << func.rev_adj[i][j];
+                if (j < func.rev_adj[i].size() - 1)
+                    std::cout << ", ";
+            }
+        }
+        std::cout << "\n\n";
+    }
+}
 
-// void print_cfg()
-// {
-//     for (const auto &func : function_cfgs)
-//         print_function_cfg(func);
-// }
+void print_cfg()
+{
+    for (const auto &func : function_cfgs)
+        print_function_cfg(func);
+}
 
 void constant_folding()
 {
@@ -451,9 +451,6 @@ void constant_folding()
             q.gotoLabel = id_map[q.gotoLabel];
     }
     tac_code = std::move(folded_tac_code);
-    //std::cout << "CF pass : \n";
-    // for (auto &instr : tac_code)
-        //std::cout << stringify(instr) << std::endl;
 }
 
 void dead_code_elimination()
@@ -575,9 +572,6 @@ void dead_code_elimination()
     compute_basic_blocks();
     build_cfg();
 
-    //std::cout << "DCE pass : \n";
-    // for (auto &instr : tac_code)
-        //std::cout << stringify(instr) << std::endl;
 }
 
 std::map<int, std::set<std::pair<operand, std::string>>> instr_annotation;
@@ -742,11 +736,7 @@ void rewrite_instr(quad &instr)
     auto reaching_copies = instr_annotation[instr.Label];
     std::unordered_set<std::string> unary_ops = {"=", "!", "~", "unary-", "unary+", "intToChar", "intToFloat", "RETURN", "param"};
     std::unordered_set<std::string> binary_ops = {"+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", ">>", "<<", "&", "|", "^"};
-    //std::cout << "Reaching copies for instr " << stringify(instr) << std::endl;
-    for (auto &[arg, val] : reaching_copies)
-    {
-        //std::cout << arg.value << " = " << val << std::endl;
-    }
+
     if (unary_ops.find(instr.op) != unary_ops.end())
     {
         for (auto &[arg, val] : reaching_copies)
@@ -832,7 +822,6 @@ void run_optimisations()
     int optimization_cnt = 77;
     do
     {
-        //std::cout << "----------------------------------------\n";
         tac_updated = false;
         constant_folding();
         dead_code_elimination();
@@ -852,9 +841,6 @@ void run_optimisations()
         }
         reconstruct_basic_blocks();
         blocks_to_code();
-        //std::cout << "Constant propagation pass : \n";
-        //for (auto &instr : tac_code)
-            //std::cout << stringify(instr) << std::endl;
         optimization_cnt--;
     } while (tac_updated && optimization_cnt > 0);
 

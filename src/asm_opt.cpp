@@ -4,6 +4,7 @@
 
 
 std::vector<x86_instr> optim_asm_instr;
+bool optimize_asm = false;
 
 void print_instr_asm(std::vector<x86_instr> &v){
     for(x86_instr &instr : v){
@@ -125,21 +126,13 @@ void optimize_last_asm(std::vector<x86_instr> &optim_asm_instr){
     pattern_two_opt(optim_asm_instr);
 }
 
-void optimize_asm(const std::string &inputFile)
+void opt_asm(const std::string &inputFile)
 {
-    asm_file.close();
-    asm_file.open( inputFile + "_optimized.asm");
-
-    // std::cout << "---------Original ASM-------------" << std::endl;
-    // print_block_wise_asm(blocks_asm);
-    
     for(auto it:asm_instr){
         optim_asm_instr.push_back(it);
         optimize_last_asm(optim_asm_instr);
     }
-    // std::cout << "---------Optimized ASM-------------" << std::endl;
     print_instr_asm(optim_asm_instr);
-    asm_file.close();
 }
 
 // void register_move_coalescing(){

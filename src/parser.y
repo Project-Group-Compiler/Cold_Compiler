@@ -169,8 +169,8 @@ postfix_expression
 		DBG("postfix_expression -> postfix_expression '[' expression ']' " + $1->tempName + " " + $3->tempName);
 		if(!temp.empty()){	
 			$$->type = temp;
-			std::cerr << $1->tempName << " " << $3->tempName << std::endl;
-				std::cerr << $1->place.value << " " << $3->tempName << std::endl;
+			// std::cerr << $1->tempName << " " << $3->tempName << std::endl;
+				// std::cerr << $1->place.value << " " << $3->tempName << std::endl;
 		
 			//3AC
 			int isDim = 0;
@@ -190,9 +190,9 @@ postfix_expression
 				$$->place = q4;
 				emit("unary*", q3, {}, q4, -1);
 			}else{
-				std::cerr << $$->type << " " << $1->isArray << std::endl;
-				std::cerr << $1->tempName << " " << $3->tempName << std::endl;
-				std::cerr << $1->place.value << " " << $3->tempName << std::endl;
+				// std::cerr << $$->type << " " << $1->isArray << std::endl;
+				// std::cerr << $1->tempName << " " << $3->tempName << std::endl;
+				// std::cerr << $1->place.value << " " << $3->tempName << std::endl;
 				std::vector<int>previDims;
 				if($1->isArray){
 					previDims = $1->arraydims;
@@ -204,7 +204,7 @@ postfix_expression
 					DBG("Array " + $1->tempName + " not declared in this scope");
 				} 
 				for(auto it: previDims){
-					std::cerr << "it = " << it << std::endl;
+					// std::cerr << "it = " << it << std::endl;
 					if(it == 0){
 						semantic_error("Array index out of bound", "semantic error");
 					}
@@ -512,7 +512,7 @@ postfix_expression
 		emit("unary*", q, {}, q1, -1);
 		// q.value = "*" + q.value;
 
-		std::cerr << "513 " << $$->type << '\n';
+		// std::cerr << "513 " << $$->type << '\n';
         $$->place = q1;
 		$$->nextlist.clear();
 	}

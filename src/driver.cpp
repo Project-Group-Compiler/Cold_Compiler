@@ -67,8 +67,12 @@ int main(int argc, char *argv[])
     for (int i = 2; i < argc; i++)
     {
         std::string arg = argv[i];
-        if (arg == "-O0")
-            optimize_ir = false;
+        if (arg == "-O1")
+            optimize_ir = true;
+        else if (arg == "-O2")
+            optimize_asm = true;
+        else if(arg == "-O3")
+            optimize_ir = true, optimize_asm = true;
         else if (arg == "-l" || arg == "--lex")
             lexPrint = true;
         else if (arg == "-a" || arg == "--ast")
@@ -135,7 +139,8 @@ int main(int argc, char *argv[])
 
             emit_asm(inputFileString);
 
-            optimize_asm(inputFileString);
+            if (optimize_asm)
+                opt_asm(inputFileString);
         }
         else
             std::cerr << "\nsyntax or semantic errors present, use -f to forcefully continue\n";

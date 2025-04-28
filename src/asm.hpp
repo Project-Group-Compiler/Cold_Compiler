@@ -1,5 +1,5 @@
-#ifndef ASM_GEN_HPP
-#define ASM_GEN_HPP
+#ifndef ASM_HPP
+#define ASM_HPP
 
 #include <iostream>
 #include <fstream>
@@ -22,10 +22,12 @@ extern std::ofstream asm_file;
 extern bool print_comments;
 /* optimization */
 extern std::vector<x86_instr> asm_instr;
+extern bool optimize_asm;
 
 inline void emit_instr(const std::string &instr)
 {
-    asm_file << "\t" << instr << std::endl;
+    if(!optimize_asm)
+        asm_file << "\t" << instr << std::endl;
 }
 
 inline void emit_label(const std::string &label)
@@ -34,7 +36,8 @@ inline void emit_label(const std::string &label)
     instr.label = label;
     instr.printing = label + " :";
     asm_instr.push_back(instr);
-    asm_file << label << " :\n";
+    if(!optimize_asm)
+        asm_file << label << " :\n";
 }
 
 inline void emit_data(const std::string &data)
@@ -43,7 +46,8 @@ inline void emit_data(const std::string &data)
     instr.comment = data;
     instr.printing = "\t" + data;
     asm_instr.push_back(instr);
-    asm_file << "\t" << data << "\n";
+    if(!optimize_asm)
+        asm_file << "\t" << data << "\n";
 }
 
 inline void emit_section(const std::string &section)
@@ -52,7 +56,8 @@ inline void emit_section(const std::string &section)
     instr.comment = section;
     instr.printing = "\nsection " + section;
     asm_instr.push_back(instr);
-    asm_file << "\nsection " << section << "\n";
+    if(!optimize_asm)
+        asm_file << "\nsection " << section << "\n";
 }
 
 inline void emit_comment(const std::string &comment)
@@ -61,7 +66,8 @@ inline void emit_comment(const std::string &comment)
     instr.comment = comment;
     instr.printing = "\t\t\t; " + comment;
     asm_instr.push_back(instr);
-    asm_file << "\t\t\t; " << comment << "\n";
+    if(!optimize_asm)
+        asm_file << "\t\t\t; " << comment << "\n";
 }
 
 inline void add_extern_funcs()
@@ -71,7 +77,8 @@ inline void add_extern_funcs()
         instr.comment = "extern " + func;
         instr.printing = "extern " + func;
         asm_instr.push_back(instr);
-        asm_file << "extern " << func << "\n";
+        if(!optimize_asm)
+            asm_file << "extern " << func << "\n";
     }
         
 }
@@ -149,8 +156,6 @@ void emit_data_section();
 void emit_bss_section();
 
 //Optimization functions
-void optimize_asm(const std::string &inputFile);
-void print_asm_instr();
-
+void opt_asm(const std::string &inputFile);
 
 #endif
