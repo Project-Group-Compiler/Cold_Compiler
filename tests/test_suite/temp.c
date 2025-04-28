@@ -228,29 +228,107 @@
 //     printf("%d\n",p.b[0]);
 // }
 
-struct node {
-    int a;
-    int b;
-    char* c;
-  };
+// struct node {
+//     int a;
+//     int b;
+//     int c;
+//     // char* c;
+// };
   
-  int main(){
-    int a = 10;
-    struct node d1;
-    struct node d2;
-    struct node dar[2] = {d1,d2};
+// void f(){
+//     struct node d1;
+//     struct node d2;
+//     struct node *d3 = &d1;
+//     struct node *d4 = &d2;
 
-    dar[1].a = 13;
-    dar[0].a = 13;
+//     // struct node dar[2] = {d1,d2};
+
+//     d1.a = 10, d1.b = 20, d1.c = 30;
+//     printf("%d\n", d1.a);
+//     printf("%d\n", d1.b);
+//     printf("%d\n", d1.c);
+//     // d2 = d1;
     
+//     // d2 = *d3;
+//     // printf("%d\n", d2.a);
+//     // printf("%d\n", d2.b);
+//     // printf("%d\n", d2.c);
+
+//     *d4 = d1;
+//     printf("%d\n", d2.a);
+//     printf("%d\n", d2.b);
+//     printf("%d\n", d2.c);
+
+//     *d4 = *d3;
+//     // printf("%d\n", (*d3).a);
+//     // printf("%d\n", (*d3).b);
+//     // printf("%d\n", (*d3).c);
+//     printf("%d\n", d2.a);
+//     printf("%d\n", d2.b);
+//     printf("%d\n", d2.c);
+// }
+
+// void f3(){
+//     struct node d1;
+//     struct node d2;
+//     // struct node *d3 = &d1;
+
+//     struct node dar[2];
+//     d1.a = 10;
+//     d1.b = 20;
+//     d1.c = 30;
+    
+//     dar[1] = d1;
+//     printf("%d\n",dar[1].a);
+//     printf("%d\n",dar[1].b);
+//     printf("%d\n",dar[1].c);
+//     dar[0] = dar[1];
+//     dar[0].a = 100;
+//     printf("%d\n",dar[0].a);
+//     printf("%d\n",dar[0].b);
+//     printf("%d\n",dar[0].c);
+
+// }
+
+// int main(){
+//     // int b,c,j;
+//     // printf("value of a\n");
+//     // scanf("%d",&d.a);
+//     // printf("value of b\n");
+//     // scanf("%d",&d.b);
+//     // j = d.a;
+//     // printf("value of a - %d b - %d",d.a,d.b);
+//     return 1;
+// }
 
 
-    int b,c,j;
-    printf("value of a\n");
-    scanf("%d",&d.a);
-    printf("value of b\n");
-    scanf("%d",&d.b);
-    j = d.a;
-    printf("value of a - %d b - %d",d.a,d.b);
-    return 1;
-  }
+
+
+struct Node
+{
+    int data;
+    struct Node *next;
+};
+
+int main()
+{
+    struct Node *head;
+    struct Node *current;
+    int i;
+    int cnt = 9;
+    for(i = 0; i < cnt; i++)
+    {
+        struct Node *newNode = (struct Node *)malloc(sizeof(struct Node));
+        newNode->data = i;
+        newNode->next = head;
+        head = newNode;
+    }
+    current = head;
+    for(i = 0; i < cnt; i++)
+    {
+        printf("%d ", current->data);
+        current = current->next;
+    }
+    printf("\n");
+    return 0;
+}
