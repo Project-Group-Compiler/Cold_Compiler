@@ -98,13 +98,15 @@ bin/compiler <input_file> [options]
 ```markdown
 Extra Options:
     -h, --help       Show this help message and exit
-    -O, --opt        Enable optimizations
     -l, --lex        Print lexical analysis table
     -a, --ast        Print abstract syntax tree as dot file
     -s, --symtab     Print symbol tables
     -d, --debug      Print debug trace
     -t, --tac        Print three address code
     -f, --force      Forcefully continue even if errors are present
+    -O1              Enable machine-independent optimizations
+    -O2              Enable machine-dependent optimizations
+    -O3              Enable all optimizations
 ```
 
 ## To create executable : 

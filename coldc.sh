@@ -42,7 +42,7 @@ if [ ! -f "$filename_noext.asm" ]; then
 fi
 
 # Step 2: Assemble with nasm and link with gcc in a pipeline
-nasm -f elf32 "$filename_noext.asm" -o "$filename_noext.o"
+nasm -g -f elf32 "$filename_noext.asm" -o "$filename_noext.o"
 
 if [ $? -ne 0 ]; then
     echo "Assembling failed. Exiting."

@@ -119,7 +119,7 @@ inline std::string postfixExpression(std::string type, int rule_num)
     case 2:
         return (type.size() >= 5 && type.substr(0, 5) == "FUNC_") ? type.substr(5, type.length() - 5) : "";
     case 3:
-        return checkInt(type) ? type : "";
+        return (checkInt(type) || isFloat(type)) ? type : "";
     default:
         return "";
     }

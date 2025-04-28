@@ -8,7 +8,7 @@ extern FILE *yyin;
 bool print_ast = false;
 bool print_symtab = false;
 bool debug_enabled = false;
-bool print_comments = false;
+bool print_comments = true;
 std::string inputFilename;
 std::string outputDir = std::filesystem::current_path().string() + "/";
 std::string astDir = std::filesystem::current_path().string() + "/";
@@ -38,14 +38,16 @@ int main(int argc, char *argv[])
             std::cout << "Usage: <compiler> <input_file> [options]\n"
                       << "Options:\n"
                       << "  -h, --help       Show this help message and exit\n"
-                      << "  -O0              Generate unoptimized IR\n"
                       << "  -l, --lex        Print lexical analysis table\n"
                       << "  -a, --ast        Print abstract syntax tree\n"
                       << "  -s, --symtab     Print symbol tables\n"
                       << "  -d, --debug      Print debug trace\n"
                       << "  -t, --tac        Print three address code\n"
-                      << "  -c, --comments   Print comments in the generated asm\n"
-                      << "  -f, --force      Forcefully continue even if errors are present\n";
+                      << "  -f, --force      Forcefully continue even if errors are present\n"
+                      << "  -O1              Enable machine-independent optimizations\n"
+                      << "  -O2              Enable machine-dependent optimizations\n"
+                      << "  -O3              Enable all optimizations\n";
+
             return 42;
         }
     }

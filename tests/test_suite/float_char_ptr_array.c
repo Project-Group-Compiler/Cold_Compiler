@@ -37,8 +37,8 @@ void f2(){
 
 
 int main() {
-    // f();
+    f();
     // f2();
-    f4();
+    // f4();
     return 0;
 }

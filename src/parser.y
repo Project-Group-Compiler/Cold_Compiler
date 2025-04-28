@@ -182,7 +182,7 @@ postfix_expression
 			if($$->type == "int" || $$->type == "char" || ($1->type == "char**" && isDim == 0) || $$->type == "float"  || ($$->type.substr(0,7) == "STRUCT_" && $$->type.back() != '*') || ($$->type.substr(0,6) == "CLASS_" && $$->type.back() != '*')){
 				operand q = getTempVariable($$->type + "*");
 				emit("=", $1->place,{}, q, -1); 
-				operand q2 = getTempVariable($$->type);
+				operand q2 = getTempVariable("int");
 				emit("*", $3->place, {std::to_string(q2.entry->size)}, q2, -1); 
 				operand q3 = getTempVariable($$->type + "*");
 				emit("ptr+", q, q2, q3, -1);
@@ -1169,15 +1169,32 @@ postfix_expression
 			debug(temp);
 
 			if(!temp.empty()){
-				$$->type = temp;
-				$$->intVal = $1->intVal + 1;
-				debug($$->type, $$->intVal);
-				//3AC
-				operand q = getTempVariable($$->type);
-				$$->place = q;
-				$$->nextlist.clear();
-				emit("=", $1->place, {}, q, -1);
-				emit("+", $1->place, {"1"}, $1->place, -1);
+				if(checkInt(temp)){
+					$$->type = temp;
+					$$->intVal = $1->intVal + 1;
+					debug($$->type, $$->intVal);
+					//3AC
+					operand q = getTempVariable($$->type);
+					$$->place = q;
+					$$->nextlist.clear();
+					emit("=", $1->place, {}, q, -1);
+					emit("+", $1->place, {"1"}, $1->place, -1);
+				}
+				else{
+					$$->type = temp;
+					$$->intVal = $1->intVal + 1;
+					debug($$->type, $$->intVal);
+					//3AC
+					operand q = getTempVariable($$->type);
+					$$->place = q;
+					$$->nextlist.clear();
+					emit("(f)=", $1->place, {}, q, -1);
+					sym_entry* newEntry = new sym_entry;
+					newEntry->type = "float";
+					// newEntry->Init = 1;
+					operand q2{"1.0",newEntry};
+					emit("(f)+", $1->place, q2, $1->place, -1);
+				}
 			}
 			else{
 				semantic_error("Increment not defined for this type", "type error");
@@ -1202,15 +1219,32 @@ postfix_expression
 			string temp = postfixExpression($1->type, 3);
 			debug(temp);
 			if(!temp.empty()){
-				$$->type = temp;
-				$$->intVal = $1->intVal - 1;
-				debug($$->type, $$->intVal);
-				//3AC
-				operand q = getTempVariable($$->type);
-				$$->place = q;
-				$$->nextlist.clear();
-				emit("=", $1->place, {}, q, -1);
-				emit("-", $1->place, {"1"}, $1->place, -1);
+				if(checkInt(temp)){
+					$$->type = temp;
+					$$->intVal = $1->intVal + 1;
+					debug($$->type, $$->intVal);
+					//3AC
+					operand q = getTempVariable($$->type);
+					$$->place = q;
+					$$->nextlist.clear();
+					emit("=", $1->place, {}, q, -1);
+					emit("-", $1->place, {"1"}, $1->place, -1);
+				}
+				else{
+					$$->type = temp;
+					$$->intVal = $1->intVal + 1;
+					debug($$->type, $$->intVal);
+					//3AC
+					operand q = getTempVariable($$->type);
+					$$->place = q;
+					$$->nextlist.clear();
+					emit("(f)=", $1->place, {}, q, -1);
+					sym_entry* newEntry = new sym_entry;
+					newEntry->type = "float";
+					// newEntry->Init = 1;
+					operand q2{"1.0",newEntry};
+					emit("(f)-", $1->place, q2, $1->place, -1);
+				}
 			}
 			else{
 				semantic_error("Decrement not defined for this type", "type error");
@@ -1265,14 +1299,32 @@ unary_expression
 		string temp = postfixExpression($2->type, 3);
 		debug(temp);
 		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $2->intVal + 1;
-			//3AC
-			operand q = getTempVariable($$->type);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit("+", $2->place, {"1"}, $2->place, -1);
-			emit("=", $2->place, {}, q, -1);
+			if(checkInt(temp)){
+				$$->type = temp;
+				$$->intVal = $2->intVal + 1;
+				//3AC
+				operand q = getTempVariable($$->type);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit("+", $2->place, {"1"}, $2->place, -1);
+				emit("=", $2->place, {}, q, -1);
+			}
+			else 
+			{
+				$$->type = temp;
+				$$->intVal = $2->intVal + 1;
+				//3AC
+				operand q = getTempVariable($$->type);
+				$$->place = q;
+				$$->nextlist.clear();
+				sym_entry* newEntry = new sym_entry;
+				newEntry->type = "float";
+				// newEntry->Init = 1;
+				operand q2{"1.0",newEntry};
+				emit("(f)+", $2->place, q2, $2->place, -1);
+				
+				emit("(f)=", $2->place, {}, q, -1);
+			}			
 		}
 		else{
 			semantic_error("Increment not defined for this type", "type error");
@@ -1288,17 +1340,32 @@ unary_expression
 		string temp = postfixExpression($2->type, 3);
 		debug(temp);
 		if(!temp.empty()){
-			$$->type = temp;
-			$$->intVal = $2->intVal - 1;
-			debug($$->type, $$->intVal);
-			//3AC
-			operand q = getTempVariable($$->type);
-			$$->place = q;
-			$$->nextlist.clear();
-			emit("-", $2->place, {"1"}, $2->place, -1);
-			emit("=", $2->place, {}, q, -1);
-		}
-		else{
+			if(checkInt(temp)){
+				$$->type = temp;
+				$$->intVal = $2->intVal + 1;
+				//3AC
+				operand q = getTempVariable($$->type);
+				$$->place = q;
+				$$->nextlist.clear();
+				emit("-", $2->place, {"1"}, $2->place, -1);
+				emit("=", $2->place, {}, q, -1);
+			}
+			else 
+			{
+				$$->type = temp;
+				$$->intVal = $2->intVal + 1;
+				//3AC
+				operand q = getTempVariable($$->type);
+				$$->place = q;
+				$$->nextlist.clear();
+				sym_entry* newEntry = new sym_entry;
+				newEntry->type = "float";
+				// newEntry->Init = 1;
+				operand q2{"1.0",newEntry};
+				emit("(f)-", $2->place, q2, $2->place, -1);
+				emit("(f)=", $2->place, {}, q, -1);
+			}			
+		}else{
 			semantic_error("Decrement not defined for this type", "type error");
 		}
 	}
