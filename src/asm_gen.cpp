@@ -50,8 +50,7 @@ std::set<operand> seenOperand;
 std::map<std::string, operand> mem_operand;
 
 /* Optimization Related */
-std::vector<std::vector<std::string>> blocks_asm;
-std::vector<std::string> curr_block_asm;
+std::vector<x86_instr> asm_instr;
 
 void updateSeenOperand(quad &instr)
 {
@@ -459,16 +458,12 @@ void emit_asm(const std::string &inputFile)
     compute_basic_blocks();
 
     print_tac_code(inputFile, true); // only for debugging
-    curr_block_asm.clear(); //opt
     add_extern_funcs();
     emit_section(".text");
     emit_data("global main");
-    blocks_asm.push_back(curr_block_asm);
-    curr_block_asm.clear(); //opt
 
     for (auto &block : basic_blocks)
     {
-        curr_block_asm.clear(); //opt
         next_use_analysis(block);
         if (print_comments)
             emit_comment("Block begins");
@@ -599,19 +594,12 @@ void emit_asm(const std::string &inputFile)
             spillAllReg();
 
         block_regs_spilled = false; // reset for next block
-        //opt
-        if(curr_block_asm.size()){
-            blocks_asm.push_back(curr_block_asm);
-            curr_block_asm.clear();
-        }
     }
 
     emit_section(".data");
     emit_data_section(); // add initialized data
     emit_section(".bss");
     emit_bss_section(); // add uninitialized data
-    blocks_asm.push_back(curr_block_asm);
-    curr_block_asm.clear(); //opt
 }
 
 void emit_copy_to_offset(quad &instr)
@@ -1723,6 +1711,7 @@ void emit_assign(quad &instr)
         _debug_(flag);
         if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*' && (!flag))
         {
+            //ptr = t0(&)
             _debug_("here");
             emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
         }

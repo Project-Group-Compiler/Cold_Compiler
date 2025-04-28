@@ -2,22 +2,20 @@
 #include <regex>
 #include <sstream>
 
-std::vector<std::vector<std::string>> opt_blocks_asm;
-std::vector<std::string> opt_curr_block_asm;
 
+std::vector<x86_instr> optim_asm_instr;
 
-//TODO: what about other section
-void print_block_wise_asm(std::vector<std::vector<std::string>>& blocks_asm){
-    for(auto &it:blocks_asm){
-        asm_file << "\t\t;NEW BLOCK" << std::endl;
-        for(auto &instr:it){
-            asm_file << instr << std::endl;
-        }
+void print_instr_asm(std::vector<x86_instr> &v){
+    for(x86_instr &instr : v){
+         if(instr.op == ""){
+             asm_file << instr.printing << "\n";
+         }else{
+            asm_file << "\t"<< instr.printing << "\n";
+         }
     }
 }
 
-
-void pattern_one_opt(std::vector<std::string> &opt){
+void pattern_one_opt(std::vector<x86_instr> &opt){
     if(opt.size() == 0) return;
     /*add rg 0 
     sub rg 0
@@ -25,14 +23,13 @@ void pattern_one_opt(std::vector<std::string> &opt){
     xor rg 0
     or rg 0 - remove this instr 
     */
-
     std::regex add_regex(R"(^add (eax|ebx|ecx|edx|esi|edi), 0$)");
     std::regex sub_regex(R"(^sub (eax|ebx|ecx|edx|esi|edi), 0$)");
     std::regex xor_regex(R"(^xor (eax|ebx|ecx|edx|esi|edi), 0$)");
     std::regex or_regex(R"(^or (eax|ebx|ecx|edx|esi|edi), 0$)");
     std::regex imul_regex(R"(^imul (eax), \1, 1$|^imul (ebx), \1, 1$|^imul (ecx), \1, 1$|^imul (edx), \1, 1$|^imul (esi), \1, 1$|^imul (edi), \1, 1$)");
 
-    std::string instr = opt.back();
+    std::string instr = opt.back().printing;
     if (std::regex_match(instr, add_regex)) {
         opt.pop_back();
     } else if (std::regex_match(instr, sub_regex)) {
@@ -46,13 +43,60 @@ void pattern_one_opt(std::vector<std::string> &opt){
     }
 }
 
-void pattern_two_opt(std::vector<std::string> &opt){
-    /*
-        eax -> al
-        ebx -> bl
-        ecx -> cl
-        edx -> dl
-    */
+void pattern_two_opt(std::vector<x86_instr> &opt){
+    if(opt.size() <= 1) return;
+    
+    x86_instr last_instr = opt.back();
+    if(last_instr.op != "mov")return;
+    
+    std::map<std::string,std::string> mp = {{"eax","al"}, {"ebx","bl"}, {"ecx","cl"}, {"edx","dl"}, {"esi", ""}, {"edi", ""},{"al","eax"}, {"bl","ebx"}, {"cl","ecx"}, {"dl","edx"},};
+    std::set<std::string> stops = {"idiv", "call", "jmp", "je", "jne", "jz", "jnz", "jg", "jge", "jl", "jle", "ja", "jae", "jb", "jbe"};
+    int sz = opt.size();
+    if(mp.find(last_instr.arg1) != mp.end()){ //dest is reg
+        std::string destReg = last_instr.arg1;
+        std::string subReg = mp[destReg];
+        int j = -1;
+        for(int i = sz-2;i>=0;i--){
+            if(opt[i].label != "" || stops.find(opt[i].op) != stops.end()){
+                return;
+            }
+            if(opt[i].op == "mov" && opt[i].arg1 == destReg){
+                j = i;
+                break;
+            }
+            if(opt[i].arg1 == destReg || opt[i].arg2 == destReg || opt[i].arg3 == destReg){
+                return;
+            }
+            if(opt[i].arg1 == subReg || opt[i].arg2 == subReg || opt[i].arg3 == subReg){
+                return;
+            }
+        }
+        if(j != -1){
+            opt.erase(opt.begin()+j);
+        }
+    }else if(last_instr.arg1.substr(0,4) == "[ebp"){
+        std::string destMem = last_instr.arg1;
+        int j = -1;
+        for(int i = sz-2;i>=0;i--){
+            if(opt[i].op == "movzx" || opt[i].label != "" || stops.find(opt[i].op) != stops.end()){
+                return;
+            }
+            if(opt[i].op == "mov" && opt[i].arg1 == destMem){
+                j = i;
+                break;
+            }
+            if(opt[i].arg1 == destMem || opt[i].arg2 == destMem || opt[i].arg3 == destMem){
+                return;
+            }
+        }
+        if(j != -1){
+            opt.erase(opt.begin()+j);
+        }
+    }else{
+        return;
+    }
+    // last instr se dekho
+    /* eax -> al ebx -> bl ecx -> cl edx -> dl */
     /*
         [ebp - x] <- eax/int
         eax <- [ebp - x]
@@ -61,31 +105,24 @@ void pattern_two_opt(std::vector<std::string> &opt){
 
     /*   
     mov ecx, [ebp-8]  dst mem/reg
-    ...no use of ecx
+    ...no use of ecx,dl..
     ... no jumps and call
     ...edx stored then check use of dl
-    
+
     mov ecx, eax
     */
+   /*   return "mov " + dest_reg + ", " + src_reg;
+        return "mov " + dest_reg + ", " + mem(src_addr);
+        return "mov " + dest_reg + ", " + imm;
+        return "mov " + mem(dest_addr) + ", " + src_reg;
+    */
+
 }
 
-void check_pattern_and_optimize(std::vector<std::string> &opt){
-    if(opt.size() == 0) return;
-    pattern_one_opt(opt);
-}
 
-void optimize_block_asm(std::vector<std::string> block_asm){
-    if(block_asm.size() == 0) return;
-
-    std::vector<std::string> opt;
-    int j = 0;
-    int i = 0;
-    while(i != block_asm.size()){
-        opt.push_back(block_asm[i]);
-        check_pattern_and_optimize(opt);
-        i++;
-    }
-    opt_curr_block_asm = opt;
+void optimize_last_asm(std::vector<x86_instr> &optim_asm_instr){
+    pattern_one_opt(optim_asm_instr);
+    pattern_two_opt(optim_asm_instr);
 }
 
 void optimize_asm(const std::string &inputFile)
@@ -96,16 +133,12 @@ void optimize_asm(const std::string &inputFile)
     // std::cout << "---------Original ASM-------------" << std::endl;
     // print_block_wise_asm(blocks_asm);
     
-    for(auto it:blocks_asm){
-        opt_curr_block_asm.clear();
-        optimize_block_asm(it);
-        if(opt_curr_block_asm.size()){
-            opt_blocks_asm.push_back(opt_curr_block_asm);
-        }
+    for(auto it:asm_instr){
+        optim_asm_instr.push_back(it);
+        optimize_last_asm(optim_asm_instr);
     }
-    
     // std::cout << "---------Optimized ASM-------------" << std::endl;
-    print_block_wise_asm(opt_blocks_asm);
+    print_instr_asm(optim_asm_instr);
     asm_file.close();
 }
 
