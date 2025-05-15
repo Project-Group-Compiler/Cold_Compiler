@@ -110,7 +110,7 @@ void separate_functions()
             if (in_function && !current_function.blocks.empty())
                 function_cfgs.push_back(std::move(current_function));
 
-            std::vector<quad> entry_point = std::vector<quad>(1,quad(-1, "ENTRY", {}, {}, {}, -1));
+            std::vector<quad> entry_point = std::vector<quad>(1, quad(-1, "ENTRY", {}, {}, {}, -1));
             current_function = FunctionCFG();
             current_function.name = block[0].op.substr(0, block[0].op.length() - 7);
             current_function.blocks.push_back(entry_point);
@@ -149,8 +149,9 @@ void separate_functions()
         }
     }
 
-    if (in_function && !current_function.blocks.empty()){
-        std::vector<quad> exit = std::vector<quad>(1,quad(-1, "EXIT", {}, {}, {}, -1));
+    if (in_function && !current_function.blocks.empty())
+    {
+        std::vector<quad> exit = std::vector<quad>(1, quad(-1, "EXIT", {}, {}, {}, -1));
         current_function.blocks.push_back(exit);
         function_cfgs.push_back(std::move(current_function));
     }
@@ -203,7 +204,7 @@ void build_function_cfg(FunctionCFG &func)
             if (func.blocks.back().empty())
                 continue;
             std::string back_op = func.blocks.back().back().op;
-            if (back_op=="EXIT")
+            if (back_op == "EXIT")
             {
                 func.adj[i].push_back(func.blocks.size() - 1);
                 func.rev_adj[func.blocks.size() - 1].push_back(i);
@@ -225,7 +226,7 @@ void reconstruct_basic_blocks()
     basic_blocks.clear();
     for (const auto &func : function_cfgs)
         for (const auto &block : func.blocks)
-            if(block.size() > 0 && block[0].op!="ENTRY" && block[0].op!="EXIT") 
+            if (block.size() > 0 && block[0].op != "ENTRY" && block[0].op != "EXIT")
                 basic_blocks.push_back(block);
 }
 
@@ -571,7 +572,6 @@ void dead_code_elimination()
     blocks_to_code();
     compute_basic_blocks();
     build_cfg();
-
 }
 
 std::map<int, std::set<std::pair<operand, std::string>>> instr_annotation;
@@ -650,7 +650,7 @@ std::set<std::pair<operand, std::string>> meet(const FunctionCFG &graph, const i
     auto block_predecessors = graph.rev_adj[block_id];
     for (auto it : block_predecessors)
     {
-        if(it == 0)
+        if (it == 0)
             return std::set<std::pair<operand, std::string>>();
         auto pred_out_copies = block_annotation[it];
         std::set<std::pair<operand, std::string>> intersection;
@@ -687,7 +687,7 @@ int find_reaching_copies(const FunctionCFG &graph)
     }
 
     std::deque<std::pair<std::vector<quad>, int>> worklist;
-    for (auto blockId = 1; blockId < graph.blocks.size()-1; blockId++)
+    for (auto blockId = 1; blockId < graph.blocks.size() - 1; blockId++)
     {
         worklist.push_back(make_pair(graph.blocks[blockId], blockId));
         block_annotation[blockId] = all_copies;
@@ -707,7 +707,7 @@ int find_reaching_copies(const FunctionCFG &graph)
         {
             for (auto it : graph.adj[blockId])
             {
-                if(it == graph.blocks.size()-1)
+                if (it == graph.blocks.size() - 1)
                     continue;
                 bool isPresent = false;
                 auto successor = graph.blocks[it];
@@ -783,30 +783,42 @@ void rewrite_instr(quad &instr)
     }
 }
 
-void strength_reduction(){
-    for(auto &instr:tac_code){
-        if(instr.op == "*"){
-            if(is_int_constant(instr.arg2.value)){
+void strength_reduction()
+{
+    for (auto &instr : tac_code)
+    {
+        if (instr.op == "*")
+        {
+            if (is_int_constant(instr.arg2.value))
+            {
                 int val = std::stoi(instr.arg2.value);
                 int lg = log2(val);
-                if((1<<lg) == val){
+                if ((1 << lg) == val)
+                {
                     instr.op = "<<";
-                    instr.arg2 = {std::to_string(lg)};
-                }
-            }else if(is_int_constant(instr.arg1.value)){
-                int val = std::stoi(instr.arg1.value);
-                int lg = log2(val);
-                if((1<<lg) == val){
-                    instr.op = "<<";
-                    std::swap(instr.arg1,instr.arg2);
                     instr.arg2 = {std::to_string(lg)};
                 }
             }
-        }else if(instr.op == "/"){
-            if(is_int_constant(instr.arg2.value)){
+            else if (is_int_constant(instr.arg1.value))
+            {
+                int val = std::stoi(instr.arg1.value);
+                int lg = log2(val);
+                if ((1 << lg) == val)
+                {
+                    instr.op = "<<";
+                    std::swap(instr.arg1, instr.arg2);
+                    instr.arg2 = {std::to_string(lg)};
+                }
+            }
+        }
+        else if (instr.op == "/")
+        {
+            if (is_int_constant(instr.arg2.value))
+            {
                 int val = std::stoi(instr.arg2.value);
                 int lg = log2(val);
-                if((1<<lg) == val){
+                if ((1 << lg) == val)
+                {
                     instr.op = ">>";
                     instr.arg2 = {std::to_string(lg)};
                 }

@@ -67,110 +67,13 @@ operand getTempVariable(std::string type)
     operand q = {tempName, lookup(tempName)};
     return q;
 }
-operand getTempVariableForArray(std::string type, std::vector<int>&array_dims)
+operand getTempVariableForArray(std::string type, std::vector<int> &array_dims)
 {
     std::string tempName = "_t_" + std::to_string(counter++);
-    insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL, "", 0, 0, 0, 0, array_dims); 
+    insertSymbol(*curr_table, tempName, type, getSize(type), 0, NULL, "", 0, 0, 0, 0, array_dims);
     operand q = {tempName, lookup(tempName)};
     return q;
 }
-
-// Emit for assignment expressions
-// int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, int isLocalStaticInit)
-// {
-//     // std::cerr << "assign_exp: " << op << "#" << type << "#" << type1 << "#" << type2 << "#" << arg1.value << "#" << arg2.value << std::endl;
-//     if (isLocalStaticInit > 0)
-//         arg1.value += "_" + std::to_string(isLocalStaticInit);
-//     std::string temp_op = "";
-//     std::string str = op;
-//     operand q;
-
-//     str.pop_back();
-//     /*
-//     if(($1->type).back() == '*' && (($3->type == "int") || ($3->type == "Integer Constant"))){  //int** + ...
-//                 operand q2 = getTempVariable($3->type);
-//                 emit("*", $3->place, {std::to_string(getSize($1->type.substr(0, $1->type.size()-1)))}, q2, -1);
-//                 emit("ptr-", $1->place, q2, q, -1);
-//             }else{
-//     */
-//     if (op != "=")
-//     {
-//         temp_op = str;
-//         if (op == "+=" || op == "-=" || op == "*=" || op == "/=" || op == "%=")
-//         {
-//             if ((op == "+=" || op == "-=") && (type1.back() == '*' && (type2 == "int" || type2 == "Integer Constant")))
-//             {
-//                 operand q1 = getTempVariable(type2);
-//                 emit("*", arg2, {std::to_string(getSize(type1.substr(0, type1.size() - 1)))}, q1, -1);
-//                 q = getTempVariable(type);
-//                 emit("ptr" + temp_op, arg1, q1, q, -1);
-//             }
-//             else
-//             {
-//                 if (isFloat(type1) && checkInt(type2))
-//                 {
-//                     operand q1 = getTempVariable(type1);
-//                     emit("intToFloat", arg2, {}, q1, -1);
-//                     q = getTempVariable(type);
-//                     emit("(f)" + temp_op, arg1, q1, q, -1);
-//                 }
-//                 else if (checkInt(type1) && isFloat(type2))
-//                 {
-//                     operand q1 = getTempVariable(type1);
-//                     emit("floatToInt", arg2, {}, q1, -1);
-//                     q = getTempVariable(type);
-//                     emit(temp_op, arg1, q1, q, -1);
-//                 }
-//                 else if (isFloat(type1) && isFloat(type2))
-//                 {
-//                     q = getTempVariable(type);
-//                     emit("(f)" + temp_op, arg1, arg2, q, -1);
-//                 }
-//                 else
-//                 {
-//                     q = getTempVariable(type);
-//                     emit(temp_op, arg1, arg2, q, -1);
-//                 }
-//             }
-//         }
-//         else
-//         {
-//             q = getTempVariable(type);
-//             emit(temp_op, arg1, arg2, q, -1);
-//         }
-//     }
-//     else
-//     {
-//         if (isFloat(type1) && checkInt(type2))
-//         {
-//             q = getTempVariable(type1);
-//             emit("intToFloat", arg2, operand(), q, -1);
-//         }
-//         else if (checkInt(type1) && isFloat(type2))
-//         {
-//             q = getTempVariable(type1);
-//             emit("floatToInt", arg2, operand(), q, -1);
-//         }
-//         else
-//             q = arg2;
-//     }
-//     int x;
-//     if (isFloat(type))
-//     {
-//         if (isLocalStaticInit > 0)
-//             staticAddLater.push_back(quad(staticAddLater.size(), "(f)=", q, operand(), arg1, -1));
-//         else
-//             x = emit("(f)=", q, operand(), arg1, -1);
-//     }
-//     else
-//     {
-//         if (isLocalStaticInit > 0)
-//             staticAddLater.push_back(quad(staticAddLater.size(), "=", q, operand(), arg1, -1));
-//         else
-//             x = emit("=", q, operand(), arg1, -1);
-//     }
-//     return x;
-// }
 
 int assign_exp(std::string op, std::string type, std::string type1, std::string type2, operand arg1, operand arg2, int isLocalStaticInit)
 {

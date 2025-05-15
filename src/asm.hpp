@@ -6,15 +6,16 @@
 #include <vector>
 #include "tac.hpp"
 
-class x86_instr{
-    public:
+class x86_instr
+{
+public:
     std::string op;
-    std::string size;//dword, byte, qword etc
+    std::string size; // dword, byte, qword etc
     std::string arg1;
     std::string arg2;
     std::string arg3;
     std::string comment;
-    std::string label;//jump label
+    std::string label; // jump label
     std::string printing;
 };
 
@@ -26,7 +27,7 @@ extern bool optimize_asm;
 
 inline void emit_instr(const std::string &instr)
 {
-    if(!optimize_asm)
+    if (!optimize_asm)
         asm_file << "\t" << instr << std::endl;
 }
 
@@ -36,7 +37,7 @@ inline void emit_label(const std::string &label)
     instr.label = label;
     instr.printing = label + " :";
     asm_instr.push_back(instr);
-    if(!optimize_asm)
+    if (!optimize_asm)
         asm_file << label << " :\n";
 }
 
@@ -46,7 +47,7 @@ inline void emit_data(const std::string &data)
     instr.comment = data;
     instr.printing = "\t" + data;
     asm_instr.push_back(instr);
-    if(!optimize_asm)
+    if (!optimize_asm)
         asm_file << "\t" << data << "\n";
 }
 
@@ -56,7 +57,7 @@ inline void emit_section(const std::string &section)
     instr.comment = section;
     instr.printing = "\nsection " + section;
     asm_instr.push_back(instr);
-    if(!optimize_asm)
+    if (!optimize_asm)
         asm_file << "\nsection " << section << "\n";
 }
 
@@ -66,30 +67,32 @@ inline void emit_comment(const std::string &comment)
     instr.comment = comment;
     instr.printing = "\t\t\t; " + comment;
     asm_instr.push_back(instr);
-    if(!optimize_asm)
+    if (!optimize_asm)
         asm_file << "\t\t\t; " << comment << "\n";
 }
 
 inline void add_extern_funcs()
 {
-    for (auto &func : called_lib_funcs){
+    for (auto &func : called_lib_funcs)
+    {
         x86_instr instr;
         instr.comment = "extern " + func;
         instr.printing = "extern " + func;
         asm_instr.push_back(instr);
-        if(!optimize_asm)
+        if (!optimize_asm)
             asm_file << "extern " << func << "\n";
     }
-        
 }
 
 template <typename T>
-inline void __print__(const T &x){
+inline void __print__(const T &x)
+{
     std::cerr << x;
 }
 
 template <typename T, typename... Args>
-inline void __print__(const T &x, const Args &...rest){
+inline void __print__(const T &x, const Args &...rest)
+{
     std::cerr << x << ", ";
     __print__(rest...);
 }
@@ -155,7 +158,7 @@ void fixgotoLabels();
 void emit_data_section();
 void emit_bss_section();
 
-//Optimization functions
+// Optimization functions
 void opt_asm(const std::string &inputFile);
 
 #endif

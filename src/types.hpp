@@ -68,18 +68,30 @@ inline char giveChar(std::string temp)
         char esc = temp[2];
         switch (esc)
         {
-        case 'n': return '\n';
-        case 't': return '\t';
-        case 'r': return '\r';
-        case '0': return '\0';
-        case '\\': return '\\';
-        case '\'': return '\'';
-        case '\"': return '\"';
-        case 'a': return '\a';
-        case 'b': return '\b';
-        case 'f': return '\f';
-        case 'v': return '\v';
-        default: return '\0'; // Invalid escape sequence
+        case 'n':
+            return '\n';
+        case 't':
+            return '\t';
+        case 'r':
+            return '\r';
+        case '0':
+            return '\0';
+        case '\\':
+            return '\\';
+        case '\'':
+            return '\'';
+        case '\"':
+            return '\"';
+        case 'a':
+            return '\a';
+        case 'b':
+            return '\b';
+        case 'f':
+            return '\f';
+        case 'v':
+            return '\v';
+        default:
+            return '\0'; // Invalid escape sequence
         }
     }
     else if (temp.size() >= 5 && temp.size() <= 8 && temp[0] == '\'' && temp.back() == '\'' && temp[1] == '\\' && temp[2] == 'x')
@@ -153,7 +165,7 @@ inline void setVar(std::string a, std::string b)
 inline std::string checkType(std::string a, std::string b)
 {
     setVar(a, b);
-    
+
     if (a.empty() || b.empty())
         return "";
 
@@ -201,13 +213,13 @@ inline std::string checkExplicitType(std::string a, std::string b)
 
     if (isAChar && isBInt)
         return "ok";
-    
+
     if (isAInt && isBFloat)
         return "ok";
 
     if (isBInt && isAFloat)
         return "ok";
-    
+
     if (isAChar && isBFloat)
         return "ok";
 
@@ -322,7 +334,7 @@ inline std::string relExp(std::string a, std::string b)
         else
             return "char";
     }
-    
+
     // if ((isAInt || isAFloat || isAChar) && (isBInt || isBFloat || isBChar))
     //     return "ok";
     return "";

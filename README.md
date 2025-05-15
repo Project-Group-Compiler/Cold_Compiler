@@ -33,7 +33,6 @@ Also pointers and arrays work for all data types including char and float as wel
 - command line input
 - public, private and protected keywords
 - typedef
-- reference
 - enum, union
 - file manipulation
 - until loop

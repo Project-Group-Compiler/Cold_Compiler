@@ -3034,6 +3034,7 @@ declaration
     : declaration_specifiers ';' { 
         DBG("declaration -> declaration_specifiers ';'");
           $$ = $1; 
+		  type = "";
       }
     | declaration_specifiers init_declarator_list ';' {
         DBG("declaration -> declaration_specifiers init_declarator_list ';'");

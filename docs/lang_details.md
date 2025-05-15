@@ -67,7 +67,7 @@
 
     `scanf`, `printf`, `malloc`, `calloc`, `free`, `fopen`, `fputs`, `fgets`, `fclose`, `fprintf`, `fscanf`, `fgetc`, `fputc`, `fread`, `fwrite`, `fseek`, `ftell`, `rewind`, `strlen`, `strcmp`, `strncmp`, `strcpy`, `strcat`, `memcpy`, `memset`, `atoi`, `atof`, `fabs`, `sin`, `cos`, `tan`, `exp`, `log`, `log10`, `pow`, `sqrt`, `ceil`, `floor`, `round`, `fmod`, `fmax`, `fmin`, `va_start`, `va_arg`, `va_end`
 
-- typedef works only for unqualified types (that is, works for int but not const int). Also typedef for struct is supported but keyword 'struct' needs to be written with the type alias as well. Example in tests/asm_gen/typedef.cold
+- typedef works only for unqualified types (that is, works for int but not int* or const int). Also typedef for struct is supported but keyword 'struct' needs to be written with the type alias as well. Example in tests/asm_gen/typedef.cold
 - Compound initialization of arrays is supported. For example, `int a[3] = {1, 2, 3};`.
 - Global variables (and arrays) can be initialized only using constant values. For example, `int a = 5;` is OK but `int a = b + c;` is not OK.
 - No type casting is allowed when passing arguments to functions. Function arguments must match exactly with the parameter types. That is, for `int` parameter only int variable or int constant is allowed. Similarly for float and char.

@@ -198,9 +198,9 @@ void spillAllReg()
         spillReg(reg);
     }
 }
-    // This function selects the best register to use when no free registers are available.
-    // It prioritizes registers that hold dead variables or variables that are also in memory.
-    // If all registers hold live variables, it spills the register with the fewest live variables.
+// This function selects the best register to use when no free registers are available.
+// It prioritizes registers that hold dead variables or variables that are also in memory.
+// If all registers hold live variables, it spills the register with the fewest live variables.
 int getBestReg(std::vector<int> resReg)
 {
     std::vector<int> isResReg(uRegCnt);
@@ -242,9 +242,9 @@ int getBestReg(std::vector<int> resReg)
     spillReg(bestReg);
     return bestReg;
 }
-    // This function retrieves a register for the given operand.
-    // It checks if the operand is already in a register, and if not, allocates one.
-    // It considers whether the register will be modified and avoids certain registers if specified.
+// This function retrieves a register for the given operand.
+// It checks if the operand is already in a register, and if not, allocates one.
+// It considers whether the register will be modified and avoids certain registers if specified.
 // Check reference
 // Warning : make sure that addrDesc and regDesc contain unique entry
 int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
@@ -349,8 +349,8 @@ int getReg(operand &op, bool willYouModify, std::vector<int> resReg)
     return bestReg;
 }
 // This function assigns a specific register to a given operand.
-    // It spills the register's current content and loads the operand's value into it.
-    // It handles constants, string literals, and memory locations.
+// It spills the register's current content and loads the operand's value into it.
+// It handles constants, string literals, and memory locations.
 void setParticularReg(int reg, operand &op)
 {
     if (is_int_constant(op.value))
@@ -448,9 +448,9 @@ void updateRegDesc(int reg, operand &op)
         op.entry->addrDesc.inHeap = 0;
     }
 }
-    // This function is the main entry point for assembly code generation.
-    // It takes the input file name, generates assembly code, and writes it to a file.
-    // It orchestrates various steps like basic block computation, next-use analysis, and instruction emission.
+// This function is the main entry point for assembly code generation.
+// It takes the input file name, generates assembly code, and writes it to a file.
+// It orchestrates various steps like basic block computation, next-use analysis, and instruction emission.
 void emit_asm(const std::string &inputFile)
 {
     asm_file = std::ofstream(outputDir + inputFile + ".asm");
@@ -609,8 +609,8 @@ void emit_asm(const std::string &inputFile)
     emit_bss_section(); // add uninitialized data
 }
 // This function handles the "CopyToOffset" operation, typically used for array assignments.
-    // It copies a value to a specific offset within an array.
-    // It spills all registers to ensure safety and uses appropriate addressing modes.
+// It copies a value to a specific offset within an array.
+// It spills all registers to ensure safety and uses appropriate addressing modes.
 void emit_copy_to_offset(quad &instr)
 {
     if (!inside_fn)
@@ -619,9 +619,10 @@ void emit_copy_to_offset(quad &instr)
         return;
     // char* ch[5] = {}
     spillAllReg();
-    if(instr.result.entry && instr.result.entry->type.substr(0,4) == "char"){
+    if (instr.result.entry && instr.result.entry->type.substr(0, 4) == "char")
+    {
         // int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
-        setParticularReg(EDX,instr.arg1);
+        setParticularReg(EDX, instr.arg1);
         if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
         {
             emit_instr(x86_lib::movzx_reg_mem(reg_names[EDX], "byte", reg_names[EDX]));
@@ -631,17 +632,21 @@ void emit_copy_to_offset(quad &instr)
         std::string mem = getMem(instr.result); // arr
         emit_instr(x86_lib::lea(reg_names[reg3], mem));
         emit_instr(x86_lib::mov_mem_reg(reg_names[reg3] + "+" + reg_names[reg2], "dl"));
-    }else if(instr.result.entry && instr.result.entry->type.substr(0,5) == "float" && instr.arg1.value.substr(0,4) == "__f_"){
-        int reg2 = getReg(instr.arg2, 1,{}); //->reg2 -> offset
+    }
+    else if (instr.result.entry && instr.result.entry->type.substr(0, 5) == "float" && instr.arg1.value.substr(0, 4) == "__f_")
+    {
+        int reg2 = getReg(instr.arg2, 1, {}); //->reg2 -> offset
         int reg3 = getReg(instr.result, 1, {reg2});
         std::string mem = getMem(instr.result); // arr
         emit_instr(x86_lib::lea(reg_names[reg3], mem));
         // emit_instr(x86_lib::add(reg_names[reg3], reg_names[reg2]));
-        //move arg1 in address of reg3
-        int reg1 = getReg(instr.arg2,1,{reg2,reg3});
-        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1],instr.arg1.value));
+        // move arg1 in address of reg3
+        int reg1 = getReg(instr.arg2, 1, {reg2, reg3});
+        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], instr.arg1.value));
         emit_instr(x86_lib::mov_mem_reg(reg_names[reg3] + "+" + reg_names[reg2], reg_names[reg1]));
-    }else{
+    }
+    else
+    {
         int reg1 = getReg(instr.arg1, 1, {}); // reg1 -> value
         if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
         {
@@ -718,13 +723,14 @@ void emit_logical_ptr_sub(quad &instr)
     }
     updateRegDesc(reg1, instr.result);
 }
-    // This function handles the unary star operator (*), used for dereferencing pointers.
-    // It generates assembly code to load the value pointed to by the operand.
-    // It spills all registers to ensure safety and uses appropriate addressing modes.
+// This function handles the unary star operator (*), used for dereferencing pointers.
+// It generates assembly code to load the value pointed to by the operand.
+// It spills all registers to ensure safety and uses appropriate addressing modes.
 void emit_unary_star(quad &instr)
 {
     // _debug_(stringify(instr));
-    if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    {
         // if(instr.result.entry->type.end()[-2] != '*'){
         spillAllReg();
         // if (instr.arg1.entry && instr.arg1.entry->isArray){
@@ -733,11 +739,12 @@ void emit_unary_star(quad &instr)
         //     emit_instr(x86_lib::lea(reg_names[reg1], mem));
         //     updateRegDesc(reg1, instr.result);
         // }else{
-            int reg1 = getReg(instr.arg1, 1, {});
-            emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
-            updateRegDesc(reg1, instr.result);
+        int reg1 = getReg(instr.arg1, 1, {});
+        emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
+        updateRegDesc(reg1, instr.result);
         // }
-    }else if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
+    }
+    else if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         // to = * ptr => to is a reference
         // to = *arr
@@ -764,12 +771,13 @@ void emit_unary_star(quad &instr)
             int reg1 = getReg(instr.result, 1, {});
             emit_instr(x86_lib::lea(reg_names[reg1], mem));
             updateRegDesc(reg1, instr.result);
-        }else{
+        }
+        else
+        {
             int reg1 = getReg(instr.arg1, 1, {});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg1]));
             updateRegDesc(reg1, instr.result);
         }
-
     }
 }
 
@@ -791,9 +799,9 @@ void emit_unary_and(quad &instr)
         updateRegDesc(reg1, instr.result);
     }
 }
-    // This function emits the assembly code for the definition of a function.
-    // It sets up the function label, stack frame, and saves callee-saved registers.
-    // It also handles the special case for the main function.
+// This function emits the assembly code for the definition of a function.
+// It sets up the function label, stack frame, and saves callee-saved registers.
+// It also handles the special case for the main function.
 void emit_fn_defn(quad &instr)
 {
     if (instr.op.substr(5, 5) == "4main")
@@ -841,9 +849,9 @@ void emit_fn_defn(quad &instr)
 
     fn_epilogue_emitted = false;
 }
-    // This function handles the "param" operation, used for passing parameters to functions.
-    // It pushes the parameter onto the stack, handling different data types and addressing modes.
-    // It also updates the parameter size for proper stack management during function calls.
+// This function handles the "param" operation, used for passing parameters to functions.
+// It pushes the parameter onto the stack, handling different data types and addressing modes.
+// It also updates the parameter size for proper stack management during function calls.
 void emit_param(quad &instr)
 {
     if (!fn_prologue_emitted)
@@ -862,14 +870,16 @@ void emit_param(quad &instr)
         params_size += 4;
         return;
     }
-    
-    if (instr.arg1.value.substr(0, 6) == "__str_"){
+
+    if (instr.arg1.value.substr(0, 6) == "__str_")
+    {
         emit_instr(x86_lib::push(instr.arg1.value));
         params_size += 4;
         return;
     }
 
-    if(instr.arg1.entry && instr.arg1.entry->isArray){
+    if (instr.arg1.entry && instr.arg1.entry->isArray)
+    {
         std::string mem = getMem(instr.arg1);
         int reg1 = getReg(instr.arg1, 1, {});
         emit_instr(x86_lib::lea(reg_names[reg1], mem));
@@ -879,7 +889,7 @@ void emit_param(quad &instr)
     }
 
     if (instr.arg1.entry)
-    {   
+    {
         if (instr.arg1.entry->isGlobal || instr.arg1.entry->isStatic > 0 || instr.arg1.value.substr(0, 4) == "__f_") // TODO;handle & wala case
         {
             if ((instr.arg1.entry->type == "float" || instr.arg1.entry->type == "float&") && instr.arg2.value == "lea")
@@ -891,7 +901,8 @@ void emit_param(quad &instr)
             {
                 setParticularReg(EBX, instr.arg1);
                 // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", instr.arg1.value));
-                if(instr.arg1.entry->type == "char&"){
+                if (instr.arg1.entry->type == "char&")
+                {
                     emit_instr(x86_lib::mov_reg_mem(reg_names[EBX], reg_names[EBX]));
                 }
                 emit_instr(x86_lib::push(reg_names[EBX]));
@@ -912,7 +923,8 @@ void emit_param(quad &instr)
             {
                 setParticularReg(EBX, instr.arg1);
                 // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", instr.arg1.value));
-                if(instr.arg1.entry->type == "char&"){
+                if (instr.arg1.entry->type == "char&")
+                {
                     emit_instr(x86_lib::mov_reg_mem(reg_names[EBX], reg_names[EBX]));
                 }
                 emit_instr(x86_lib::push(reg_names[EBX]));
@@ -952,7 +964,8 @@ void emit_param(quad &instr)
                     setParticularReg(EBX, instr.arg1);
                     // std::cout << instr.arg1.entry->type << " charrrrrrrrrrrrrrrrrrr mem    " << instr.arg1.value << std::endl;
                     // emit_instr(x86_lib::movzx_reg_mem(reg_names[EBX], "byte", instr.arg1.value));
-                    if(instr.arg1.entry->type == "char&"){
+                    if (instr.arg1.entry->type == "char&")
+                    {
                         emit_instr(x86_lib::mov_reg_mem(reg_names[EBX], reg_names[EBX]));
                     }
                     emit_instr(x86_lib::push(reg_names[EBX]));
@@ -990,9 +1003,9 @@ void emit_fparam(operand op)
     emit_fload(op);
     emit_instr(x86_lib::fstp_mem("qword", reg_names[ESP]));
 }
-    // This function handles the "CALL" operation, used for function calls.
-    // It pushes necessary registers, emits the call instruction, and adjusts the stack.
-    // It also handles retrieving the return value and resetting the function prologue flag.
+// This function handles the "CALL" operation, used for function calls.
+// It pushes necessary registers, emits the call instruction, and adjusts the stack.
+// It also handles retrieving the return value and resetting the function prologue flag.
 void emit_fn_call(quad &instr)
 {
     if (!fn_prologue_emitted)
@@ -1043,9 +1056,9 @@ void emit_fn_epilogue()
     emit_instr(x86_lib::ret());
     fn_epilogue_emitted = true;
 }
-    // This function handles the "RETURN" operation, used for returning from a function.
-    // It moves the return value to EAX, emits the function epilogue, and resets the main_no_ret flag.
-    // It spills all registers to ensure safety.
+// This function handles the "RETURN" operation, used for returning from a function.
+// It moves the return value to EAX, emits the function epilogue, and resets the main_no_ret flag.
+// It spills all registers to ensure safety.
 void emit_return(quad &instr)
 {
     if (!block_regs_spilled)
@@ -1067,7 +1080,7 @@ void emit_return(quad &instr)
         {
             emit_fload(instr.arg1);
         }
-        else if(instr.arg1.value.size())
+        else if (instr.arg1.value.size())
         {
             spillAllReg();
             block_regs_spilled = true;
@@ -1137,9 +1150,9 @@ void emit_logical_and(quad &instr)
 
     updateRegDesc(reg1, instr.result);
 }
-    // This function handles the "||" operation, used for logical OR.
-    // It generates assembly code to perform the logical OR operation.
-    // It uses short-circuit evaluation by jumping to a label if the first operand is true.
+// This function handles the "||" operation, used for logical OR.
+// It generates assembly code to perform the logical OR operation.
+// It uses short-circuit evaluation by jumping to a label if the first operand is true.
 void emit_logical_or(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
@@ -1194,9 +1207,9 @@ void emit_logical_not(quad &instr)
 
     updateRegDesc(reg1, instr.result);
 }
-    // This function handles the comparison operations (==, !=, <, >, <=, >=).
-    // It generates assembly code to compare two operands and set the result based on the comparison.
-    // It uses jump instructions to conditionally set the result to 1 or 0.
+// This function handles the comparison operations (==, !=, <, >, <=, >=).
+// It generates assembly code to compare two operands and set the result based on the comparison.
+// It uses jump instructions to conditionally set the result to 1 or 0.
 void emit_cmp(quad &instr)
 {
     int reg1 = getReg(instr.arg1, 1, {});
@@ -1249,9 +1262,9 @@ void emit_cmp(quad &instr)
     emit_label(label2);
     updateRegDesc(reg1, instr.result);
 }
-    // This function handles floating-point comparison operations.
-    // It loads the operands, performs the comparison, and sets the result based on the condition.
-    // It uses floating-point specific instructions and jump labels.
+// This function handles floating-point comparison operations.
+// It loads the operands, performs the comparison, and sets the result based on the condition.
+// It uses floating-point specific instructions and jump labels.
 void emit_fcmp(quad &instr)
 {
     emit_fload(instr.arg2);
@@ -1289,7 +1302,6 @@ void emit_fcmp(quad &instr)
     {
         emit_instr(x86_lib::jae(label1));
     }
-
 
     emit_instr(x86_lib::mov_reg_imm(reg_names[reg], "0"));
     emit_instr(x86_lib::jmp(label2));
@@ -1529,9 +1541,9 @@ void emit_mod(quad &instr)
     emit_instr(x86_lib::idiv(reg_names[reg2]));
     updateRegDesc(EDX, instr.result);
 }
-    // This function handles the multiplication operation (*).
-    // It generates assembly code to perform the multiplication.
-    // It handles constants, global/static variables, and register operands.
+// This function handles the multiplication operation (*).
+// It generates assembly code to perform the multiplication.
+// It handles constants, global/static variables, and register operands.
 void emit_mul(quad &instr)
 {
     // x = y * z
@@ -1574,10 +1586,10 @@ void emit_fmul(quad &instr)
     emit_instr(x86_lib::fmulp());
     emit_fstore(instr.result);
 }
-//similar to emit_add
+// similar to emit_add
 void emit_sub(quad &instr)
 {
-    if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
+    if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {});
@@ -1596,7 +1608,7 @@ void emit_sub(quad &instr)
             reg2 = getReg(instr.arg2, 0, {reg1});
         }
         emit_instr(x86_lib::sub(reg_names[reg1], reg_names[reg2]));
-        int reg3 = getReg(instr.result,1,{reg1,reg2});
+        int reg3 = getReg(instr.result, 1, {reg1, reg2});
         emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
         return;
     }
@@ -1641,7 +1653,7 @@ void emit_fsub(quad &instr)
 
 void emit_add(quad &instr)
 {
-    if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
+    if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         spillAllReg();
         int reg1 = getReg(instr.arg1, 1, {});
@@ -1660,7 +1672,7 @@ void emit_add(quad &instr)
             reg2 = getReg(instr.arg2, 0, {reg1});
         }
         emit_instr(x86_lib::add(reg_names[reg1], reg_names[reg2]));
-        int reg3 = getReg(instr.result,1,{reg1,reg2});
+        int reg3 = getReg(instr.result, 1, {reg1, reg2});
         emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
         return;
     }
@@ -1703,78 +1715,90 @@ void emit_fadd(quad &instr)
     emit_instr(x86_lib::faddp());
     emit_fstore(instr.result);
 }
-    // This function handles the assignment operation (=).
-    // It generates assembly code to assign the value of one operand to another.
-    // It handles different data types, arrays, and references.
+// This function handles the assignment operation (=).
+// It generates assembly code to assign the value of one operand to another.
+// It handles different data types, arrays, and references.
 void emit_assign(quad &instr)
 {
     if (!inside_fn) // global
         return;
 
-    if(instr.result.entry && instr.result.entry->type.substr(0,7) == "STRUCT_" && instr.result.entry->type.back() != '*'){
+    if (instr.result.entry && instr.result.entry->type.substr(0, 7) == "STRUCT_" && instr.result.entry->type.back() != '*')
+    {
         // d1 = d2(&) -> d1 = *ptr
-        // d1(&) = d2 -> 
+        // d1(&) = d2 ->
         // d1 = d2
-        spillAllReg(); //Just for safety
-        if(instr.result.entry->type.back() != '&' && instr.arg1.entry->type.back()!= '&'){
+        spillAllReg(); // Just for safety
+        if (instr.result.entry->type.back() != '&' && instr.arg1.entry->type.back() != '&')
+        {
             int sz = instr.result.entry->size;
             std::string mem_arg1 = getMem(instr.arg1);
             std::string mem_result = getMem(instr.result);
             int reg1 = getBestReg({});
             int reg2 = getBestReg({reg1});
-            int reg3 = getBestReg({reg1,reg2});
+            int reg3 = getBestReg({reg1, reg2});
             emit_instr(x86_lib::lea(reg_names[reg2], mem_arg1));
             emit_instr(x86_lib::lea(reg_names[reg3], mem_result));
 
-            for(int i = 0;i<sz;i+=4){
+            for (int i = 0; i < sz; i += 4)
+            {
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg2]));
                 emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
 
-                emit_instr(x86_lib::add_reg_imm(reg_names[reg2],"4"));
-                emit_instr(x86_lib::add_reg_imm(reg_names[reg3],"4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg2], "4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg3], "4"));
             }
-        }else if(instr.result.entry->type.back() != '&' && instr.arg1.entry->type.back() == '&'){
+        }
+        else if (instr.result.entry->type.back() != '&' && instr.arg1.entry->type.back() == '&')
+        {
             int sz = instr.result.entry->size;
             std::string mem_arg1 = getMem(instr.arg1);
             std::string mem_result = getMem(instr.result);
             int reg1 = getBestReg({});
             int reg2 = getReg(instr.arg1, 1, {reg1});
-            int reg3 = getBestReg({reg1,reg2});
+            int reg3 = getBestReg({reg1, reg2});
             emit_instr(x86_lib::lea(reg_names[reg3], mem_result));
 
-            for(int i = 0;i<sz;i+=4){
+            for (int i = 0; i < sz; i += 4)
+            {
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg2]));
                 emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
 
-                emit_instr(x86_lib::add_reg_imm(reg_names[reg2],"4"));
-                emit_instr(x86_lib::add_reg_imm(reg_names[reg3],"4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg2], "4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg3], "4"));
             }
-        }else if(instr.result.entry->type.back() == '&' && instr.arg1.entry->type.back() != '&'){
+        }
+        else if (instr.result.entry->type.back() == '&' && instr.arg1.entry->type.back() != '&')
+        {
             int sz = instr.arg1.entry->size;
             std::string mem_arg1 = getMem(instr.arg1);
             int reg1 = getBestReg({});
             int reg2 = getBestReg({reg1});
-            int reg3 = getReg(instr.result, 1, {reg1,reg2});
+            int reg3 = getReg(instr.result, 1, {reg1, reg2});
             emit_instr(x86_lib::lea(reg_names[reg2], mem_arg1));
 
-            for(int i = 0;i<sz;i+=4){
+            for (int i = 0; i < sz; i += 4)
+            {
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg2]));
                 emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
 
-                emit_instr(x86_lib::add_reg_imm(reg_names[reg2],"4"));
-                emit_instr(x86_lib::add_reg_imm(reg_names[reg3],"4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg2], "4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg3], "4"));
             }
-        }else{
-            int sz = getSize(instr.result.entry->type.substr(0,(int)instr.result.entry->type.size()-1));
+        }
+        else
+        {
+            int sz = getSize(instr.result.entry->type.substr(0, (int)instr.result.entry->type.size() - 1));
             int reg1 = getBestReg({});
             int reg2 = getReg(instr.arg1, 1, {reg1});
-            int reg3 = getReg(instr.result, 1, {reg1,reg2});
-            for(int i = 0;i<sz;i+=4){
+            int reg3 = getReg(instr.result, 1, {reg1, reg2});
+            for (int i = 0; i < sz; i += 4)
+            {
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg1], reg_names[reg2]));
                 emit_instr(x86_lib::mov_mem_reg(reg_names[reg3], reg_names[reg1]));
 
-                emit_instr(x86_lib::add_reg_imm(reg_names[reg2],"4"));
-                emit_instr(x86_lib::add_reg_imm(reg_names[reg3],"4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg2], "4"));
+                emit_instr(x86_lib::add_reg_imm(reg_names[reg3], "4"));
             }
         }
         return;
@@ -1828,7 +1852,7 @@ void emit_assign(quad &instr)
         // _debug_(flag);
         if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '*' && (!flag))
         {
-            //ptr = t0(&)
+            // ptr = t0(&)
             emit_instr(x86_lib::mov(reg_names[reg2], reg_names[reg1]));
         }
         else
@@ -1886,7 +1910,7 @@ void emit_fload(operand &arg)
         emit_instr(x86_lib::fld_mem("dword", getMem(arg)));
     }
 
-    if(recoverReg != -1)
+    if (recoverReg != -1)
     {
         updateRegDesc(recoverReg, arg);
         recoverReg = -1;
@@ -1909,26 +1933,31 @@ void emit_fassign(quad &instr)
 {
     if (!inside_fn) // global, TODO: check
         return;
-    
-    if(instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
+
+    if (instr.result.entry && instr.result.entry->type.size() && instr.result.entry->type.back() == '&')
     {
         // std::cout << "in & fassign" << std::endl;
         spillAllReg();
         int reg1 = getReg(instr.result, 1, {}); // TODO: both can be made 0
-        if ((instr.arg1.value).substr(0, 4) == "__f_"){
+        if ((instr.arg1.value).substr(0, 4) == "__f_")
+        {
             int reg2 = getReg(instr.result, 1, {reg1});
             emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], instr.arg1.value));
             emit_instr(x86_lib::mov_mem_reg(reg_names[reg1], reg_names[reg2]));
-        }else{
+        }
+        else
+        {
             int reg2 = getReg(instr.arg1, 1, {reg1});
-            if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&'){
+            if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+            {
                 emit_instr(x86_lib::mov_reg_mem(reg_names[reg2], reg_names[reg2]));
             }
             emit_instr(x86_lib::mov_mem_reg(reg_names[reg1], reg_names[reg2]));
         }
     }
-    else{  
-        emit_fload(instr.arg1);      
+    else
+    {
+        emit_fload(instr.arg1);
         emit_fstore(instr.result);
     }
 }
@@ -1953,13 +1982,11 @@ void emit_intToFloat(quad &instr)
 
     emit_fstore(instr.result);
 
-    if(recoverReg != -1)
+    if (recoverReg != -1)
     {
         updateRegDesc(recoverReg, instr.arg1);
         recoverReg = -1;
     }
-
-
 }
 
 void emit_floatToInt(quad &instr)
@@ -1971,7 +1998,7 @@ void emit_floatToInt(quad &instr)
     else
         emit_instr(x86_lib::fisttp("dword", getMem(instr.result)));
 }
-//Handle the assignment of char
+// Handle the assignment of char
 void emit_cassign(quad &instr)
 {
 
@@ -2019,7 +2046,7 @@ void emit_intToChar(quad &instr)
 {
     spillAllReg();
     setParticularReg(EDX, instr.arg1);
-    if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[EDX], reg_names[EDX]));
     }
@@ -2034,7 +2061,7 @@ void emit_charToInt(quad &instr)
     spillAllReg();
     setParticularReg(EDX, instr.arg1);
 
-    if(instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
+    if (instr.arg1.entry && instr.arg1.entry->type.size() && instr.arg1.entry->type.back() == '&')
     {
         emit_instr(x86_lib::mov_reg_mem(reg_names[EDX], reg_names[EDX]));
     }
@@ -2312,7 +2339,6 @@ void global_init_pass()
 
 void update_ir()
 {
-    addgotoLabels();
     get_constants();
     global_init_pass();
 }

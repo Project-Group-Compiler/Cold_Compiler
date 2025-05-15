@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
             optimize_ir = true;
         else if (arg == "-O2")
             optimize_asm = true;
-        else if(arg == "-O3")
+        else if (arg == "-O3")
             optimize_ir = true, optimize_asm = true;
         else if (arg == "-l" || arg == "--lex")
             lexPrint = true;
@@ -129,10 +129,12 @@ int main(int argc, char *argv[])
             if (print_ir && !optimize_ir)
                 print_tac_code(inputFileString);
 
-            update_ir();
+            addgotoLabels();
 
             if (optimize_ir)
                 run_optimisations();
+
+            update_ir();
 
             if (print_ir && optimize_ir)
                 print_tac_code(inputFileString);

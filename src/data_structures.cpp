@@ -42,7 +42,7 @@ bool curr_structure_is_union = false;
 #define LIB_FUNC_LIST "scanf", "printf", "malloc", "calloc", "free",           \
                       "fopen", "fputs", "fgets", "fclose", "fprintf",          \
                       "fscanf", "fgetc", "fputc", "strlen", "strcmp",          \
-                      "strncmp", "strcpy", "strcat", "va_start", "va_arg",     \
+                      "strncmp", "strcpy", "strncpy", "strcat", "va_start", "va_arg",     \
                       "va_end", "fread", "fwrite", "fseek", "ftell", "rewind", \
                       "memcpy", "memset", "atoi", "atof", "sin", "cos", \
                       "tan", "exp", "log", "log10", "pow", "sqrt", "ceil",     \
@@ -355,6 +355,7 @@ void insertKeywords()
     insert_std_func("strcmp", {"char*", "char*"}, "int");
     insert_std_func("strncmp", {"char*", "char*", "int"}, "int");
     insert_std_func("strcpy", {"char*", "char*"}, "char*");
+    insert_std_func("strncpy", {"char*", "char*", "int"}, "char*");
     insert_std_func("strcat", {"char*", "char*"}, "char*");
     insert_std_func("memcpy", {"void*", "void*", "int"}, "void*");
     insert_std_func("memset", {"void*", "int", "int"}, "void*");
